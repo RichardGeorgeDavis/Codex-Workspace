@@ -1,0 +1,1 @@
+../tools/docs/03-workspace-hub-build-spec.md

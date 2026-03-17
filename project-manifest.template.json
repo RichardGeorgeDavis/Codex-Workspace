@@ -1,0 +1,22 @@
+{
+  "name": "Example Project",
+  "slug": "example-project",
+  "type": "vite",
+  "preferredMode": "direct",
+  "packageManager": "pnpm",
+  "installCommand": "pnpm install",
+  "devCommand": "pnpm dev",
+  "buildCommand": "pnpm build",
+  "previewCommand": "pnpm preview",
+  "previewUrl": "http://localhost:5173",
+  "externalUrl": "",
+  "servbayPath": "/repo/example-project",
+  "servbaySubdomain": "",
+  "healthcheckUrl": "http://localhost:5173",
+  "tags": [
+    "frontend",
+    "example"
+  ],
+  "notes": "Replace this file with repo-specific values.",
+  "isWordPress": false
+}
