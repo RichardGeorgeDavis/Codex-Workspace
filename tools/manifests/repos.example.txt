@@ -1,0 +1,4 @@
+# One repo per line: <git-url> [relative/path/under/repos]
+# Examples:
+# git@github.com:example/workspace-hub.git workspace-hub
+# https://github.com/example/three-lab.git prototypes/three-lab

@@ -1,0 +1,72 @@
+{
+  "workspaceRoot": "~/Desktop/Work Documents/Codex Workspace",
+  "reposPath": "~/Desktop/Work Documents/Codex Workspace/repos",
+  "generatedExample": true,
+  "repos": [
+    {
+      "name": "workspace-hub",
+      "slug": "workspace-hub",
+      "path": "repos/workspace-hub",
+      "type": "node-app",
+      "preferredMode": "direct",
+      "packageManager": "pnpm",
+      "devCommand": "pnpm dev",
+      "previewUrl": "http://localhost:4100",
+      "tags": [
+        "internal",
+        "hub",
+        "workspace"
+      ],
+      "notes": "Local control panel for discovering and managing sibling repos."
+    },
+    {
+      "name": "wp-client-site",
+      "slug": "wp-client-site",
+      "path": "repos/wp-client-site",
+      "type": "wordpress",
+      "preferredMode": "external",
+      "packageManager": "composer",
+      "devCommand": "",
+      "previewUrl": "",
+      "externalUrl": "https://client-site.local",
+      "tags": [
+        "wordpress",
+        "client"
+      ],
+      "notes": "Managed primarily through Local or ServBay mapping."
+    },
+    {
+      "name": "threejs-scene",
+      "slug": "threejs-scene",
+      "path": "repos/threejs-scene",
+      "type": "threejs",
+      "preferredMode": "direct",
+      "packageManager": "pnpm",
+      "devCommand": "pnpm dev",
+      "previewUrl": "http://localhost:5173",
+      "servbayPath": "/repo/threejs-scene",
+      "tags": [
+        "threejs",
+        "webgl",
+        "art"
+      ],
+      "notes": "Direct mode preferred; ServBay proxy optional."
+    },
+    {
+      "name": "static-portfolio",
+      "slug": "static-portfolio",
+      "path": "repos/static-portfolio",
+      "type": "static",
+      "preferredMode": "direct",
+      "packageManager": "npm",
+      "devCommand": "npx serve .",
+      "previewUrl": "http://localhost:3000",
+      "servbayPath": "/repo/static-portfolio",
+      "tags": [
+        "static",
+        "portfolio"
+      ],
+      "notes": "Simple static site example."
+    }
+  ]
+}
