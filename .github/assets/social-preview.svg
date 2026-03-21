@@ -35,33 +35,33 @@
   </g>
 
   <rect x="185" y="130" width="188" height="38" rx="19" fill="#F0E5D3"/>
-  <text x="207" y="154" fill="#0F766E" font-size="16" font-family="'Avenir Next', 'Segoe UI', sans-serif" font-weight="700" letter-spacing="2.4">CODEX WORKSPACE</text>
+  <text x="207" y="154" fill="#0F766E" font-size="16" font-family="Arial, sans-serif" font-weight="700" letter-spacing="2.4">CODEX WORKSPACE</text>
 
-  <text x="185" y="224" fill="#1F1A16" font-size="54" font-family="'Iowan Old Style', 'Palatino Linotype', serif" font-weight="700">
+  <text x="185" y="224" fill="#1F1A16" font-size="54" font-family="Times New Roman, serif" font-weight="700">
     One workspace
   </text>
-  <text x="185" y="284" fill="#1F1A16" font-size="54" font-family="'Iowan Old Style', 'Palatino Linotype', serif" font-weight="700">
+  <text x="185" y="284" fill="#1F1A16" font-size="54" font-family="Times New Roman, serif" font-weight="700">
     for many repos
   </text>
-  <text x="185" y="344" fill="#1F1A16" font-size="54" font-family="'Iowan Old Style', 'Palatino Linotype', serif" font-weight="700">
-    kept independent.
+  <text x="185" y="344" fill="#1F1A16" font-size="54" font-family="Times New Roman, serif" font-weight="700">
+    with visible context.
   </text>
 
-  <text x="190" y="404" fill="#5F564D" font-size="24" font-family="'Avenir Next', 'Segoe UI', sans-serif">
+  <text x="190" y="404" fill="#5F564D" font-size="24" font-family="Arial, sans-serif">
     Local-first structure for mixed stacks, shared caches, and a Workspace Hub
   </text>
-  <text x="190" y="436" fill="#5F564D" font-size="24" font-family="'Avenir Next', 'Segoe UI', sans-serif">
-    that keeps every repository runnable on its own terms.
+  <text x="190" y="436" fill="#5F564D" font-size="24" font-family="Arial, sans-serif">
+    with filesystem-first docs, skills, and explainable repo context.
   </text>
 
   <rect x="186" y="468" width="172" height="40" rx="20" fill="#0F766E" fill-opacity="0.12"/>
-  <text x="212" y="493" fill="#134E4A" font-size="18" font-family="'Avenir Next', 'Segoe UI', sans-serif" font-weight="600">Workspace Hub</text>
+  <text x="212" y="493" fill="#134E4A" font-size="18" font-family="Arial, sans-serif" font-weight="600">Workspace Hub</text>
 
   <rect x="371" y="468" width="167" height="40" rx="20" fill="#C58A2A" fill-opacity="0.14"/>
-  <text x="397" y="493" fill="#7B5817" font-size="18" font-family="'Avenir Next', 'Segoe UI', sans-serif" font-weight="600">Shared caches</text>
+  <text x="397" y="493" fill="#7B5817" font-size="18" font-family="Arial, sans-serif" font-weight="600">Shared caches</text>
 
-  <rect x="551" y="468" width="146" height="40" rx="20" fill="#2E607A" fill-opacity="0.12"/>
-  <text x="577" y="493" fill="#244A5E" font-size="18" font-family="'Avenir Next', 'Segoe UI', sans-serif" font-weight="600">Mixed stacks</text>
+  <rect x="551" y="468" width="164" height="40" rx="20" fill="#2E607A" fill-opacity="0.12"/>
+  <text x="573" y="493" fill="#244A5E" font-size="18" font-family="Arial, sans-serif" font-weight="600">Visible context</text>
 
   <rect x="884" y="136" width="190" height="230" rx="28" fill="#18374A"/>
   <rect x="906" y="160" width="146" height="18" rx="9" fill="#FFF5E8" fill-opacity="0.14"/>
@@ -74,11 +74,11 @@
 
   <rect x="838" y="236" width="150" height="114" rx="24" fill="#FFF8EF"/>
   <rect x="838.75" y="236.75" width="148.5" height="112.5" rx="23.25" stroke="#2A211B" stroke-opacity="0.08" stroke-width="1.5"/>
-  <text x="864" y="272" fill="#1F1A16" font-size="18" font-family="'Avenir Next', 'Segoe UI', sans-serif" font-weight="700">Docs</text>
-  <text x="864" y="304" fill="#5F564D" font-size="17" font-family="'Avenir Next', 'Segoe UI', sans-serif">Canonical</text>
-  <text x="864" y="328" fill="#5F564D" font-size="17" font-family="'Avenir Next', 'Segoe UI', sans-serif">root docs/</text>
+  <text x="864" y="272" fill="#1F1A16" font-size="18" font-family="Arial, sans-serif" font-weight="700">Docs</text>
+  <text x="864" y="304" fill="#5F564D" font-size="17" font-family="Arial, sans-serif">Canonical</text>
+  <text x="864" y="328" fill="#5F564D" font-size="17" font-family="Arial, sans-serif">root docs/</text>
 
-  <text x="185" y="548" fill="#7A6E61" font-size="18" font-family="'Avenir Next', 'Segoe UI', sans-serif">
+  <text x="185" y="548" fill="#7A6E61" font-size="18" font-family="Arial, sans-serif">
     github.com/RichardGeorgeDavis/Codex-Workspace
   </text>
 </svg>

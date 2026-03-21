@@ -2,6 +2,10 @@
 
 `social-preview.png` is the repository social preview image sized for GitHub's recommended 1280 x 640 layout.
 
+`cover-readme-20260321.png` is the current versioned README cover image used to avoid stale GitHub image caching on the repository page.
+
+`social-preview.svg` is the editable source for the current social preview artwork, including the refreshed visible-context project framing.
+
 Use it in:
 
 1. Repository `Settings`
