@@ -9,7 +9,6 @@ import { ThemeControls } from '../features/theme/ThemeControls.tsx'
 import {
   applyThemePreference,
   persistThemePreference,
-  themePresets,
   type ThemeMode,
   type ThemePreference,
   type ThemePreset,
@@ -382,8 +381,6 @@ export function App({ initialThemePreference }: AppProps) {
   const filteredRepos = summary
     ? filterRepos(summary.repos, normalizedSearch, selectedFilter)
     : []
-  const activeThemePreset =
-    themePresets.find((preset) => preset.id === themePreference.preset) ?? themePresets[0]
 
   useEffect(() => {
     const nextFilteredRepos = summary
@@ -465,7 +462,6 @@ export function App({ initialThemePreference }: AppProps) {
                 A local dashboard for discovering repositories, tracking runtime
                 state, and keeping direct previews as the default path.
               </p>
-              <p className="hero-subtext">{activeThemePreset.description}</p>
             </div>
 
             <div className="hero-actions">

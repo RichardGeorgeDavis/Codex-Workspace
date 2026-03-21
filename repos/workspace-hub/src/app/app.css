@@ -222,6 +222,405 @@
   font-size: 0.86rem;
 }
 
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .hero-panel::before,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .hero-panel::after {
+  display: none;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .hero-panel {
+  padding: 1.5rem;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .eyebrow {
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .hero-panel h1 {
+  font-size: clamp(2rem, 4.2vw, 2.75rem);
+  line-height: 1.1;
+  font-weight: 600;
+  text-shadow: none;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .hero-text,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .hero-subtext {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .hero-meta span,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .theme-console,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .section-card,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .status-card,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .entry,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .milestone,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .details-section,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .repo-card {
+  backdrop-filter: none;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .hero-meta span {
+  min-height: 2.25rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--radius-button);
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .theme-console {
+  gap: 0.85rem;
+  padding: 1rem;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .theme-console h2 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .theme-console-copy,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .theme-console-meta,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .hero-text,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .hero-subtext,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .status-card small,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .entry p,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .milestone p,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .section-copy,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .details-accordion-copy {
+  font-size: 0.875rem;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .primary-button,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .secondary-link,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .action-button,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .theme-mode-button {
+  min-height: 2.25rem;
+  padding: 0.375rem 0.875rem;
+  border-radius: var(--radius-button);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .theme-console-chip,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .tag,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .milestone-status,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .status-pill {
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .theme-console-chip,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .tag,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .milestone-status,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .status-pill,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .hero-meta span {
+  border-radius: 999px;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .status-card span,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .field span,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .details-row dt {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .field input,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .field select {
+  min-height: 2.25rem;
+  padding: 0.375rem 0.75rem;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .field textarea {
+  min-height: 7rem;
+  padding: 0.625rem 0.75rem;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .section-card {
+  padding: 1rem;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .section-card h2 {
+  font-size: 1.25rem;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .details-accordion-title,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .section-heading h3,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .entry h3,
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .milestone h3 {
+  font-size: 1rem;
+}
+
+:root:is(
+  [data-theme-preset='preset-2'],
+  [data-theme-preset='preset-3'],
+  [data-theme-preset='preset-4'],
+  [data-theme-preset='preset-5']
+) .status-card strong {
+  font-family: var(--font-body);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
 .primary-button,
 .secondary-link {
   display: inline-flex;
@@ -240,7 +639,7 @@
 }
 
 .primary-button {
-  border: 0;
+  border: var(--button-primary-border);
   color: var(--button-primary-color);
   background: var(--button-primary-background);
 }
@@ -254,6 +653,14 @@
   transform: translateY(-1px);
 }
 
+.primary-button:hover:not(:disabled),
+.primary-button:focus-visible:not(:disabled),
+.action-button.primary:hover:not(:disabled),
+.action-button.primary:focus-visible:not(:disabled) {
+  background: var(--button-primary-hover-background);
+  border-color: var(--button-primary-hover-border);
+}
+
 .primary-button:disabled {
   cursor: wait;
   opacity: 0.75;
@@ -263,6 +670,12 @@
   border: 1px solid var(--button-secondary-border);
   color: var(--button-secondary-color);
   background: var(--button-secondary-background);
+}
+
+.secondary-link:hover,
+.secondary-link:focus-visible {
+  background: var(--button-secondary-hover-background);
+  border-color: var(--button-secondary-hover-border);
 }
 
 .dashboard-grid {
@@ -283,17 +696,18 @@
 }
 
 .dashboard-masonry {
-  column-count: 2;
-  column-gap: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  gap: 1rem;
+  align-items: start;
 }
 
 .dashboard-masonry-item {
-  break-inside: avoid;
-  margin-bottom: 1rem;
+  min-width: 0;
 }
 
-.dashboard-masonry-item:last-child {
-  margin-bottom: 0;
+.dashboard-masonry-item:first-child {
+  grid-row: 1 / span 2;
 }
 
 .section-card {
@@ -708,10 +1122,10 @@
   align-items: center;
   min-height: 2.7rem;
   padding: 0.75rem 0.95rem;
-  border: 1px solid var(--input-border);
+  border: 1px solid var(--button-secondary-border);
   border-radius: var(--radius-button);
-  background: var(--surface-panel);
-  color: var(--text-default);
+  background: var(--button-secondary-background);
+  color: var(--button-secondary-color);
   transition:
     transform 180ms ease,
     background-color 180ms ease,
@@ -722,7 +1136,8 @@
 .action-button:hover:not(:disabled),
 .action-button:focus-visible:not(:disabled) {
   transform: translateY(-1px);
-  border-color: var(--border-accent);
+  border-color: var(--button-secondary-hover-border);
+  background: var(--button-secondary-hover-background);
 }
 
 .action-button:disabled {
@@ -731,7 +1146,7 @@
 }
 
 .action-button.primary {
-  border-color: transparent;
+  border: var(--button-primary-border);
   background: var(--button-primary-background);
   color: var(--button-primary-color);
 }
@@ -1034,7 +1449,11 @@ textarea:focus-visible {
 
 @media (max-width: 960px) {
   .dashboard-masonry {
-    column-count: 1;
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-masonry-item:first-child {
+    grid-row: auto;
   }
 
   .status-strip {

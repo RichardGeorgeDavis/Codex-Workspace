@@ -1,7 +1,7 @@
 import {
-  themePresets,
   type ThemeMode,
   type ThemePreset,
+  themePresets,
 } from './theme.ts'
 
 type ThemeControlsProps = {
@@ -17,9 +17,6 @@ export function ThemeControls({
   onPresetChange,
   preset,
 }: ThemeControlsProps) {
-  const activePreset =
-    themePresets.find((presetOption) => presetOption.id === preset) ?? themePresets[0]
-
   return (
     <aside className="theme-console" aria-label="Appearance controls">
       <div className="theme-console-head">
@@ -67,13 +64,6 @@ export function ThemeControls({
         >
           Dark
         </button>
-      </div>
-
-      <p className="theme-console-copy">{activePreset.description}</p>
-
-      <div className="theme-console-meta">
-        <span>{activePreset.palette}</span>
-        <span>Saved locally in this browser</span>
       </div>
     </aside>
   )
