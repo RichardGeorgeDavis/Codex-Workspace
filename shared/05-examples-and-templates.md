@@ -1,1 +1,0 @@
-../tools/docs/05-examples-and-templates.md

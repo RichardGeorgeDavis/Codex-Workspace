@@ -1,7 +1,7 @@
 {
-  "workspaceRoot": "/Users/richard/Desktop/Work Documents/Codex Workspace",
-  "reposPath": "/Users/richard/Desktop/Work Documents/Codex Workspace/repos",
-  "generatedExample": false,
-  "generatedAt": "2026-03-16",
+  "workspaceRoot": "~/Workspaces/Codex Workspace",
+  "reposPath": "~/Workspaces/Codex Workspace/repos",
+  "generatedExample": true,
+  "generatedAt": "2026-03-21",
   "repos": []
 }

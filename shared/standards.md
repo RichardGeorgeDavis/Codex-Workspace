@@ -13,9 +13,10 @@ Codex Workspace keeps repositories portable and independently runnable.
 ## Structure
 
 - `repos/` contains runnable repositories and grouped repo folders.
-- `tools/` contains shared scripts, templates, manifests, and canonical helper docs.
+- `docs/` contains the canonical workspace documentation set.
+- `tools/` contains shared scripts, templates, manifests, and helper assets.
 - `cache/` contains shared package-manager caches and stores.
-- `shared/` contains workspace-facing guidance links and metadata.
+- `shared/` contains workspace-facing metadata and shared standards.
 
 ## Metadata
 
