@@ -16,8 +16,9 @@ dist-ssr
 repos/*
 !repos/workspace-hub/
 !repos/workspace-hub/**
-Run Workspace Hub.command
-Run mysigmail.command
+*.command
+tools/ref/
+tools/local/
 
 # macOS and synced-folder noise
 .DS_Store
