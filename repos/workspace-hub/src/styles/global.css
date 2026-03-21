@@ -1,0 +1,75 @@
+:root {
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #123043;
+  background:
+    radial-gradient(circle at top, rgba(255, 182, 122, 0.2), transparent 28%),
+    linear-gradient(180deg, #fbf4e4 0%, #f3ebdf 56%, #efe6d6 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --paper: #f8ecd6;
+  --paper-strong: #fffaf2;
+  --ink-deep: #102f43;
+  --text-default: #18374a;
+  --text-soft: #d9e7f1;
+  --text-muted: #5d7283;
+  --accent-warm: #ffb07c;
+  --accent-soft: #ffcf93;
+  --line-soft: rgba(16, 47, 67, 0.12);
+  --line-strong: rgba(248, 236, 214, 0.18);
+  --panel-shadow: 0 28px 100px rgba(14, 31, 43, 0.28);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--text-default);
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(18, 48, 67, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(18, 48, 67, 0.025) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent 88%);
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+h1,
+h2,
+h3 {
+  font-family: "Iowan Old Style", "Palatino Linotype", serif;
+  letter-spacing: -0.02em;
+  color: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}

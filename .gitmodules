@@ -1,4 +1,0 @@
-[submodule "repos/workspace-hub"]
-	path = repos/workspace-hub
-	url = https://github.com/RichardGeorgeDavis/workspace-hub.git
-	branch = main

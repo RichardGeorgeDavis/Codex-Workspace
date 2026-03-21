@@ -1,0 +1,1406 @@
+import { type ReactNode, useState } from 'react'
+
+import { SectionCard } from '../../components/SectionCard.tsx'
+import type {
+  PreviewMode,
+  RepoType,
+  WorkspaceManifestRecord,
+  WorkspaceRepo,
+} from '../../types/workspace.ts'
+
+type RepoDetailsProps = {
+  actionError: string | null
+  actionPendingKey: string | null
+  onCoverAction: (relativePath: string) => Promise<void>
+  onCopyError: (message: string | null) => void
+  onInstallAction: (relativePath: string) => Promise<void>
+  loading: boolean
+  onOpenAction: (
+    relativePath: string,
+    target:
+      | 'manifest'
+      | 'preview'
+      | 'readme'
+      | 'repo'
+      | 'terminal'
+      | 'troubleshooting',
+  ) => Promise<void>
+  onResetMetadata: (relativePath: string) => Promise<void>
+  onRuntimeAction: (
+    relativePath: string,
+    action: 'restart' | 'start' | 'stop',
+  ) => Promise<void>
+  onSaveMetadata: (
+    relativePath: string,
+    metadata: {
+      buildCommand?: string
+      devCommand?: string
+      externalUrl?: string
+      healthcheckUrl?: string
+      notes: string
+      pinned: boolean
+      preferredMode: PreviewMode
+      previewUrl?: string
+      tags: string[]
+    },
+  ) => Promise<void>
+  onWriteManifest: (
+    relativePath: string,
+    manifest: {
+      buildCommand?: string
+      devCommand?: string
+      externalUrl?: string
+      healthcheckUrl?: string
+      installCommand?: string
+      name: string
+      notes?: string
+      packageManager?: string
+      preferredMode: PreviewMode
+      previewCommand?: string
+      previewUrl?: string
+      servbayPath?: string
+      servbaySubdomain?: string
+      slug: string
+      tags?: string[]
+      type: RepoType
+    },
+  ) => Promise<void>
+  repo: WorkspaceRepo | null
+}
+
+type MetadataDraft = {
+  buildCommand: string
+  devCommand: string
+  externalUrl: string
+  healthcheckUrl: string
+  notes: string
+  pinned: boolean
+  preferredMode: PreviewMode
+  previewUrl: string
+  tags: string
+}
+
+type ManifestDraft = {
+  buildCommand: string
+  devCommand: string
+  externalUrl: string
+  healthcheckUrl: string
+  installCommand: string
+  name: string
+  notes: string
+  packageManager: string
+  preferredMode: PreviewMode
+  previewCommand: string
+  previewUrl: string
+  servbayPath: string
+  servbaySubdomain: string
+  slug: string
+  tags: string
+  type: RepoType
+}
+
+function buildPendingKey(
+  relativePath: string,
+  action:
+    | 'cover'
+    | 'install'
+    | 'manifest'
+    | 'preview'
+    | 'readme'
+    | 'repo'
+    | 'restart'
+    | 'reset-metadata'
+    | 'save-metadata'
+    | 'start'
+    | 'stop'
+    | 'terminal'
+    | 'troubleshooting'
+    | 'write-manifest',
+) {
+  return `${relativePath}:${action}`
+}
+
+function buildMetadataDraft(repo: WorkspaceRepo): MetadataDraft {
+  return {
+    buildCommand: repo.savedMetadata?.buildCommand ?? '',
+    devCommand: repo.savedMetadata?.devCommand ?? '',
+    externalUrl: repo.savedMetadata?.externalUrl ?? '',
+    healthcheckUrl: repo.savedMetadata?.healthcheckUrl ?? '',
+    notes: repo.savedMetadata?.notes ?? repo.notes,
+    pinned: repo.savedMetadata?.pinned ?? repo.isPinned,
+    preferredMode: repo.savedMetadata?.preferredMode ?? repo.preferredMode,
+    previewUrl: repo.savedMetadata?.previewUrl ?? '',
+    tags: (repo.savedMetadata?.tags ?? repo.tags).join(', '),
+  }
+}
+
+function normalizeTags(value: string) {
+  return value
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+}
+
+function buildManifestDraft(repo: WorkspaceRepo): ManifestDraft {
+  return {
+    buildCommand: repo.buildCommand ?? '',
+    devCommand: repo.devCommand ?? '',
+    externalUrl: repo.externalUrl ?? '',
+    healthcheckUrl: repo.healthcheckUrl ?? '',
+    installCommand: repo.installCommand ?? '',
+    name: repo.name,
+    notes: repo.notes,
+    packageManager: repo.packageManager,
+    preferredMode: repo.preferredMode,
+    previewCommand: repo.previewCommand ?? '',
+    previewUrl: repo.previewUrl ?? '',
+    servbayPath: repo.servbayPath ?? '',
+    servbaySubdomain: repo.servbaySubdomain ?? '',
+    slug: repo.slug,
+    tags: repo.tags.join(', '),
+    type: repo.type,
+  }
+}
+
+function buildManifestDraftFromRecord(manifest: WorkspaceManifestRecord): ManifestDraft {
+  return {
+    buildCommand: manifest.buildCommand ?? '',
+    devCommand: manifest.devCommand ?? '',
+    externalUrl: manifest.externalUrl ?? '',
+    healthcheckUrl: manifest.healthcheckUrl ?? '',
+    installCommand: manifest.installCommand ?? '',
+    name: manifest.name,
+    notes: manifest.notes ?? '',
+    packageManager: manifest.packageManager ?? '',
+    preferredMode: manifest.preferredMode,
+    previewCommand: manifest.previewCommand ?? '',
+    previewUrl: manifest.previewUrl ?? '',
+    servbayPath: manifest.servbayPath ?? '',
+    servbaySubdomain: manifest.servbaySubdomain ?? '',
+    slug: manifest.slug,
+    tags: (manifest.tags ?? []).join(', '),
+    type: manifest.type,
+  }
+}
+
+function buildManifestPayload(draft: ManifestDraft) {
+  const tags = normalizeTags(draft.tags)
+  const manifest = {
+    name: draft.name.trim(),
+    preferredMode: draft.preferredMode,
+    slug: draft.slug.trim(),
+    type: draft.type,
+  } satisfies {
+    name: string
+    preferredMode: PreviewMode
+    slug: string
+    type: RepoType
+  }
+
+  return {
+    ...manifest,
+    buildCommand: draft.buildCommand.trim() || undefined,
+    devCommand: draft.devCommand.trim() || undefined,
+    externalUrl: draft.externalUrl.trim() || undefined,
+    healthcheckUrl: draft.healthcheckUrl.trim() || undefined,
+    installCommand: draft.installCommand.trim() || undefined,
+    notes: draft.notes.trim() || undefined,
+    packageManager: draft.packageManager.trim() || undefined,
+    previewCommand: draft.previewCommand.trim() || undefined,
+    previewUrl: draft.previewUrl.trim() || undefined,
+    servbayPath: draft.servbayPath.trim() || undefined,
+    servbaySubdomain: draft.servbaySubdomain.trim() || undefined,
+    tags: tags.length ? tags : undefined,
+  }
+}
+
+function formatDependencyStateLabel(state: WorkspaceRepo['dependencies']['state']) {
+  switch (state) {
+    case 'missing':
+      return 'missing'
+    case 'not-applicable':
+      return 'not applicable'
+    case 'ready':
+      return 'ready'
+    default:
+      return 'unknown'
+  }
+}
+
+function formatRecentValue(value: string | null) {
+  if (!value) {
+    return 'No recent activity recorded'
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value))
+}
+
+type AccordionSectionProps = {
+  badge?: ReactNode
+  children: ReactNode
+  defaultOpen?: boolean
+  description?: ReactNode
+  title: string
+}
+
+function AccordionSection({
+  badge,
+  children,
+  defaultOpen = false,
+  description,
+  title,
+}: AccordionSectionProps) {
+  return (
+    <details className="details-section details-accordion" open={defaultOpen}>
+      <summary className="details-accordion-summary">
+        <span className="details-accordion-head">
+          <span className="details-accordion-title">{title}</span>
+          {badge ? <span className="details-accordion-badge">{badge}</span> : null}
+        </span>
+        {description ? (
+          <span className="details-accordion-copy">{description}</span>
+        ) : null}
+      </summary>
+      <div className="details-accordion-body">{children}</div>
+    </details>
+  )
+}
+
+function buildTroubleshootingTips(repo: WorkspaceRepo) {
+  const tips: string[] = []
+
+  if (repo.dependencies.state === 'missing') {
+    if (repo.installCommand) {
+      tips.push(`Run ${repo.installCommand} before starting the repo again.`)
+    } else {
+      tips.push('Add an install command in the manifest if this repo needs dependencies.')
+    }
+  }
+
+  if (repo.dependencies.state === 'unknown') {
+    tips.push(
+      'Dependency readiness is uncertain. Check the repo README or manifest, then confirm the correct install command.',
+    )
+  }
+
+  if (repo.install.status === 'error') {
+    tips.push('The last install failed. Review the install log below before retrying.')
+  }
+
+  if (repo.runtime.status === 'error') {
+    tips.push('The last runtime command failed. Compare the runtime log with the install state before retrying.')
+  }
+
+  if (repo.runtime.status === 'running' && repo.health.state === 'unreachable') {
+    tips.push('The repo process is running but not answering yet. Check the expected port, preview URL, and startup log output.')
+  }
+
+  if (!tips.length) {
+    tips.push('No active troubleshooting warnings are present for this repo.')
+  }
+
+  return tips
+}
+
+export function RepoDetails({
+  actionError,
+  actionPendingKey,
+  onCoverAction,
+  onCopyError,
+  onInstallAction,
+  loading,
+  onOpenAction,
+  onResetMetadata,
+  onRuntimeAction,
+  onSaveMetadata,
+  onWriteManifest,
+  repo,
+}: RepoDetailsProps) {
+  return (
+    <SectionCard
+      body="This panel reflects the current selection from the repo list, exposes the core repo actions, persists manual overrides, and can write repo manifests."
+      className="tall reveal delayed"
+      eyebrow="Selection"
+      title={repo?.name ?? 'Repo details'}
+    >
+      {loading && !repo ? (
+        <p className="loading-copy">Waiting for the first repo selection...</p>
+      ) : repo ? (
+        <RepoDetailsContent
+          key={repo.relativePath}
+          actionError={actionError}
+          actionPendingKey={actionPendingKey}
+          onCoverAction={onCoverAction}
+          onCopyError={onCopyError}
+          onInstallAction={onInstallAction}
+          onOpenAction={onOpenAction}
+          onResetMetadata={onResetMetadata}
+          onRuntimeAction={onRuntimeAction}
+          onSaveMetadata={onSaveMetadata}
+          onWriteManifest={onWriteManifest}
+          repo={repo}
+        />
+      ) : (
+        <p className="loading-copy">No repo is selected.</p>
+      )}
+    </SectionCard>
+  )
+}
+
+type RepoDetailsContentProps = Omit<RepoDetailsProps, 'loading' | 'repo'> & {
+  repo: WorkspaceRepo
+}
+
+function RepoDetailsContent({
+  actionError,
+  actionPendingKey,
+  onCoverAction,
+  onCopyError,
+  onInstallAction,
+  onOpenAction,
+  onResetMetadata,
+  onRuntimeAction,
+  onSaveMetadata,
+  onWriteManifest,
+  repo,
+}: RepoDetailsContentProps) {
+  const [draft, setDraft] = useState<MetadataDraft>(() => buildMetadataDraft(repo))
+  const [manifestDraft, setManifestDraft] = useState<ManifestDraft>(() =>
+    buildManifestDraft(repo),
+  )
+  const [copyMessage, setCopyMessage] = useState<string | null>(null)
+  const troubleshootingTips = buildTroubleshootingTips(repo)
+  const manifestPayload = buildManifestPayload(manifestDraft)
+  const manifestReady =
+    manifestPayload.name.length > 0 && manifestPayload.slug.length > 0
+  const hasTroubleshootingAttention =
+    repo.dependencies.state === 'missing' ||
+    repo.dependencies.state === 'unknown' ||
+    repo.install.status === 'error' ||
+    repo.runtime.status === 'error'
+
+  async function handleCopy(value: string | null, label: string) {
+    if (!value) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopyMessage(`Copied ${label}.`)
+      onCopyError(null)
+    } catch (caughtError) {
+      setCopyMessage(null)
+      onCopyError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : `Unable to copy ${label}.`,
+      )
+    }
+  }
+
+  return (
+    <>
+      <div className="action-row">
+        <button
+          className="action-button"
+          disabled={actionPendingKey === buildPendingKey(repo.relativePath, 'repo')}
+          onClick={() => {
+            void onOpenAction(repo.relativePath, 'repo')
+          }}
+          type="button"
+        >
+          Open in Finder
+        </button>
+        <button
+          className="action-button"
+          disabled={actionPendingKey === buildPendingKey(repo.relativePath, 'terminal')}
+          onClick={() => {
+            void onOpenAction(repo.relativePath, 'terminal')
+          }}
+          type="button"
+        >
+          Open in Terminal
+        </button>
+        <button
+          className="action-button"
+          disabled={
+            !repo.readmePath ||
+            actionPendingKey === buildPendingKey(repo.relativePath, 'readme')
+          }
+          onClick={() => {
+            void onOpenAction(repo.relativePath, 'readme')
+          }}
+          type="button"
+        >
+          Open README
+        </button>
+        <button
+          className="action-button"
+          disabled={
+            !repo.previewUrl ||
+            actionPendingKey === buildPendingKey(repo.relativePath, 'cover')
+          }
+          onClick={() => {
+            void onCoverAction(repo.relativePath)
+          }}
+          type="button"
+        >
+          Capture cover + update README
+        </button>
+        <button
+          className="action-button"
+          disabled={
+            !repo.manifestPath ||
+            actionPendingKey === buildPendingKey(repo.relativePath, 'manifest')
+          }
+          onClick={() => {
+            void onOpenAction(repo.relativePath, 'manifest')
+          }}
+          type="button"
+        >
+          Open manifest
+        </button>
+        <button
+          className="action-button"
+          disabled={
+            !repo.previewUrl ||
+            actionPendingKey === buildPendingKey(repo.relativePath, 'preview')
+          }
+          onClick={() => {
+            void onOpenAction(repo.relativePath, 'preview')
+          }}
+          type="button"
+        >
+          Open preview
+        </button>
+        <button
+          className="action-button"
+          disabled={
+            actionPendingKey === buildPendingKey(repo.relativePath, 'troubleshooting')
+          }
+          onClick={() => {
+            void onOpenAction(repo.relativePath, 'troubleshooting')
+          }}
+          type="button"
+        >
+          Open troubleshooting notes
+        </button>
+      </div>
+
+      <div className="action-row runtime">
+        <button
+          className="action-button"
+          disabled={
+            !repo.installCommand ||
+            actionPendingKey === buildPendingKey(repo.relativePath, 'install')
+          }
+          onClick={() => {
+            void onInstallAction(repo.relativePath)
+          }}
+          type="button"
+        >
+          Install dependencies
+        </button>
+        <button
+          className="action-button primary"
+          disabled={
+            !repo.devCommand ||
+            repo.runtime.status === 'running' ||
+            actionPendingKey === buildPendingKey(repo.relativePath, 'start')
+          }
+          onClick={() => {
+            void onRuntimeAction(repo.relativePath, 'start')
+          }}
+          type="button"
+        >
+          Start
+        </button>
+        <button
+          className="action-button"
+          disabled={
+            repo.runtime.status !== 'running' ||
+            actionPendingKey === buildPendingKey(repo.relativePath, 'stop')
+          }
+          onClick={() => {
+            void onRuntimeAction(repo.relativePath, 'stop')
+          }}
+          type="button"
+        >
+          Stop
+        </button>
+        <button
+          className="action-button"
+          disabled={
+            !repo.devCommand ||
+            actionPendingKey === buildPendingKey(repo.relativePath, 'restart')
+          }
+          onClick={() => {
+            void onRuntimeAction(repo.relativePath, 'restart')
+          }}
+          type="button"
+        >
+          Restart
+        </button>
+      </div>
+
+      <div className="details-section">
+        <div className="section-heading">
+          <h3>Overview</h3>
+          <span className={`status-pill ${repo.runtime.status}`}>
+            {repo.runtime.status}
+          </span>
+        </div>
+
+        <dl className="details-list overview-list">
+          <div className="details-row">
+            <dt>Preview URL</dt>
+            <dd>
+              {repo.previewUrl
+                ? `${repo.previewUrl} (${repo.previewUrlSource})`
+                : 'No preview URL set'}
+            </dd>
+          </div>
+          <div className="details-row">
+            <dt>Health</dt>
+            <dd>
+              <span className={`status-pill ${repo.health.state}`}>
+                {repo.health.state}
+              </span>
+              {repo.health.url ? ` ${repo.health.url}` : ''}
+              {repo.health.httpStatus ? ` (HTTP ${repo.health.httpStatus})` : ''}
+            </dd>
+          </div>
+          <div className="details-row">
+            <dt>Dependencies</dt>
+            <dd>
+              <span className={`status-pill ${repo.dependencies.state}`}>
+                {formatDependencyStateLabel(repo.dependencies.state)}
+              </span>
+              {` ${repo.dependencies.reason}`}
+            </dd>
+          </div>
+          <div className="details-row">
+            <dt>Dev command</dt>
+            <dd>{repo.devCommand ?? 'Not inferred yet'}</dd>
+          </div>
+          <div className="details-row">
+            <dt>Git</dt>
+            <dd>
+              <span className={`status-pill ${repo.git.state}`}>{repo.git.state}</span>
+              {' '}
+              <span className="details-inline-copy">{repo.git.summary}</span>
+            </dd>
+          </div>
+          <div className="details-row">
+            <dt>Visibility</dt>
+            <dd>
+              <span className={`status-pill ${repo.git.visibility}`}>
+                {repo.git.visibility === 'local-only' ? 'local only' : repo.git.visibility}
+              </span>
+              {repo.git.remoteUrl ? ` ${repo.git.remoteUrl}` : ' No remote configured'}
+            </dd>
+          </div>
+          <div className="details-row">
+            <dt>Recent</dt>
+            <dd>
+              {repo.recent.lastActionKind
+                ? `${repo.recent.lastActionKind} at ${formatRecentValue(repo.recent.lastActionAt)}`
+                : formatRecentValue(repo.recent.lastSelectedAt)}
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <AccordionSection
+        badge={
+          <span className={`status-pill ${repo.isPinned ? 'ready' : 'unknown'}`}>
+            {repo.isPinned ? 'pinned' : 'standard'}
+          </span>
+        }
+        title="Quick copy"
+      >
+
+        <div className="action-row">
+          <button
+            className="action-button"
+            disabled={!repo.previewUrl}
+            onClick={() => {
+              void handleCopy(repo.previewUrl, 'preview URL')
+            }}
+            type="button"
+          >
+            Copy preview URL
+          </button>
+          <button
+            className="action-button"
+            disabled={!repo.devCommand}
+            onClick={() => {
+              void handleCopy(repo.devCommand, 'dev command')
+            }}
+            type="button"
+          >
+            Copy dev command
+          </button>
+          <button
+            className="action-button"
+            disabled={!repo.installCommand}
+            onClick={() => {
+              void handleCopy(repo.installCommand, 'install command')
+            }}
+            type="button"
+          >
+            Copy install command
+          </button>
+          <button
+            className="action-button"
+            onClick={() => {
+              void handleCopy(repo.relativePath, 'repo path')
+            }}
+            type="button"
+          >
+            Copy repo path
+          </button>
+        </div>
+
+        {copyMessage ? <p className="copy-note">{copyMessage}</p> : null}
+      </AccordionSection>
+
+      <AccordionSection
+        badge={
+          <span className={`status-pill ${repo.hasSavedMetadata ? 'running' : 'unknown'}`}>
+            {repo.hasSavedMetadata ? 'saved' : 'inferred'}
+          </span>
+        }
+        title="Saved overrides"
+      >
+
+        <div className="editor-grid">
+          <label className="field">
+            <span>Preferred mode</span>
+            <select
+              onChange={(event) => {
+                setDraft((currentDraft) => ({
+                  ...currentDraft,
+                  preferredMode: event.target.value as PreviewMode,
+                }))
+              }}
+              value={draft.preferredMode}
+            >
+              <option value="direct">direct</option>
+              <option value="external">external</option>
+              <option value="servbay">servbay</option>
+            </select>
+          </label>
+
+          <label className="field">
+            <span>Tags</span>
+            <input
+              onChange={(event) => {
+                setDraft((currentDraft) => ({
+                  ...currentDraft,
+                  tags: event.target.value,
+                }))
+              }}
+              placeholder="frontend, prototype"
+              type="text"
+              value={draft.tags}
+            />
+          </label>
+
+          <label className="field checkbox-field">
+            <span>Pinned</span>
+            <input
+              checked={draft.pinned}
+              onChange={(event) => {
+                setDraft((currentDraft) => ({
+                  ...currentDraft,
+                  pinned: event.target.checked,
+                }))
+              }}
+              type="checkbox"
+            />
+          </label>
+
+          <label className="field">
+            <span>Dev command override</span>
+            <input
+              onChange={(event) => {
+                setDraft((currentDraft) => ({
+                  ...currentDraft,
+                  devCommand: event.target.value,
+                }))
+              }}
+              placeholder="pnpm dev"
+              type="text"
+              value={draft.devCommand}
+            />
+          </label>
+
+          <label className="field">
+            <span>Build command override</span>
+            <input
+              onChange={(event) => {
+                setDraft((currentDraft) => ({
+                  ...currentDraft,
+                  buildCommand: event.target.value,
+                }))
+              }}
+              placeholder="pnpm build"
+              type="text"
+              value={draft.buildCommand}
+            />
+          </label>
+
+          <label className="field">
+            <span>Preview URL override</span>
+            <input
+              onChange={(event) => {
+                setDraft((currentDraft) => ({
+                  ...currentDraft,
+                  previewUrl: event.target.value,
+                }))
+              }}
+              placeholder="http://127.0.0.1:5173"
+              type="url"
+              value={draft.previewUrl}
+            />
+          </label>
+
+          <label className="field">
+            <span>External URL override</span>
+            <input
+              onChange={(event) => {
+                setDraft((currentDraft) => ({
+                  ...currentDraft,
+                  externalUrl: event.target.value,
+                }))
+              }}
+              placeholder="https://client-site.local"
+              type="url"
+              value={draft.externalUrl}
+            />
+          </label>
+
+          <label className="field">
+            <span>Healthcheck URL override</span>
+            <input
+              onChange={(event) => {
+                setDraft((currentDraft) => ({
+                  ...currentDraft,
+                  healthcheckUrl: event.target.value,
+                }))
+              }}
+              placeholder="http://127.0.0.1:4101/api/health"
+              type="url"
+              value={draft.healthcheckUrl}
+            />
+          </label>
+        </div>
+
+        <label className="field">
+          <span>Notes</span>
+          <textarea
+            onChange={(event) => {
+              setDraft((currentDraft) => ({
+                ...currentDraft,
+                notes: event.target.value,
+              }))
+            }}
+            rows={4}
+            value={draft.notes}
+          />
+        </label>
+
+        <div className="action-row">
+          <button
+            className="action-button primary"
+            disabled={actionPendingKey === buildPendingKey(repo.relativePath, 'save-metadata')}
+            onClick={() => {
+              void onSaveMetadata(repo.relativePath, {
+                buildCommand: draft.buildCommand,
+                devCommand: draft.devCommand,
+                externalUrl: draft.externalUrl,
+                healthcheckUrl: draft.healthcheckUrl,
+                notes: draft.notes,
+                pinned: draft.pinned,
+                preferredMode: draft.preferredMode,
+                previewUrl: draft.previewUrl,
+                tags: normalizeTags(draft.tags),
+              })
+            }}
+            type="button"
+          >
+            Save overrides
+          </button>
+          <button
+            className="action-button"
+            disabled={
+              !repo.hasSavedMetadata ||
+              actionPendingKey === buildPendingKey(repo.relativePath, 'reset-metadata')
+            }
+            onClick={() => {
+              void onResetMetadata(repo.relativePath)
+            }}
+            type="button"
+          >
+            Reset saved overrides
+          </button>
+        </div>
+      </AccordionSection>
+
+      <AccordionSection
+        badge={
+          <span className={`status-pill ${repo.hasManifest ? 'running' : 'unknown'}`}>
+            {repo.hasManifest ? 'manifest' : 'draft'}
+          </span>
+        }
+        title="Manifest authoring"
+      >
+
+        <p className="section-copy">
+          <strong>{repo.recommendedPreset.label}</strong>: {repo.recommendedPreset.rationale}
+        </p>
+
+        <div className="action-row">
+          <button
+            className="action-button"
+            onClick={() => {
+              setManifestDraft(buildManifestDraft(repo))
+            }}
+            type="button"
+          >
+            Reset to current
+          </button>
+          <button
+            className="action-button"
+            onClick={() => {
+              setManifestDraft(buildManifestDraftFromRecord(repo.suggestedManifest))
+            }}
+            type="button"
+          >
+            Reset to preset
+          </button>
+          <button
+            className="action-button primary"
+            disabled={
+              !manifestReady ||
+              actionPendingKey === buildPendingKey(repo.relativePath, 'write-manifest')
+            }
+            onClick={() => {
+              void onWriteManifest(repo.relativePath, manifestPayload)
+            }}
+            type="button"
+          >
+            {repo.hasManifest ? 'Write manifest' : 'Create manifest'}
+          </button>
+        </div>
+
+        <div className="editor-grid">
+          <label className="field">
+            <span>Name</span>
+            <input
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  name: event.target.value,
+                }))
+              }}
+              placeholder="Repo name"
+              type="text"
+              value={manifestDraft.name}
+            />
+          </label>
+
+          <label className="field">
+            <span>Slug</span>
+            <input
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  slug: event.target.value,
+                }))
+              }}
+              placeholder="repo-slug"
+              type="text"
+              value={manifestDraft.slug}
+            />
+          </label>
+
+          <label className="field">
+            <span>Type</span>
+            <select
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  type: event.target.value as RepoType,
+                }))
+              }}
+              value={manifestDraft.type}
+            >
+              <option value="node-app">node-app</option>
+              <option value="other">other</option>
+              <option value="php">php</option>
+              <option value="static">static</option>
+              <option value="threejs">threejs</option>
+              <option value="vite">vite</option>
+              <option value="wordpress">wordpress</option>
+            </select>
+          </label>
+
+          <label className="field">
+            <span>Preferred mode</span>
+            <select
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  preferredMode: event.target.value as PreviewMode,
+                }))
+              }}
+              value={manifestDraft.preferredMode}
+            >
+              <option value="direct">direct</option>
+              <option value="external">external</option>
+              <option value="servbay">servbay</option>
+            </select>
+          </label>
+
+          <label className="field">
+            <span>Package manager</span>
+            <input
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  packageManager: event.target.value,
+                }))
+              }}
+              placeholder="pnpm"
+              type="text"
+              value={manifestDraft.packageManager}
+            />
+          </label>
+
+          <label className="field">
+            <span>Tags</span>
+            <input
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  tags: event.target.value,
+                }))
+              }}
+              placeholder="frontend, prototype"
+              type="text"
+              value={manifestDraft.tags}
+            />
+          </label>
+
+          <label className="field">
+            <span>Install command</span>
+            <input
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  installCommand: event.target.value,
+                }))
+              }}
+              placeholder="pnpm install"
+              type="text"
+              value={manifestDraft.installCommand}
+            />
+          </label>
+
+          <label className="field">
+            <span>Dev command</span>
+            <input
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  devCommand: event.target.value,
+                }))
+              }}
+              placeholder="pnpm dev"
+              type="text"
+              value={manifestDraft.devCommand}
+            />
+          </label>
+
+          <label className="field">
+            <span>Build command</span>
+            <input
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  buildCommand: event.target.value,
+                }))
+              }}
+              placeholder="pnpm build"
+              type="text"
+              value={manifestDraft.buildCommand}
+            />
+          </label>
+
+          <label className="field">
+            <span>Preview command</span>
+            <input
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  previewCommand: event.target.value,
+                }))
+              }}
+              placeholder="pnpm preview"
+              type="text"
+              value={manifestDraft.previewCommand}
+            />
+          </label>
+
+          <label className="field">
+            <span>Preview URL</span>
+            <input
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  previewUrl: event.target.value,
+                }))
+              }}
+              placeholder="http://127.0.0.1:5173"
+              type="url"
+              value={manifestDraft.previewUrl}
+            />
+          </label>
+
+          <label className="field">
+            <span>External URL</span>
+            <input
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  externalUrl: event.target.value,
+                }))
+              }}
+              placeholder="https://client-site.local"
+              type="url"
+              value={manifestDraft.externalUrl}
+            />
+          </label>
+
+          <label className="field">
+            <span>Healthcheck URL</span>
+            <input
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  healthcheckUrl: event.target.value,
+                }))
+              }}
+              placeholder="http://127.0.0.1:4101/api/health"
+              type="url"
+              value={manifestDraft.healthcheckUrl}
+            />
+          </label>
+
+          <label className="field">
+            <span>ServBay path</span>
+            <input
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  servbayPath: event.target.value,
+                }))
+              }}
+              placeholder="/repo/example"
+              type="text"
+              value={manifestDraft.servbayPath}
+            />
+          </label>
+
+          <label className="field">
+            <span>ServBay subdomain</span>
+            <input
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  servbaySubdomain: event.target.value,
+                }))
+              }}
+              placeholder="workspace-hub"
+              type="text"
+              value={manifestDraft.servbaySubdomain}
+            />
+          </label>
+        </div>
+
+        <label className="field">
+          <span>Notes</span>
+          <textarea
+            onChange={(event) => {
+              setManifestDraft((currentDraft) => ({
+                ...currentDraft,
+                notes: event.target.value,
+              }))
+            }}
+            rows={4}
+            value={manifestDraft.notes}
+          />
+        </label>
+
+        <label className="field">
+          <span>Manifest preview</span>
+          <pre className="manifest-preview">{JSON.stringify(manifestPayload, null, 2)}</pre>
+        </label>
+      </AccordionSection>
+
+      <AccordionSection
+        badge={
+          <span className={`status-pill ${hasTroubleshootingAttention ? 'error' : 'ready'}`}>
+            {hasTroubleshootingAttention ? 'attention' : 'clear'}
+          </span>
+        }
+        defaultOpen={hasTroubleshootingAttention}
+        title="Troubleshooting"
+      >
+
+        <p className="section-copy">
+          Common repo recovery notes live in <code>docs/runtime-troubleshooting.md</code>.
+        </p>
+
+        <ul className="troubleshooting-list">
+          {troubleshootingTips.map((tip) => (
+            <li key={tip}>{tip}</li>
+          ))}
+        </ul>
+      </AccordionSection>
+
+      {actionError ? (
+        <div className="inline-error" aria-live="polite">
+          {actionError}
+        </div>
+      ) : null}
+
+      <AccordionSection title="Diagnostics, logs, and metadata">
+      <dl className="details-list">
+        <div className="details-row">
+          <dt>Runtime status</dt>
+          <dd>
+            <span className={`status-pill ${repo.runtime.status}`}>
+              {repo.runtime.status}
+            </span>
+          </dd>
+        </div>
+        <div className="details-row">
+          <dt>Saved metadata</dt>
+          <dd>
+            {repo.hasSavedMetadata
+              ? `Updated ${repo.metadataUpdatedAt ?? 'recently'}`
+              : 'No saved overrides'}
+          </dd>
+        </div>
+        <div className="details-row">
+          <dt>PID</dt>
+          <dd>{repo.runtime.pid ?? 'Not running'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Path</dt>
+          <dd>{repo.relativePath}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Type</dt>
+          <dd>{repo.type}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Preferred mode</dt>
+          <dd>{repo.preferredMode}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Package manager</dt>
+          <dd>{repo.packageManager || 'manual'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Discovery</dt>
+          <dd>{repo.hasManifest ? 'manifest-backed' : repo.detectedBy}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Collection</dt>
+          <dd>{repo.location === 'direct' ? 'direct repo' : repo.collection}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Pinned</dt>
+          <dd>{repo.isPinned ? 'Pinned to the top of the repo list' : 'Not pinned'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Last selected</dt>
+          <dd>{formatRecentValue(repo.recent.lastSelectedAt)}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Last opened</dt>
+          <dd>{formatRecentValue(repo.recent.lastOpenedAt)}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Last action</dt>
+          <dd>
+            {repo.recent.lastActionKind
+              ? `${repo.recent.lastActionKind} at ${formatRecentValue(repo.recent.lastActionAt)}`
+              : 'No recent action recorded'}
+          </dd>
+        </div>
+        <div className="details-row">
+          <dt>Git</dt>
+          <dd>
+            <span className={`status-pill ${repo.git.state}`}>{repo.git.state}</span>
+            {' '}
+            <span className="details-inline-copy">{repo.git.summary}</span>
+          </dd>
+        </div>
+        <div className="details-row">
+          <dt>Visibility</dt>
+          <dd>
+            <span className={`status-pill ${repo.git.visibility}`}>
+              {repo.git.visibility === 'local-only' ? 'local only' : repo.git.visibility}
+            </span>
+            {repo.git.remoteUrl ? ` ${repo.git.remoteUrl}` : ' No remote configured'}
+          </dd>
+        </div>
+        <div className="details-row">
+          <dt>Dependencies</dt>
+          <dd>
+            <span className={`status-pill ${repo.dependencies.state}`}>
+              {formatDependencyStateLabel(repo.dependencies.state)}
+            </span>
+            {` ${repo.dependencies.reason}`}
+            {repo.dependencies.installPath ? (
+              <>
+                {' '}
+                <code>{repo.dependencies.installPath}</code>
+              </>
+            ) : null}
+          </dd>
+        </div>
+        <div className="details-row">
+          <dt>Install status</dt>
+          <dd>
+            <span className={`status-pill ${repo.install.status}`}>{repo.install.status}</span>
+            {repo.install.message ? ` ${repo.install.message}` : ''}
+          </dd>
+        </div>
+        <div className="details-row">
+          <dt>Dev command</dt>
+          <dd>{repo.devCommand ?? 'Not inferred yet'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Build command</dt>
+          <dd>{repo.buildCommand ?? 'Not inferred yet'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Preview command</dt>
+          <dd>{repo.previewCommand ?? 'Not inferred yet'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Install command</dt>
+          <dd>{repo.installCommand ?? 'Not inferred yet'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Install update</dt>
+          <dd>{repo.install.updatedAt ?? 'No install activity yet'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>README</dt>
+          <dd>{repo.readmePath ?? 'No README detected'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Manifest</dt>
+          <dd>{repo.manifestPath ?? 'No manifest detected'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Preset</dt>
+          <dd>{repo.recommendedPreset.label}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Preview URL</dt>
+          <dd>
+            {repo.previewUrl
+              ? `${repo.previewUrl} (${repo.previewUrlSource})`
+              : 'No preview URL set'}
+          </dd>
+        </div>
+        <div className="details-row">
+          <dt>Healthcheck</dt>
+          <dd>{repo.healthcheckUrl ?? 'No healthcheck URL set'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>ServBay</dt>
+          <dd>
+            {repo.servbaySubdomain
+              ? `${repo.servbaySubdomain} subdomain`
+              : repo.servbayPath ?? 'No ServBay routing set'}
+          </dd>
+        </div>
+        <div className="details-row">
+          <dt>Health</dt>
+          <dd>
+            <span className={`status-pill ${repo.health.state}`}>
+              {repo.health.state}
+            </span>
+            {repo.health.url ? ` ${repo.health.url}` : ''}
+            {repo.health.httpStatus ? ` (HTTP ${repo.health.httpStatus})` : ''}
+          </dd>
+        </div>
+        <div className="details-row">
+          <dt>Last update</dt>
+          <dd>{repo.runtime.updatedAt ?? 'No runtime activity yet'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Exit state</dt>
+          <dd>
+            {repo.runtime.lastExitCode !== null
+              ? `exit ${repo.runtime.lastExitCode}`
+              : repo.runtime.lastSignal
+                ? `signal ${repo.runtime.lastSignal}`
+                : repo.runtime.message ?? 'No recorded exit'}
+          </dd>
+        </div>
+        <div className="details-row stacked">
+          <dt>Install log</dt>
+          <dd>
+            {repo.install.logTail.length ? (
+              <pre className="log-tail">{repo.install.logTail.join('\n')}</pre>
+            ) : (
+              'No install log captured yet.'
+            )}
+          </dd>
+        </div>
+        <div className="details-row stacked">
+          <dt>Recent logs</dt>
+          <dd>
+            {repo.runtime.logTail.length ? (
+              <pre className="log-tail">{repo.runtime.logTail.join('\n')}</pre>
+            ) : (
+              'No runtime logs captured yet.'
+            )}
+          </dd>
+        </div>
+        <div className="details-row stacked">
+          <dt>Notes</dt>
+          <dd>{repo.notes || 'No notes yet.'}</dd>
+        </div>
+        <div className="details-row stacked">
+          <dt>Tags</dt>
+          <dd className="tag-group">
+            {repo.tags.length ? (
+              repo.tags.map((tag) => (
+                <span key={tag} className="tag">
+                  {tag}
+                </span>
+              ))
+            ) : (
+              'No tags'
+            )}
+          </dd>
+        </div>
+      </dl>
+      </AccordionSection>
+    </>
+  )
+}

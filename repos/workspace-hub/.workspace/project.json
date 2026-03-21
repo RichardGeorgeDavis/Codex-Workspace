@@ -1,0 +1,18 @@
+{
+  "name": "Workspace Hub",
+  "slug": "workspace-hub",
+  "type": "node-app",
+  "preferredMode": "direct",
+  "packageManager": "pnpm",
+  "devCommand": "pnpm dev",
+  "buildCommand": "pnpm build",
+  "previewCommand": "pnpm preview",
+  "previewUrl": "http://127.0.0.1:4100",
+  "healthcheckUrl": "http://127.0.0.1:4101/api/health",
+  "tags": [
+    "hub",
+    "workspace",
+    "tooling"
+  ],
+  "notes": "Local-first dashboard for managing mixed-stack repo workspaces."
+}
