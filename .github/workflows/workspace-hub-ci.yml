@@ -1,0 +1,56 @@
+name: Workspace Hub CI
+
+on:
+  pull_request:
+    paths:
+      - "repos/workspace-hub/**"
+      - ".github/workflows/workspace-hub-ci.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "repos/workspace-hub/**"
+      - ".github/workflows/workspace-hub-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workspace-hub-ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: repos/workspace-hub
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: repos/workspace-hub/pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@9.4.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build
+        run: pnpm build
