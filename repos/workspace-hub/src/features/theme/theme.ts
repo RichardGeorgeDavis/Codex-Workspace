@@ -1,4 +1,4 @@
-export type ThemePreset = 'preset-1' | 'preset-2'
+export type ThemePreset = 'preset-1' | 'preset-2' | 'preset-3' | 'preset-4' | 'preset-5'
 export type ThemeMode = 'dark' | 'light'
 
 export type ThemePreference = {
@@ -13,7 +13,13 @@ export type ThemePresetOption = {
   palette: string
 }
 
-const themePresetLookup = new Set<ThemePreset>(['preset-1', 'preset-2'])
+const themePresetLookup = new Set<ThemePreset>([
+  'preset-1',
+  'preset-2',
+  'preset-3',
+  'preset-4',
+  'preset-5',
+])
 const themeModeLookup = new Set<ThemeMode>(['dark', 'light'])
 
 export const defaultThemePreference: ThemePreference = {
@@ -36,6 +42,27 @@ export const themePresets: ThemePresetOption[] = [
     id: 'preset-2',
     label: 'Preset 2 · Dracula Ops',
     palette: 'Dracula Classic / Alucard Classic',
+  },
+  {
+    description:
+      'Preset 3 ports the local github-master Dracula Pro reference into the Hub with GitHub-style controls and denser spacing.',
+    id: 'preset-3',
+    label: 'Preset 3 · Dracula Pro GitHub',
+    palette: 'github-master Dracula Pro',
+  },
+  {
+    description:
+      'Preset 4 leans into the supplied Dracula Pro palette with a softer IDE-style surface stack and stronger purple-pink controls.',
+    id: 'preset-4',
+    label: 'Preset 4 · Dracula Pro Studio',
+    palette: 'Dracula Pro / Buffy / Alucard',
+  },
+  {
+    description:
+      'Preset 5 pushes a darker control-room dashboard using Dracula Pro, Van Helsing, and Alucard tokens with brighter component accents.',
+    id: 'preset-5',
+    label: 'Preset 5 · Dracula Pro Control',
+    palette: 'Dracula Pro / Van Helsing / Alucard',
   },
 ]
 
