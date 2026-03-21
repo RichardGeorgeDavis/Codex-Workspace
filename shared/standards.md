@@ -24,6 +24,14 @@ Codex Workspace keeps repositories portable and independently runnable.
 - Keep repo metadata lightweight and readable.
 - Use `shared/repo-index.json` as the shared inventory placeholder until Workspace Hub owns it.
 
+## Agent Portability
+
+- Keep portable tracked skills in `shared/skills/` or repo-local `.workspace/skills/`.
+- Treat `.agents/skills/`, `.claude/skills/`, `.github/skills/`, and similar folders as adapter targets rather than the canonical source.
+- Keep portable MCP examples separate from real credentials and machine-specific settings.
+- Store local-only agent config, exports, and secrets in ignored locations such as `tools/local/`.
+- Do not make AI-agent setup a required dependency for normal repo runtime.
+
 ## Runtime Defaults
 
 - `wordpress` repos usually prefer `external`.
