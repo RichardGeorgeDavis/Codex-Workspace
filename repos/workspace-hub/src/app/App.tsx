@@ -5,6 +5,15 @@ import { SectionCard } from '../components/SectionCard.tsx'
 import { RepoSnapshot } from '../features/repos/RepoSnapshot.tsx'
 import { SettingsPanel } from '../features/settings/SettingsPanel.tsx'
 import { StatusStrip } from '../features/status/StatusStrip.tsx'
+import { ThemeControls } from '../features/theme/ThemeControls.tsx'
+import {
+  applyThemePreference,
+  persistThemePreference,
+  themePresets,
+  type ThemeMode,
+  type ThemePreference,
+  type ThemePreset,
+} from '../features/theme/theme.ts'
 import {
   fetchWorkspaceSummary,
   generateRepoCover,
@@ -22,6 +31,9 @@ import type { RepoType, WorkspaceRepo, WorkspaceSummary } from '../types/workspa
 import './app.css'
 
 type RepoFilterValue = RepoType | 'all' | 'external' | 'runnable'
+type AppProps = {
+  initialThemePreference: ThemePreference
+}
 
 function formatGeneratedAt(value: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -110,7 +122,7 @@ function filterRepos(
   })
 }
 
-export function App() {
+export function App({ initialThemePreference }: AppProps) {
   const [summary, setSummary] = useState<WorkspaceSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -119,6 +131,7 @@ export function App() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
   const [selectedFilter, setSelectedFilter] = useState<RepoFilterValue>('all')
+  const [themePreference, setThemePreference] = useState(initialThemePreference)
   const deferredSearchTerm = useDeferredValue(searchTerm)
   const lastRecordedSelectionRef = useRef<string | null>(null)
 
@@ -357,6 +370,11 @@ export function App() {
     }
   }, [])
 
+  useEffect(() => {
+    applyThemePreference(themePreference)
+    persistThemePreference(themePreference)
+  }, [themePreference])
+
   const availableTypes = summary
     ? [...new Set(summary.repos.map((repo) => repo.type))].sort()
     : []
@@ -364,6 +382,8 @@ export function App() {
   const filteredRepos = summary
     ? filterRepos(summary.repos, normalizedSearch, selectedFilter)
     : []
+  const activeThemePreset =
+    themePresets.find((preset) => preset.id === themePreference.preset) ?? themePresets[0]
 
   useEffect(() => {
     const nextFilteredRepos = summary
@@ -419,38 +439,64 @@ export function App() {
 
   const generatedAt = summary ? formatGeneratedAt(summary.generatedAt) : 'Waiting for API'
 
+  function handleThemePresetChange(preset: ThemePreset) {
+    setThemePreference((currentPreference) => ({
+      ...currentPreference,
+      preset,
+    }))
+  }
+
+  function handleThemeModeChange(mode: ThemeMode) {
+    setThemePreference((currentPreference) => ({
+      ...currentPreference,
+      mode,
+    }))
+  }
+
   return (
     <div className="app-shell">
       <header className="hero-panel reveal">
-        <div className="hero-copy">
-          <p className="eyebrow">Codex Workspace Control Centre</p>
-          <h1>Workspace Hub</h1>
-          <p className="hero-text">
-            A local dashboard for discovering repositories, tracking runtime
-            state, and keeping direct previews as the default path.
-          </p>
-        </div>
+        <div className="hero-grid">
+          <div className="hero-main">
+            <div className="hero-copy">
+              <p className="eyebrow">Codex Workspace Control Centre</p>
+              <h1>Workspace Hub</h1>
+              <p className="hero-text">
+                A local dashboard for discovering repositories, tracking runtime
+                state, and keeping direct previews as the default path.
+              </p>
+              <p className="hero-subtext">{activeThemePreset.description}</p>
+            </div>
 
-        <div className="hero-actions">
-          <button
-            className="primary-button"
-            disabled={loading}
-            onClick={() => {
-              void loadSummary()
-            }}
-            type="button"
-          >
-            {loading ? 'Refreshing snapshot...' : 'Refresh snapshot'}
-          </button>
+            <div className="hero-actions">
+              <button
+                className="primary-button"
+                disabled={loading}
+                onClick={() => {
+                  void loadSummary()
+                }}
+                type="button"
+              >
+                {loading ? 'Refreshing snapshot...' : 'Refresh snapshot'}
+              </button>
 
-          <a className="secondary-link" href="/api/health" rel="noreferrer" target="_blank">
-            API health
-          </a>
-        </div>
+              <a className="secondary-link" href="/api/health" rel="noreferrer" target="_blank">
+                API health
+              </a>
+            </div>
 
-        <div className="hero-meta">
-          <span>Workspace root: {summary?.workspaceRoot ?? 'Loading...'}</span>
-          <span>Last sync: {generatedAt}</span>
+            <div className="hero-meta">
+              <span>Workspace root: {summary?.workspaceRoot ?? 'Loading...'}</span>
+              <span>Last sync: {generatedAt}</span>
+            </div>
+          </div>
+
+          <ThemeControls
+            mode={themePreference.mode}
+            onModeChange={handleThemeModeChange}
+            onPresetChange={handleThemePresetChange}
+            preset={themePreference.preset}
+          />
         </div>
       </header>
 

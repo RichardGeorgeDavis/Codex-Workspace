@@ -1,27 +1,429 @@
 :root {
-  font-family: "Avenir Next", "Segoe UI", sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color: #123043;
-  background:
-    radial-gradient(circle at top, rgba(255, 182, 122, 0.2), transparent 28%),
-    linear-gradient(180deg, #fbf4e4 0%, #f3ebdf 56%, #efe6d6 100%);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
+  --font-body: "Avenir Next", "Segoe UI", sans-serif;
+  --font-display: "Iowan Old Style", "Palatino Linotype", serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", "Menlo", monospace;
+
+  --page-background:
+    radial-gradient(circle at top, rgba(255, 182, 122, 0.2), transparent 28%),
+    linear-gradient(180deg, #fbf4e4 0%, #f3ebdf 56%, #efe6d6 100%);
+  --page-grid-line: rgba(18, 48, 67, 0.025);
+  --page-grid-opacity: 1;
+  --selection-background: rgba(88, 134, 188, 0.22);
+  --selection-color: #123043;
+
   --paper: #f8ecd6;
   --paper-strong: #fffaf2;
   --ink-deep: #102f43;
   --text-default: #18374a;
-  --text-soft: #d9e7f1;
   --text-muted: #5d7283;
-  --accent-warm: #ffb07c;
-  --accent-soft: #ffcf93;
-  --line-soft: rgba(16, 47, 67, 0.12);
-  --line-strong: rgba(248, 236, 214, 0.18);
-  --panel-shadow: 0 28px 100px rgba(14, 31, 43, 0.28);
+  --text-soft: #d9e7f1;
+  --text-strong: #123043;
+  --text-inverse: #f8ecd6;
+
+  --accent-primary: #ffb07c;
+  --accent-secondary: #ffcf93;
+  --accent-tertiary: #5886bc;
+
+  --surface-hero:
+    linear-gradient(135deg, rgba(11, 31, 48, 0.96), rgba(19, 52, 69, 0.92));
+  --hero-glow-one: rgba(255, 176, 124, 0.28);
+  --hero-glow-two: rgba(88, 134, 188, 0.18);
+  --hero-orb: rgba(248, 236, 214, 0.08);
+  --hero-border: rgba(248, 236, 214, 0.18);
+  --hero-title-color: #fffaf2;
+  --hero-copy-color: #d9e7f1;
+  --hero-subtext-color: rgba(248, 236, 214, 0.78);
+
+  --surface-card: rgba(250, 247, 239, 0.84);
+  --surface-card-strong: rgba(248, 236, 214, 0.6);
+  --surface-card-subtle: rgba(255, 255, 255, 0.62);
+  --surface-panel: rgba(255, 255, 255, 0.72);
+  --surface-muted: rgba(255, 255, 255, 0.48);
+  --surface-inset: rgba(16, 47, 67, 0.08);
+  --surface-code: rgba(16, 47, 67, 0.92);
+  --surface-console: rgba(248, 236, 214, 0.08);
+  --surface-console-input: rgba(248, 236, 214, 0.12);
+  --surface-console-toggle: rgba(248, 236, 214, 0.08);
+  --surface-console-toggle-active: rgba(255, 176, 124, 0.24);
+
+  --border-soft: rgba(18, 48, 67, 0.08);
+  --border-strong: rgba(248, 236, 214, 0.18);
+  --border-muted: rgba(18, 48, 67, 0.18);
+  --border-accent: rgba(88, 134, 188, 0.32);
+  --border-console: rgba(248, 236, 214, 0.16);
+
+  --tag-background: rgba(18, 48, 67, 0.1);
+  --tag-color: #102f43;
+  --tag-pinned-background: rgba(255, 176, 124, 0.26);
+  --tag-pinned-color: #7a4d1d;
+  --selected-card-background: rgba(237, 244, 250, 0.92);
+
+  --button-primary-background:
+    linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  --button-primary-color: #102f43;
+  --button-secondary-background: rgba(248, 236, 214, 0.08);
+  --button-secondary-border: rgba(248, 236, 214, 0.28);
+  --button-secondary-color: #f8ecd6;
+  --input-background: rgba(255, 255, 255, 0.72);
+  --input-border: rgba(18, 48, 67, 0.12);
+  --input-color: #18374a;
+  --input-placeholder: rgba(93, 114, 131, 0.78);
+
+  --status-neutral-background: rgba(18, 48, 67, 0.1);
+  --status-neutral-color: #102f43;
+  --status-success-background: rgba(64, 152, 95, 0.18);
+  --status-success-color: #1d5f34;
+  --status-error-background: rgba(182, 73, 49, 0.18);
+  --status-error-color: #7c2f1e;
+  --status-warning-background: rgba(198, 144, 66, 0.18);
+  --status-warning-color: #8a5a1f;
+  --status-muted-background: rgba(126, 100, 66, 0.14);
+  --status-muted-color: #6a5239;
+  --status-info-background: rgba(88, 134, 188, 0.16);
+  --status-info-color: #1f4f79;
+
+  --message-error-background: rgba(255, 228, 215, 0.88);
+  --message-error-border: rgba(182, 73, 49, 0.18);
+  --message-error-color: #6f2c18;
+  --copy-success-color: #1d5f34;
+
+  --rule-accent: rgba(88, 134, 188, 0.32);
+  --focus-ring: rgba(88, 134, 188, 0.4);
+  --console-text: #fffaf2;
+  --console-muted: rgba(248, 236, 214, 0.74);
+  --console-chip-background: rgba(248, 236, 214, 0.12);
+  --console-chip-color: #f8ecd6;
+  --console-toggle-color: rgba(248, 236, 214, 0.78);
+  --console-toggle-active-color: #fffaf2;
+
+  --log-color: #eff6fb;
+  --shadow-panel: 0 28px 100px rgba(14, 31, 43, 0.28);
+  --shadow-card: 0 24px 60px rgba(38, 56, 74, 0.08);
+  --shadow-hover: 0 12px 30px rgba(18, 48, 67, 0.08);
+  --shadow-console: 0 18px 40px rgba(14, 31, 43, 0.18);
+
+  --radius-panel: 1.75rem;
+  --radius-card: 1.4rem;
+  --radius-control: 0.95rem;
+  --radius-button: 0.95rem;
+  --radius-pill: 999px;
+  --panel-blur: 12px;
+
+  font-family: var(--font-body);
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--text-default);
+  background: var(--page-background);
+}
+
+:root[data-theme-preset='preset-1'][data-theme-mode='dark'] {
+  --page-background:
+    radial-gradient(circle at top, rgba(255, 176, 124, 0.1), transparent 26%),
+    radial-gradient(circle at right top, rgba(88, 134, 188, 0.12), transparent 32%),
+    linear-gradient(180deg, #0b1220 0%, #101a2a 54%, #162437 100%);
+  --page-grid-line: rgba(142, 162, 183, 0.08);
+  --selection-background: rgba(127, 187, 230, 0.22);
+  --selection-color: #edf5fb;
+
+  --paper: #dfe9f2;
+  --paper-strong: #f6f8fb;
+  --ink-deep: #08111d;
+  --text-default: #e0ebf3;
+  --text-muted: #8ea2b7;
+  --text-soft: #c5d7e6;
+  --text-strong: #f6f8fb;
+  --text-inverse: #dfe9f2;
+
+  --accent-primary: #ffb07c;
+  --accent-secondary: #ffd29c;
+  --accent-tertiary: #7fbbe6;
+
+  --surface-hero:
+    linear-gradient(135deg, rgba(9, 16, 26, 0.96), rgba(16, 27, 41, 0.94));
+  --hero-glow-one: rgba(255, 176, 124, 0.16);
+  --hero-glow-two: rgba(127, 187, 230, 0.16);
+  --hero-orb: rgba(223, 233, 242, 0.08);
+  --hero-border: rgba(127, 187, 230, 0.12);
+  --hero-title-color: #f6f8fb;
+  --hero-copy-color: #d3e0eb;
+  --hero-subtext-color: rgba(223, 233, 242, 0.7);
+
+  --surface-card: rgba(12, 20, 31, 0.84);
+  --surface-card-strong: rgba(16, 27, 41, 0.76);
+  --surface-card-subtle: rgba(16, 27, 41, 0.72);
+  --surface-panel: rgba(16, 27, 41, 0.78);
+  --surface-muted: rgba(16, 27, 41, 0.58);
+  --surface-inset: rgba(223, 233, 242, 0.08);
+  --surface-code: rgba(7, 14, 24, 0.94);
+  --surface-console: rgba(9, 16, 26, 0.42);
+  --surface-console-input: rgba(223, 233, 242, 0.08);
+  --surface-console-toggle: rgba(223, 233, 242, 0.06);
+  --surface-console-toggle-active: rgba(255, 176, 124, 0.22);
+
+  --border-soft: rgba(142, 162, 183, 0.12);
+  --border-strong: rgba(127, 187, 230, 0.12);
+  --border-muted: rgba(142, 162, 183, 0.18);
+  --border-accent: rgba(127, 187, 230, 0.34);
+  --border-console: rgba(223, 233, 242, 0.12);
+
+  --tag-background: rgba(142, 162, 183, 0.12);
+  --tag-color: #dfe9f2;
+  --tag-pinned-background: rgba(255, 176, 124, 0.2);
+  --tag-pinned-color: #ffd29c;
+  --selected-card-background: rgba(17, 33, 51, 0.92);
+
+  --button-primary-color: #08111d;
+  --button-secondary-background: rgba(223, 233, 242, 0.08);
+  --button-secondary-border: rgba(223, 233, 242, 0.14);
+  --button-secondary-color: #f6f8fb;
+  --input-background: rgba(9, 16, 26, 0.44);
+  --input-border: rgba(142, 162, 183, 0.14);
+  --input-color: #e0ebf3;
+  --input-placeholder: rgba(142, 162, 183, 0.74);
+
+  --status-neutral-background: rgba(142, 162, 183, 0.12);
+  --status-neutral-color: #dfe9f2;
+  --status-success-background: rgba(80, 250, 123, 0.16);
+  --status-success-color: #8af0a9;
+  --status-error-background: rgba(255, 85, 85, 0.18);
+  --status-error-color: #ff9a9a;
+  --status-warning-background: rgba(255, 184, 108, 0.18);
+  --status-warning-color: #ffd5ab;
+  --status-muted-background: rgba(142, 162, 183, 0.12);
+  --status-muted-color: #b8cad9;
+  --status-info-background: rgba(127, 187, 230, 0.18);
+  --status-info-color: #b8dcf5;
+
+  --message-error-background: rgba(65, 27, 24, 0.78);
+  --message-error-border: rgba(255, 154, 154, 0.14);
+  --message-error-color: #ffccc2;
+  --copy-success-color: #8af0a9;
+
+  --rule-accent: rgba(127, 187, 230, 0.34);
+  --focus-ring: rgba(127, 187, 230, 0.42);
+  --console-text: #f6f8fb;
+  --console-muted: rgba(223, 233, 242, 0.74);
+  --console-chip-background: rgba(223, 233, 242, 0.08);
+  --console-chip-color: #dfe9f2;
+  --console-toggle-color: rgba(223, 233, 242, 0.82);
+  --console-toggle-active-color: #08111d;
+
+  --log-color: #edf5fb;
+  --shadow-panel: 0 28px 100px rgba(0, 0, 0, 0.42);
+  --shadow-card: 0 24px 60px rgba(0, 0, 0, 0.22);
+  --shadow-hover: 0 16px 30px rgba(0, 0, 0, 0.2);
+  --shadow-console: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+:root[data-theme-preset='preset-2'] {
+  font-size: 14px;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+  --radius-panel: 0.875rem;
+  --radius-card: 0.75rem;
+  --radius-control: 0.375rem;
+  --radius-button: 0.375rem;
+  --panel-blur: 0px;
+}
+
+:root[data-theme-preset='preset-2'][data-theme-mode='light'] {
+  --page-background: #f5f5f5;
+  --page-grid-line: rgba(99, 93, 151, 0.08);
+  --page-grid-opacity: 0;
+  --selection-background: #cfcfde;
+  --selection-color: #1f1f1f;
+
+  --paper: #f5f5f5;
+  --paper-strong: #ffffff;
+  --ink-deep: #1f1f1f;
+  --text-default: #1f1f1f;
+  --text-muted: #635d97;
+  --text-soft: #635d97;
+  --text-strong: #1f1f1f;
+  --text-inverse: #f5f5f5;
+
+  --accent-primary: #644ac9;
+  --accent-secondary: #036a96;
+  --accent-tertiary: #a3144d;
+
+  --surface-hero: #ffffff;
+  --hero-glow-one: transparent;
+  --hero-glow-two: transparent;
+  --hero-orb: transparent;
+  --hero-border: #cfcfde;
+  --hero-title-color: #1f1f1f;
+  --hero-copy-color: #1f1f1f;
+  --hero-subtext-color: #635d97;
+
+  --surface-card: #ffffff;
+  --surface-card-strong: #ffffff;
+  --surface-card-subtle: #f5f5f5;
+  --surface-panel: #ffffff;
+  --surface-muted: #f5f5f5;
+  --surface-inset: #f5f5f5;
+  --surface-code: #2c2b31;
+  --surface-console: #ffffff;
+  --surface-console-input: #ffffff;
+  --surface-console-toggle: #f5f5f5;
+  --surface-console-toggle-active: #cfcfde;
+
+  --border-soft: #cfcfde;
+  --border-strong: #cfcfde;
+  --border-muted: #cfcfde;
+  --border-accent: #644ac9;
+  --border-console: #cfcfde;
+
+  --tag-background: #cfcfde;
+  --tag-color: #1f1f1f;
+  --tag-pinned-background: rgba(163, 20, 77, 0.12);
+  --tag-pinned-color: #a3144d;
+  --selected-card-background: #ffffff;
+
+  --button-primary-background: #644ac9;
+  --button-primary-color: #f5f5f5;
+  --button-secondary-background: #ffffff;
+  --button-secondary-border: #cfcfde;
+  --button-secondary-color: #1f1f1f;
+  --input-background: #ffffff;
+  --input-border: #cfcfde;
+  --input-color: #1f1f1f;
+  --input-placeholder: #635d97;
+
+  --status-neutral-background: #cfcfde;
+  --status-neutral-color: #1f1f1f;
+  --status-success-background: rgba(20, 113, 10, 0.12);
+  --status-success-color: #14710a;
+  --status-error-background: rgba(203, 58, 42, 0.12);
+  --status-error-color: #cb3a2a;
+  --status-warning-background: rgba(163, 77, 20, 0.12);
+  --status-warning-color: #a34d14;
+  --status-muted-background: rgba(99, 93, 151, 0.12);
+  --status-muted-color: #635d97;
+  --status-info-background: rgba(3, 106, 150, 0.12);
+  --status-info-color: #036a96;
+
+  --message-error-background: rgba(203, 58, 42, 0.12);
+  --message-error-border: rgba(203, 58, 42, 0.24);
+  --message-error-color: #cb3a2a;
+  --copy-success-color: #14710a;
+
+  --rule-accent: #644ac9;
+  --focus-ring: rgba(100, 74, 201, 0.32);
+  --console-text: #1f1f1f;
+  --console-muted: #635d97;
+  --console-chip-background: #f5f5f5;
+  --console-chip-color: #1f1f1f;
+  --console-toggle-color: #1f1f1f;
+  --console-toggle-active-color: #1f1f1f;
+
+  --log-color: #f5f5f5;
+  --shadow-panel: none;
+  --shadow-card: none;
+  --shadow-hover: none;
+  --shadow-console: none;
+}
+
+:root[data-theme-preset='preset-2'][data-theme-mode='dark'] {
+  --page-background: #22212c;
+  --page-grid-line: rgba(121, 112, 169, 0.12);
+  --page-grid-opacity: 0;
+  --selection-background: #454158;
+  --selection-color: #f8f8f2;
+
+  --paper: #f8f8f2;
+  --paper-strong: #ffffff;
+  --ink-deep: #1b1a23;
+  --text-default: #f8f8f2;
+  --text-muted: #7970a9;
+  --text-soft: #c6c6c2;
+  --text-strong: #ffffff;
+  --text-inverse: #f8f8f2;
+
+  --accent-primary: #9580ff;
+  --accent-secondary: #80ffea;
+  --accent-tertiary: #ff80bf;
+
+  --surface-hero: #22212c;
+  --hero-glow-one: transparent;
+  --hero-glow-two: transparent;
+  --hero-orb: transparent;
+  --hero-border: #454158;
+  --hero-title-color: #f8f8f2;
+  --hero-copy-color: #c6c6c2;
+  --hero-subtext-color: #7970a9;
+
+  --surface-card: #22212c;
+  --surface-card-strong: #22212c;
+  --surface-card-subtle: #22212c;
+  --surface-panel: #22212c;
+  --surface-muted: #22212c;
+  --surface-inset: #454158;
+  --surface-code: #1b1a23;
+  --surface-console: #22212c;
+  --surface-console-input: #22212c;
+  --surface-console-toggle: #454158;
+  --surface-console-toggle-active: rgba(149, 128, 255, 0.18);
+
+  --border-soft: #454158;
+  --border-strong: #454158;
+  --border-muted: #7970a9;
+  --border-accent: #9580ff;
+  --border-console: #454158;
+
+  --tag-background: #454158;
+  --tag-color: #f8f8f2;
+  --tag-pinned-background: rgba(255, 128, 191, 0.18);
+  --tag-pinned-color: #ff80bf;
+  --selected-card-background: #454158;
+
+  --button-primary-background: #9580ff;
+  --button-primary-color: #22212c;
+  --button-secondary-background: #22212c;
+  --button-secondary-border: #454158;
+  --button-secondary-color: #f8f8f2;
+  --input-background: #22212c;
+  --input-border: #454158;
+  --input-color: #f8f8f2;
+  --input-placeholder: #7970a9;
+
+  --status-neutral-background: #454158;
+  --status-neutral-color: #f8f8f2;
+  --status-success-background: rgba(138, 255, 128, 0.16);
+  --status-success-color: #8aff80;
+  --status-error-background: rgba(255, 149, 128, 0.16);
+  --status-error-color: #ff9580;
+  --status-warning-background: rgba(255, 202, 128, 0.16);
+  --status-warning-color: #ffca80;
+  --status-muted-background: rgba(121, 112, 169, 0.18);
+  --status-muted-color: #c6c6c2;
+  --status-info-background: rgba(128, 255, 234, 0.16);
+  --status-info-color: #80ffea;
+
+  --message-error-background: rgba(255, 149, 128, 0.14);
+  --message-error-border: rgba(255, 149, 128, 0.26);
+  --message-error-color: #ff9580;
+  --copy-success-color: #8aff80;
+
+  --rule-accent: #9580ff;
+  --focus-ring: rgba(149, 128, 255, 0.42);
+  --console-text: #f8f8f2;
+  --console-muted: #7970a9;
+  --console-chip-background: #454158;
+  --console-chip-color: #f8f8f2;
+  --console-toggle-color: #f8f8f2;
+  --console-toggle-active-color: #f8f8f2;
+
+  --log-color: #f8f8f2;
+  --shadow-panel: none;
+  --shadow-card: none;
+  --shadow-hover: none;
+  --shadow-console: none;
 }
 
 * {
@@ -37,6 +439,10 @@ body {
   min-width: 320px;
   min-height: 100vh;
   color: var(--text-default);
+  background: var(--page-background);
+  transition:
+    background 220ms ease,
+    color 220ms ease;
 }
 
 body::before {
@@ -44,11 +450,17 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
+  opacity: var(--page-grid-opacity);
   background-image:
-    linear-gradient(rgba(18, 48, 67, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(18, 48, 67, 0.025) 1px, transparent 1px);
+    linear-gradient(var(--page-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--page-grid-line) 1px, transparent 1px);
   background-size: 34px 34px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent 88%);
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.72), transparent 88%);
+}
+
+::selection {
+  background: var(--selection-background);
+  color: var(--selection-color);
 }
 
 a {
@@ -62,10 +474,16 @@ select {
   font: inherit;
 }
 
+code,
+pre {
+  font-family: var(--font-mono);
+}
+
 h1,
 h2,
 h3 {
-  font-family: "Iowan Old Style", "Palatino Linotype", serif;
+  margin-block: 0;
+  font-family: var(--font-display);
   letter-spacing: -0.02em;
   color: inherit;
 }
