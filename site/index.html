@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Codex Workspace</title>
+    <meta
+      name="description"
+      content="Local-first workspace structure for managing many standalone repos, shared caches, and a practical Workspace Hub without forcing a monorepo."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <p class="eyebrow">Codex Workspace</p>
+        <h1>One workspace for many repos, without pretending they are one project.</h1>
+        <p class="lede">
+          Codex Workspace is a local-first structure for mixed stacks. It keeps
+          repositories independently runnable, shares caches instead of installs,
+          and pairs the workspace with a practical Workspace Hub for discovery,
+          runtime control, and previews.
+        </p>
+        <div class="hero-actions">
+          <a href="https://github.com/RichardGeorgeDavis/Codex-Workspace">View Repository</a>
+          <a href="https://github.com/RichardGeorgeDavis/Codex-Workspace/tree/main/docs">Read Docs</a>
+          <a href="https://github.com/RichardGeorgeDavis/Codex-Workspace/releases/tag/v0.1.0">Latest Release</a>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="card emphasis">
+          <h2>Core model</h2>
+          <ul>
+            <li>Keep unrelated repositories independent.</li>
+            <li>Share caches, not installs.</li>
+            <li>Support mixed runtime models without flattening them.</li>
+            <li>Keep ServBay optional.</li>
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2>Workspace Hub</h2>
+          <p>
+            The vendored Workspace Hub app scans sibling repos, classifies them
+            conservatively, exposes runtime state, and adds start, stop, open,
+            and preview actions without forcing a monorepo.
+          </p>
+          <a class="text-link" href="https://github.com/RichardGeorgeDavis/Codex-Workspace/tree/main/repos/workspace-hub">
+            Explore Workspace Hub
+          </a>
+        </section>
+
+        <section class="card">
+          <h2>Documentation</h2>
+          <p>
+            The canonical documentation set lives in the repo root under
+            <code>docs/</code>, with public project framing in the README and
+            repo-local guidance kept with the code it describes.
+          </p>
+          <a class="text-link" href="https://github.com/RichardGeorgeDavis/Codex-Workspace/tree/main/docs">
+            Open docs index
+          </a>
+        </section>
+
+        <section class="card">
+          <h2>Support the work</h2>
+          <p>
+            If this workspace model or the Hub tooling is useful, you can
+            support ongoing work here.
+          </p>
+          <a class="text-link" href="https://www.paypal.com/donate/?hosted_button_id=Z9ET7KXE4MMZS">
+            Support the work
+          </a>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
