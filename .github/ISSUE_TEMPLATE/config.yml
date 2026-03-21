@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Ask a question in Discussions
+    url: https://github.com/RichardGeorgeDavis/Codex-Workspace/discussions/categories/q-a
+    about: Use Discussions Q&A for setup help, usage questions, and workflow discussion.
   - name: Workspace docs
     url: https://github.com/RichardGeorgeDavis/Codex-Workspace/tree/main/docs
     about: Start with the workspace docs before opening a broad structure or usage question.
