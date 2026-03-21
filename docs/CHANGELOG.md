@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-03-22
+
+- Clarified that upstream skill catalogs such as `openai/skills` should be treated as optional sources for selected Codex skills rather than vendored workspace dependencies.
+- Added matching guidance in the root README, the cross-agent skills and MCP note, and the Workspace Hub extension guide.
+
 ## 2026-03-21
 
 - Added GitHub Discussions support links so repository questions are routed toward Discussions Q&A instead of Issues.

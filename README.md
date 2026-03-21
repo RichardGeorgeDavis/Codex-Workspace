@@ -153,6 +153,13 @@ See:
 - [docs/06-cross-agent-skills-and-mcp.md](docs/06-cross-agent-skills-and-mcp.md)
 - [docs/07-context-cache-and-retrieval.md](docs/07-context-cache-and-retrieval.md)
 
+External skill catalogs such as [`openai/skills`](https://github.com/openai/skills) should be treated as optional upstream sources for Codex skills, not vendored workspace dependencies.
+
+- install only the specific skills that solve a real workflow need
+- prefer local skill installation via Codex tooling such as `$skill-installer`
+- keep workspace-specific skills in tracked portable folders such as `shared/skills/` or repo-local `.workspace/skills/`
+- do not add the whole upstream skill catalog to `repos/`, `tools/`, or as a submodule unless there is a very specific maintenance reason
+
 ## Community
 
 - Ask questions in [GitHub Discussions Q&A](https://github.com/RichardGeorgeDavis/Codex-Workspace/discussions/categories/q-a)

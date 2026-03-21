@@ -23,6 +23,13 @@ Do not make `.agents/skills/`, `.claude/skills/`, `.github/skills/`, or any simi
 
 Treat those folders as compatibility targets that can be generated, symlinked, or copied from a portable source when a given tool needs them.
 
+Treat upstream skill catalogs such as [`openai/skills`](https://github.com/openai/skills) the same way:
+
+- use them as optional source material for selected Codex skills
+- install specific skills when they are useful
+- do not vendor the whole catalog into this workspace by default
+- keep canonical workspace skill content in `shared/skills/` or repo-local `.workspace/skills/`
+
 ## Minimal layout
 
 ```text
@@ -154,6 +161,8 @@ That means:
 - export or symlink into the agent-specific path only when needed
 - keep generated adapter folders local unless there is a strong reason to publish them
 - if the adapter target lives inside a repo, let that repo decide whether to ignore or publish it
+
+If you need a skill from an upstream catalog, prefer installing that one skill through the agent's supported installer flow rather than copying the upstream repository into `repos/` or `tools/`.
 
 ## MCP rule
 

@@ -16,6 +16,12 @@ Good public guidance includes:
 
 If you use a local assistant or agent setup, keep machine-specific skill lists and private workflow notes in ignored `*.local.md` files instead of tracked docs.
 
+If you use upstream skill catalogs such as [`openai/skills`](https://github.com/openai/skills), treat them as optional sources for selected skills rather than as something to vendor into this repo or the wider workspace.
+
+- install only the skills that solve a real workflow problem
+- prefer the agent's supported installer flow
+- keep repo-owned guidance in tracked portable locations such as `.workspace/skills/`
+
 ## Good extension candidates
 
 - workspace maintenance and Git hygiene
