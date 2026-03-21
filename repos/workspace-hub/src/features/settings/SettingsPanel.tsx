@@ -49,6 +49,10 @@ export function SettingsPanel({ loading, summary }: SettingsPanelProps) {
             <code>{summary?.stats.topLevelEntries}</code>
           </li>
           <li className="settings-item">
+            <span>Archive files</span>
+            <code>{summary?.stats.archiveFiles}</code>
+          </li>
+          <li className="settings-item">
             <span>Cache buckets</span>
             <code>{summary?.stats.cacheBuckets}</code>
           </li>

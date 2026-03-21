@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process'
+import { type Dirent } from 'node:fs'
 import { access, readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -14,6 +15,7 @@ import type {
   RepoHealth,
   RepoRuntime,
   RepoType,
+  WorkspaceArchive,
   WorkspaceManifestRecord,
   WorkspaceMilestone,
   WorkspaceRepo,
@@ -78,6 +80,26 @@ const repoTypes: RepoType[] = [
   'wordpress',
 ]
 
+const archiveFileExtensions = [
+  '.tar.bz2',
+  '.tar.gz',
+  '.tar.xz',
+  '.tar.zst',
+  '.tbz2',
+  '.tgz',
+  '.txz',
+  '.7z',
+  '.rar',
+  '.tar',
+  '.zip',
+  '.bz2',
+  '.gz',
+  '.xz',
+  '.zst',
+]
+
+const ignoredArchiveDisplayRoots = ['repos/Check-[Sort+add]/']
+
 const previewModes: PreviewMode[] = ['direct', 'external', 'servbay']
 const publicManifestFileName = 'project.json'
 const localManifestFileName = 'project.local.json'
@@ -104,6 +126,12 @@ const gitVisibilityCache = new Map<
     result: Pick<RepoGitState, 'remoteUrl' | 'visibility' | 'visibilitySource'>
   }
 >()
+
+type VisibleDirectoryData = {
+  archiveFiles: WorkspaceArchive[]
+  directoryNames: string[]
+  names: string[]
+}
 
 function isVisible(name: string) {
   return !name.startsWith('.')
@@ -152,14 +180,53 @@ async function fileExists(targetPath: string) {
   }
 }
 
-async function readVisibleDirectories(root: string) {
+async function readVisibleEntries(root: string) {
   const entries = await readdir(root, { withFileTypes: true })
+
+  return entries.filter((entry) => isVisible(entry.name))
+}
+
+async function readVisibleDirectories(root: string) {
+  const entries = await readVisibleEntries(root)
 
   return entries.filter((entry) => entry.isDirectory() && isVisible(entry.name))
 }
 
-async function readVisibleNames(root: string) {
-  return (await readdir(root)).filter(isVisible)
+function isArchiveFileName(name: string) {
+  const normalizedName = name.trim().toLowerCase()
+
+  return normalizedName.length > 0
+    && archiveFileExtensions.some((extension) => normalizedName.endsWith(extension))
+}
+
+function buildArchiveRecords(rootPath: string, entries: Dirent[]): WorkspaceArchive[] {
+  return entries
+    .filter((entry) => (entry.isFile() || entry.isSymbolicLink()) && isArchiveFileName(entry.name))
+    .map((entry) => {
+      const archivePath = path.join(rootPath, entry.name)
+
+      return {
+        name: entry.name,
+        path: archivePath,
+        relativePath: path.relative(workspaceRoot, archivePath),
+      }
+    })
+}
+
+function shouldDisplayArchive(archive: WorkspaceArchive) {
+  return !ignoredArchiveDisplayRoots.some((prefix) => archive.relativePath.startsWith(prefix))
+}
+
+function buildVisibleDirectoryData(rootPath: string, entries: Dirent[]): VisibleDirectoryData {
+  return {
+    archiveFiles: buildArchiveRecords(rootPath, entries),
+    directoryNames: entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name),
+    names: entries.map((entry) => entry.name),
+  }
+}
+
+async function readVisibleDirectoryData(rootPath: string): Promise<VisibleDirectoryData> {
+  return buildVisibleDirectoryData(rootPath, await readVisibleEntries(rootPath))
 }
 
 async function readJsonIfPresent<T>(targetPath: string): Promise<T | null> {
@@ -1107,12 +1174,12 @@ function isRepoCandidate(names: string[], collection: string | null) {
 
 async function buildRepoRecord(
   fullPath: string,
+  names: string[],
   collection: string | null,
   installSnapshots: Map<string, RepoInstall>,
   runtimeSnapshots: Map<string, RepoRuntime>,
   savedMetadata: StoredRepoMetadata | null,
 ): Promise<WorkspaceRepo | null> {
-  const names = await readVisibleNames(fullPath)
   const { hasManifest, manifest, manifestPath } = await readRepoManifest(fullPath)
   const packageJson = await readJsonIfPresent<PackageJson>(path.join(fullPath, 'package.json'))
 
@@ -1259,60 +1326,79 @@ async function discoverWorkspace(
   installSnapshots: Map<string, RepoInstall>,
   runtimeSnapshots: Map<string, RepoRuntime>,
 ) {
-  const topLevelDirectories = await readVisibleDirectories(reposRoot)
+  const reposDirectoryData = await readVisibleDirectoryData(reposRoot)
   const savedMetadataState = await readWorkspaceMetadata()
   const directoryResults = await Promise.all(
-    topLevelDirectories.map(async (directory) => {
-      const fullPath = path.join(reposRoot, directory.name)
-      const [directRepo, childDirectories] = await Promise.all([
-        buildRepoRecord(
-          fullPath,
-          null,
-          installSnapshots,
-          runtimeSnapshots,
-          savedMetadataState.repos[path.relative(workspaceRoot, fullPath)] ?? null,
-        ),
-        readVisibleDirectories(fullPath),
-      ])
+    reposDirectoryData.directoryNames.map(async (directoryName) => {
+      const fullPath = path.join(reposRoot, directoryName)
+      const directoryData = await readVisibleDirectoryData(fullPath)
+      const directRepo = await buildRepoRecord(
+        fullPath,
+        directoryData.names,
+        null,
+        installSnapshots,
+        runtimeSnapshots,
+        savedMetadataState.repos[path.relative(workspaceRoot, fullPath)] ?? null,
+      )
 
       if (directRepo) {
         return {
+          archives: directoryData.archiveFiles,
           repos: [directRepo],
           topLevelEntry: {
-            childDirectories: childDirectories.length,
+            childDirectories: directoryData.directoryNames.length,
             kind: 'repo' as const,
-            name: directory.name,
+            name: directoryName,
             path: fullPath,
           },
         }
       }
 
-      const childRepos = (
-        await Promise.all(
-          childDirectories.map(async (childDirectory) => {
-            const childPath = path.join(fullPath, childDirectory.name)
-            return buildRepoRecord(
+      const childResults = await Promise.all(
+        directoryData.directoryNames.map(async (childDirectoryName) => {
+          const childPath = path.join(fullPath, childDirectoryName)
+          const childDirectoryData = await readVisibleDirectoryData(childPath)
+
+          return {
+            archiveFiles: childDirectoryData.archiveFiles,
+            repo: await buildRepoRecord(
               childPath,
-              directory.name,
+              childDirectoryData.names,
+              directoryName,
               installSnapshots,
               runtimeSnapshots,
               savedMetadataState.repos[path.relative(workspaceRoot, childPath)] ?? null,
-            )
-          }),
-        )
-      ).filter((repo): repo is WorkspaceRepo => Boolean(repo))
+            ),
+          }
+        }),
+      )
+
+      const childRepos = childResults
+        .map((result) => result.repo)
+        .filter((repo): repo is WorkspaceRepo => Boolean(repo))
 
       return {
+        archives: [
+          ...directoryData.archiveFiles,
+          ...childResults.flatMap((result) => result.archiveFiles),
+        ],
         repos: childRepos,
         topLevelEntry: {
-          childDirectories: childDirectories.length,
+          childDirectories: directoryData.directoryNames.length,
           kind: 'group' as const,
-          name: directory.name,
+          name: directoryName,
           path: fullPath,
         },
       }
     }),
   )
+
+  const archives = [
+    ...reposDirectoryData.archiveFiles,
+    ...directoryResults.flatMap((result) => result.archives),
+  ].filter(shouldDisplayArchive)
+
+  archives.sort((left, right) => left.relativePath.localeCompare(right.relativePath))
 
   const repos = directoryResults.flatMap((result) => result.repos)
   const topLevelEntries = directoryResults.map((result) => result.topLevelEntry)
@@ -1329,7 +1415,7 @@ async function discoverWorkspace(
     return left.collection.localeCompare(right.collection)
   })
 
-  return { repos, topLevelEntries }
+  return { archives, repos, topLevelEntries }
 }
 
 async function countSharedMarkdownFiles() {
@@ -1413,9 +1499,13 @@ export async function buildWorkspaceSummary(
   installSnapshots: Map<string, RepoInstall>,
   runtimeSnapshots: Map<string, RepoRuntime>,
 ): Promise<WorkspaceSummary> {
-  const { repos, topLevelEntries } = await discoverWorkspace(installSnapshots, runtimeSnapshots)
+  const { archives, repos, topLevelEntries } = await discoverWorkspace(
+    installSnapshots,
+    runtimeSnapshots,
+  )
 
   return {
+    archives,
     dataRoot,
     generatedAt: new Date().toISOString(),
     milestones: buildMilestones(),
@@ -1429,6 +1519,7 @@ export async function buildWorkspaceSummary(
     },
     sharedRoot,
     stats: {
+      archiveFiles: archives.length,
       cacheBuckets: await countCacheBuckets(),
       directPreferredRepos: repos.filter((repo) => repo.preferredMode === 'direct').length,
       discoveredRepos: repos.length,

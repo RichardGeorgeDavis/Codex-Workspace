@@ -12,6 +12,7 @@ Use this folder for repo-local documentation that does not need to live in the r
 ## Current docs
 
 - `local-overview.md` explains how to keep local-only notes and manifest overrides out of the public repo.
+- `discovery.md` explains Repo Discovery, archive listing, filters, and the current dashboard rail layout.
 - `manifest.md` documents the supported `.workspace/project.json` fields and write behaviour.
 - `data.md` explains what the local `data/` folder is for.
 - `runtime-troubleshooting.md` covers missing installs, failed runtime starts, and port conflicts.

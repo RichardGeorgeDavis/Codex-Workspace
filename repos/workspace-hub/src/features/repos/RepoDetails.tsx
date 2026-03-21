@@ -256,13 +256,16 @@ function AccordionSection({
   return (
     <details className="details-section details-accordion" open={defaultOpen}>
       <summary className="details-accordion-summary">
-        <span className="details-accordion-head">
-          <span className="details-accordion-title">{title}</span>
-          {badge ? <span className="details-accordion-badge">{badge}</span> : null}
+        <span className="details-accordion-main">
+          <span className="details-accordion-head">
+            <span className="details-accordion-title">{title}</span>
+            {badge ? <span className="details-accordion-badge">{badge}</span> : null}
+          </span>
+          {description ? (
+            <span className="details-accordion-copy">{description}</span>
+          ) : null}
         </span>
-        {description ? (
-          <span className="details-accordion-copy">{description}</span>
-        ) : null}
+        <span className="details-accordion-indicator" aria-hidden="true" />
       </summary>
       <div className="details-accordion-body">{children}</div>
     </details>

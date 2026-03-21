@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 import type { WorkspaceSummary } from '../../types/workspace.ts'
 
 type StatusStripProps = {
@@ -13,11 +15,23 @@ export function StatusStrip({
   stopAllPending,
   summary,
 }: StatusStripProps) {
+  const archiveCount = summary?.stats.archiveFiles ?? 0
   const runningRepos = summary?.stats.runningRepos ?? 0
-  const items = [
+  const items: {
+    label: string
+    note: ReactNode
+    value: number | string
+  }[] = [
     {
       label: 'Discovered repos',
-      note: 'Current repo records in the Hub',
+      note: (
+        <>
+          Current repo records in the Hub
+          {!loading && archiveCount ? (
+            <span className="status-card-subnote">Archived files: {archiveCount}</span>
+          ) : null}
+        </>
+      ),
       value: summary?.stats.discoveredRepos ?? '--',
     },
     {

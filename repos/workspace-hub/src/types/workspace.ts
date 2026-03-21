@@ -118,6 +118,12 @@ export type WorkspaceMilestone = {
   title: string
 }
 
+export type WorkspaceArchive = {
+  name: string
+  path: string
+  relativePath: string
+}
+
 export type WorkspaceRepo = {
   buildCommand: string | null
   collection: string
@@ -159,6 +165,7 @@ export type WorkspaceRepo = {
 }
 
 export type WorkspaceSummary = {
+  archives: WorkspaceArchive[]
   dataRoot: string
   generatedAt: string
   milestones: WorkspaceMilestone[]
@@ -172,6 +179,7 @@ export type WorkspaceSummary = {
   }
   sharedRoot: string
   stats: {
+    archiveFiles: number
     cacheBuckets: number
     directPreferredRepos: number
     discoveredRepos: number

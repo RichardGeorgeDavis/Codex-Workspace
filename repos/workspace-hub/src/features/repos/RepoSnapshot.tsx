@@ -1,10 +1,17 @@
 import { SectionCard } from '../../components/SectionCard.tsx'
-import type { RepoType, WorkspaceRepo } from '../../types/workspace.ts'
+import type { RepoType, WorkspaceArchive, WorkspaceRepo } from '../../types/workspace.ts'
 
-type RepoFilterValue = RepoType | 'all' | 'external' | 'runnable'
+type RepoFilterValue =
+  | RepoType
+  | 'all'
+  | 'archived'
+  | 'external'
+  | 'non-archived'
+  | 'runnable'
 
 type RepoSnapshotProps = {
   availableTypes: RepoType[]
+  filteredArchives: WorkspaceArchive[]
   filteredRepos: WorkspaceRepo[]
   loading: boolean
   onFilterChange: (value: RepoFilterValue) => void
@@ -18,6 +25,10 @@ type RepoSnapshotProps = {
 type RepoSnapshotCardProps = {
   repo: WorkspaceRepo
   selected: boolean
+}
+
+type ArchiveSnapshotCardProps = {
+  archive: WorkspaceArchive
 }
 
 function formatBranchLabel(repo: WorkspaceRepo) {
@@ -58,6 +69,12 @@ function formatRecentLabel(repo: WorkspaceRepo) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value))}`
+}
+
+function formatArchiveFolder(relativePath: string) {
+  const segments = relativePath.split('/')
+
+  return segments.slice(0, -1).join('/') || 'repos'
 }
 
 function RepoSnapshotCard({ repo, selected }: RepoSnapshotCardProps) {
@@ -112,8 +129,29 @@ function RepoSnapshotCard({ repo, selected }: RepoSnapshotCardProps) {
   )
 }
 
+function ArchiveSnapshotCard({ archive }: ArchiveSnapshotCardProps) {
+  return (
+    <span className="repo-card repo-card-archive">
+      <span className="repo-card-header">
+        <strong>{archive.name}</strong>
+        <span className="repo-card-tags">
+          <span className="tag">archive</span>
+        </span>
+      </span>
+      <span className="repo-card-meta">
+        <span>{archive.relativePath}</span>
+      </span>
+      <span className="repo-card-footer">
+        <span>{formatArchiveFolder(archive.relativePath)}</span>
+        <span>not runnable</span>
+      </span>
+    </span>
+  )
+}
+
 export function RepoSnapshot({
   availableTypes,
+  filteredArchives,
   filteredRepos,
   loading,
   onFilterChange,
@@ -123,12 +161,17 @@ export function RepoSnapshot({
   selectedPath,
   selectedFilter,
 }: RepoSnapshotProps) {
+  const showRepoSection = selectedFilter !== 'archived'
+  const showArchiveSection = selectedFilter === 'all' || selectedFilter === 'archived'
+  const showGroupedHeadings = showRepoSection && showArchiveSection && filteredArchives.length > 0
+  const hasVisibleItems = filteredRepos.length > 0 || filteredArchives.length > 0
+
   return (
     <SectionCard
-      body="Sibling repos are now being discovered and classified. Filtering here only affects the list view; it does not modify anything on disk."
+      body="Sibling repos and visible archive files are discovered here. Filtering only changes the list view and does not modify anything on disk."
       className="wide reveal"
       eyebrow="Repo Discovery"
-      title="Discovered repositories"
+      title="Repo Discovery"
     >
       <div className="repo-toolbar">
         <label className="field">
@@ -137,7 +180,7 @@ export function RepoSnapshot({
             onChange={(event) => {
               onSearchChange(event.target.value)
             }}
-            placeholder="name, path, type, tag"
+            placeholder="name, path, type, tag, archive"
             type="search"
             value={searchTerm}
           />
@@ -151,7 +194,9 @@ export function RepoSnapshot({
             }}
             value={selectedFilter}
           >
-            <option value="all">All repos</option>
+            <option value="all">All items</option>
+            <option value="non-archived">Non-archived repos</option>
+            <option value="archived">Archived files</option>
             <option value="runnable">Runnable repos</option>
             <option value="external">External repos</option>
             {availableTypes.map((type) => (
@@ -163,29 +208,57 @@ export function RepoSnapshot({
         </label>
       </div>
 
-      {loading && !filteredRepos.length ? (
+      {loading && !hasVisibleItems ? (
         <p className="loading-copy">Scanning workspace roots...</p>
-      ) : filteredRepos.length ? (
-        <ul className="repo-list">
-          {filteredRepos.map((repo) => (
-            <li key={repo.path}>
-              <button
-                className="repo-button"
-                onClick={() => {
-                  onSelectRepo(repo.path)
-                }}
-                type="button"
-              >
-                <RepoSnapshotCard repo={repo} selected={repo.path === selectedPath} />
-              </button>
-            </li>
-          ))}
-        </ul>
+      ) : hasVisibleItems ? (
+        <div className="discovery-groups">
+          {showRepoSection && filteredRepos.length ? (
+            <div className="discovery-group">
+              {showGroupedHeadings ? (
+                <div className="discovery-section-heading">
+                  <span className="discovery-section-title">Repositories</span>
+                  <span className="tag">{filteredRepos.length}</span>
+                </div>
+              ) : null}
+              <ul className="repo-list">
+                {filteredRepos.map((repo) => (
+                  <li key={repo.path}>
+                    <button
+                      className="repo-button"
+                      onClick={() => {
+                        onSelectRepo(repo.path)
+                      }}
+                      type="button"
+                    >
+                      <RepoSnapshotCard repo={repo} selected={repo.path === selectedPath} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {showArchiveSection && filteredArchives.length ? (
+            <div className="discovery-group">
+              <div className="discovery-section-heading">
+                <span className="discovery-section-title">Archive files</span>
+                <span className="tag">{filteredArchives.length}</span>
+              </div>
+              <ul className="repo-list">
+                {filteredArchives.map((archive) => (
+                  <li key={archive.path}>
+                    <ArchiveSnapshotCard archive={archive} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
       ) : (
         <div className="empty-state">
-          <strong>No repos match the current filter.</strong>
+          <strong>No items match the current filter.</strong>
           <p>
-            Try clearing the search or switching the filter back to all repos.
+            Try clearing the search or switching between archived and non-archived items.
           </p>
         </div>
       )}

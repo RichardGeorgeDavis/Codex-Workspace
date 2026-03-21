@@ -25,11 +25,22 @@ import {
   stopAllRuntimes,
   writeRepoManifest,
 } from '../lib/api.ts'
-import type { RepoType, WorkspaceRepo, WorkspaceSummary } from '../types/workspace.ts'
+import type {
+  RepoType,
+  WorkspaceArchive,
+  WorkspaceRepo,
+  WorkspaceSummary,
+} from '../types/workspace.ts'
 
 import './app.css'
 
-type RepoFilterValue = RepoType | 'all' | 'external' | 'runnable'
+type RepoFilterValue =
+  | RepoType
+  | 'all'
+  | 'archived'
+  | 'external'
+  | 'non-archived'
+  | 'runnable'
 type AppProps = {
   initialThemePreference: ThemePreference
 }
@@ -79,6 +90,10 @@ function filterRepos(
   selectedFilter: RepoFilterValue,
 ) {
   return repos.filter((repo) => {
+    if (selectedFilter === 'archived') {
+      return false
+    }
+
     if (selectedFilter === 'external') {
       if (repo.preferredMode !== 'external') {
         return false
@@ -87,7 +102,7 @@ function filterRepos(
       if (!repo.devCommand) {
         return false
       }
-    } else if (selectedFilter !== 'all' && repo.type !== selectedFilter) {
+    } else if (selectedFilter !== 'all' && selectedFilter !== 'non-archived' && repo.type !== selectedFilter) {
       return false
     }
 
@@ -116,6 +131,26 @@ function filterRepos(
     ]
       .join(' ')
       .toLowerCase()
+
+    return haystack.includes(normalizedSearch)
+  })
+}
+
+function filterArchives(
+  archives: WorkspaceArchive[],
+  normalizedSearch: string,
+  selectedFilter: RepoFilterValue,
+) {
+  if (selectedFilter !== 'all' && selectedFilter !== 'archived') {
+    return []
+  }
+
+  return archives.filter((archive) => {
+    if (!normalizedSearch) {
+      return true
+    }
+
+    const haystack = [archive.name, archive.relativePath].join(' ').toLowerCase()
 
     return haystack.includes(normalizedSearch)
   })
@@ -385,6 +420,9 @@ export function App({ initialThemePreference }: AppProps) {
   const filteredRepos = summary
     ? filterRepos(summary.repos, normalizedSearch, selectedFilter)
     : []
+  const filteredArchives = summary
+    ? filterArchives(summary.archives, normalizedSearch, selectedFilter)
+    : []
 
   useEffect(() => {
     const nextFilteredRepos = summary
@@ -517,10 +555,11 @@ export function App({ initialThemePreference }: AppProps) {
       ) : null}
 
       <main className="dashboard-grid">
-        <section className="dashboard-workbench">
-          <div className="dashboard-column">
+        <section className="dashboard-main">
+          <div className="dashboard-primary">
             <RepoSnapshot
               availableTypes={availableTypes}
+              filteredArchives={filteredArchives}
               filteredRepos={filteredRepos}
               loading={loading}
               onSearchChange={setSearchTerm}
@@ -532,7 +571,7 @@ export function App({ initialThemePreference }: AppProps) {
             />
           </div>
 
-          <div className="dashboard-column">
+          <div className="dashboard-sidebar">
             <RepoDetails
               actionError={actionError}
               actionPendingKey={actionPendingKey}
@@ -547,15 +586,8 @@ export function App({ initialThemePreference }: AppProps) {
               onWriteManifest={handleWriteManifest}
               repo={selectedRepo}
             />
-          </div>
-        </section>
-
-        <section className="dashboard-masonry">
-          <div className="dashboard-masonry-item">
             <SettingsPanel loading={loading} summary={summary} />
-          </div>
 
-          <div className="dashboard-masonry-item">
             <SectionCard
               body="The current build stays deliberately practical: discovery, runtime controls, saved overrides, manifest authoring, diagnostics, install recovery, and quicker pinned workflows are in place."
               className="reveal delayed"
@@ -584,9 +616,7 @@ export function App({ initialThemePreference }: AppProps) {
                 )}
               </ul>
             </SectionCard>
-          </div>
 
-          <div className="dashboard-masonry-item">
             <SectionCard
               body="These defaults mirror the handover pack so future actions do not drift into a one-size-fits-all runtime."
               className="reveal delayed-more"
