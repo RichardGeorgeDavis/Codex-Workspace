@@ -33,6 +33,7 @@ Read these in order:
 - `tools/scripts/` holds reusable workspace scripts.
 - `tools/templates/` holds starter metadata templates.
 - `tools/manifests/` holds source lists and supporting manifests for scripts.
+- `docs/wiki/` holds starter content for the optional GitHub wiki surface.
 - `repos/workspace-hub/docs/` holds repo-local documentation for Workspace Hub itself.
 
 Useful maintenance script:

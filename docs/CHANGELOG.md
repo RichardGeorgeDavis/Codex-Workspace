@@ -2,6 +2,8 @@
 
 ## 2026-03-21
 
+- Added GitHub Discussions support links so repository questions are routed toward Discussions Q&A instead of Issues.
+- Added starter GitHub wiki pages under `docs/wiki/` for a thin navigational wiki that points back to the tracked docs set.
 - Expanded the public project framing across the root docs to describe the filesystem-first context model, observable retrieval, and tracked-versus-local memory rules more directly.
 - Added cross-agent skills and MCP guidance plus a context-cache and retrieval note for generated summaries and provenance.
 - Refreshed the README cover path with a versioned asset to avoid stale GitHub image caching.
