@@ -1,6 +1,7 @@
 import express, { type NextFunction, type Request, type Response } from 'express'
 import { fileURLToPath } from 'node:url'
 
+import { waitForReachablePreview } from './preview-readiness.ts'
 import { generateRepoCover } from './repo-cover.ts'
 import { writeRepoManifest } from './repo-manifest.ts'
 import {
@@ -32,6 +33,28 @@ const runtimeTroubleshootingPath = fileURLToPath(
 const app = express()
 
 app.use(express.json())
+
+function isLocalPreviewTarget(target: string | null) {
+  if (!target) {
+    return false
+  }
+
+  try {
+    const url = new URL(target)
+    const hostname = url.hostname.toLowerCase()
+
+    return (
+      hostname === '127.0.0.1' ||
+      hostname === 'localhost' ||
+      hostname === '::1' ||
+      hostname.endsWith('.demo') ||
+      hostname.endsWith('.local') ||
+      hostname.endsWith('.test')
+    )
+  } catch {
+    return false
+  }
+}
 
 function requireRelativePath(body: unknown) {
   if (typeof body !== 'object' || body === null) {
@@ -130,6 +153,35 @@ app.post(
             .status(400)
             .json({ message: 'This repo does not have a preview URL yet.' })
           return
+        }
+
+        const previewProbeTarget = repo.healthcheckUrl ?? url
+        const shouldAutoStartPreview =
+          repo.preferredMode === 'direct' &&
+          repo.runtime.status !== 'running' &&
+          canRunRepo(repo) &&
+          isLocalPreviewTarget(previewProbeTarget)
+
+        let previewReachable = true
+
+        if (isLocalPreviewTarget(previewProbeTarget)) {
+          previewReachable = await waitForReachablePreview(
+            previewProbeTarget,
+            repo.health.state === 'healthy' ? 1500 : 3500,
+          )
+        }
+
+        if (!previewReachable && shouldAutoStartPreview) {
+          await startRepoRuntime(repo)
+          previewReachable = await waitForReachablePreview(previewProbeTarget, 12000)
+
+          if (!previewReachable) {
+            response.status(502).json({
+              message:
+                'The repo was started, but its preview did not become reachable. Check the runtime log, preview URL, and startup port.',
+            })
+            return
+          }
         }
 
         openTarget(url)

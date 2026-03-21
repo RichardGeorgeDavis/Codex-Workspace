@@ -35,8 +35,10 @@ Workspace Hub is a local control plane for people who manage many standalone rep
 - scans sibling repos and classifies them conservatively
 - supports direct local runtimes and external preview targets
 - starts, stops, and restarts supported repos from one UI
+- auto-starts supported direct local repos when `Open preview` is used and the local preview is not up yet
 - shows runtime, install, Git, and dependency-readiness status
 - stores lightweight per-repo metadata and recent activity locally
+- includes persisted appearance controls with five built-in presets and light or dark mode
 - reads and writes `.workspace/project.json` manifests when a repo needs explicit behaviour
 - captures repo cover screenshots from live previews and can insert them into repo `README.md` files
 - gives plain static repos a lightweight direct local server when they do not already have a dev script
@@ -202,6 +204,7 @@ Use local override files when you want to keep your own operator notes or machin
 ## Docs
 
 - [Doc conventions](docs/INSTRUCTIONS.md)
+- [Appearance guide](docs/appearance.md)
 - [Local override guide](docs/local-overview.md)
 - [Manifest guide](docs/manifest.md)
 - [Runtime troubleshooting](docs/runtime-troubleshooting.md)

@@ -31,38 +31,38 @@ export const themeStorageKey = 'workspace-hub.theme'
 
 export const themePresets: ThemePresetOption[] = [
   {
-    description: 'Preset 1 preserves the current warm workspace styling as the baseline.',
-    id: 'preset-1',
-    label: 'Preset 1 · Workspace Current',
-    palette: 'Current workspace palette',
-  },
-  {
     description:
-      'Preset 2 shifts the Hub into a sharper GitHub and DigitalOcean-style dashboard using Dracula Classic and Alucard Classic tokens.',
+      'Preset 1 shifts the Hub into a sharper GitHub and DigitalOcean-style dashboard using Dracula Classic and Alucard Classic tokens.',
     id: 'preset-2',
-    label: 'Preset 2 · Dracula Ops',
+    label: 'Preset 1 · Ops',
     palette: 'Dracula Classic / Alucard Classic',
   },
   {
     description:
-      'Preset 3 ports the local github-master Dracula Pro reference into the Hub with GitHub-style controls and denser spacing.',
+      'Preset 2 ports the local github-master Dracula Pro reference into the Hub with GitHub-style controls and denser spacing.',
     id: 'preset-3',
-    label: 'Preset 3 · Dracula Pro GitHub',
+    label: 'Preset 2 · GitHub',
     palette: 'github-master Dracula Pro',
   },
   {
     description:
-      'Preset 4 leans into the supplied Dracula Pro palette with a softer IDE-style surface stack and stronger purple-pink controls.',
+      'Preset 3 leans into the supplied Dracula Pro palette with a softer IDE-style surface stack and stronger purple-pink controls.',
     id: 'preset-4',
-    label: 'Preset 4 · Dracula Pro Studio',
+    label: 'Preset 3 · Studio',
     palette: 'Dracula Pro / Buffy / Alucard',
   },
   {
     description:
-      'Preset 5 pushes a darker control-room dashboard using Dracula Pro, Van Helsing, and Alucard tokens with brighter component accents.',
+      'Preset 4 pushes a darker control-room dashboard using Dracula Pro, Van Helsing, and Alucard tokens with brighter component accents.',
     id: 'preset-5',
-    label: 'Preset 5 · Dracula Pro Control',
+    label: 'Preset 4 · Control',
     palette: 'Dracula Pro / Van Helsing / Alucard',
+  },
+  {
+    description: 'Preset 5 preserves the current warm workspace styling as the baseline.',
+    id: 'preset-1',
+    label: 'Preset 5 · Workspace',
+    palette: 'Current workspace palette',
   },
 ]
 

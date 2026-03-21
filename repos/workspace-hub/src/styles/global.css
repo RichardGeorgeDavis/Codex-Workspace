@@ -297,8 +297,8 @@
   --button-primary-background: #644ac9;
   --button-primary-color: #f5f5f5;
   --button-primary-border: 1px solid #644ac9;
-  --button-primary-hover-background: rgba(100, 74, 201, 0.08);
-  --button-primary-hover-border: #644ac9;
+  --button-primary-hover-background: linear-gradient(135deg, #644ac9, #036a96);
+  --button-primary-hover-border: #036a96;
   --button-secondary-background: rgba(100, 74, 201, 0.08);
   --button-secondary-border: rgba(100, 74, 201, 0.22);
   --button-secondary-color: #644ac9;
@@ -399,8 +399,8 @@
   --button-primary-background: #9580ff;
   --button-primary-color: #f8f8f2;
   --button-primary-border: 1px solid #9580ff;
-  --button-primary-hover-background: rgba(149, 128, 255, 0.18);
-  --button-primary-hover-border: #9580ff;
+  --button-primary-hover-background: linear-gradient(135deg, #9580ff, #ff80bf);
+  --button-primary-hover-border: #ff80bf;
   --button-secondary-background: rgba(149, 128, 255, 0.12);
   --button-secondary-border: rgba(149, 128, 255, 0.28);
   --button-secondary-color: #9580ff;

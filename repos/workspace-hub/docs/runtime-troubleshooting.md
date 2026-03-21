@@ -2,6 +2,8 @@
 
 Use these checks when Workspace Hub reports missing dependencies, failed installs, or an unreachable preview.
 
+For direct local repos, `Open preview` now tries to start the repo automatically when the saved preview or healthcheck target is local and the runtime is not already running.
+
 ## Missing dependencies
 
 If a repo shows `dependencies: missing`:
@@ -44,6 +46,13 @@ If Workspace Hub shows the repo as `running` but health is `unreachable`:
 2. Check whether the dev server chose a different port.
 3. Review the runtime log for the actual local URL.
 4. Save a `previewUrl` or `healthcheckUrl` override when the repo uses a fixed non-default address.
+
+If `Open preview` attempted to start the repo but still failed to open a working preview:
+
+1. Read the runtime log in the details panel first.
+2. Confirm the repo really exposes the saved `previewUrl` or `healthcheckUrl`.
+3. Check for port conflicts or a slow startup path.
+4. Restart the repo manually after correcting the command or URL mismatch.
 
 ## Port conflicts
 

@@ -5,6 +5,7 @@ import path from 'node:path'
 import { promisify } from 'node:util'
 
 import type { WorkspaceRepo } from '../src/types/workspace.ts'
+import { waitForReachablePreview } from './preview-readiness.ts'
 import { canRunRepo, startRepoRuntime, stopRepoRuntime } from './runtime-manager.ts'
 
 const execFileAsync = promisify(execFile)
@@ -261,39 +262,6 @@ async function captureScreenshot(url: string, outputPath: string) {
   if (!(await fileExists(outputPath))) {
     throw new Error('The screenshot command completed, but no cover image was written.')
   }
-}
-
-async function waitForReachablePreview(url: string, timeoutMs = 10000) {
-  const startedAt = Date.now()
-
-  while (Date.now() - startedAt < timeoutMs) {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => {
-      controller.abort()
-    }, 900)
-
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        redirect: 'manual',
-        signal: controller.signal,
-      })
-
-      if (response.ok) {
-        return true
-      }
-    } catch {
-      // Keep polling until timeout.
-    } finally {
-      clearTimeout(timeout)
-    }
-
-    await new Promise((resolve) => {
-      setTimeout(resolve, 350)
-    })
-  }
-
-  return false
 }
 
 function canBootstrapPreview(repo: WorkspaceRepo) {

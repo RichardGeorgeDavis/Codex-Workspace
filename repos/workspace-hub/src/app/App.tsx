@@ -186,6 +186,10 @@ export function App({ initialThemePreference }: AppProps) {
           : 'Unable to open the requested target.',
       )
     } finally {
+      if (target === 'preview') {
+        await loadSummary(undefined, false)
+      }
+
       setActionPendingKey(null)
     }
   }

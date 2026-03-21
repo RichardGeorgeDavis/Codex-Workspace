@@ -653,6 +653,13 @@
   transform: translateY(-1px);
 }
 
+.theme-mode-button:hover,
+.theme-mode-button:focus-visible {
+  border-color: var(--border-accent);
+  background: var(--surface-console-toggle-active);
+  color: var(--console-toggle-active-color);
+}
+
 .primary-button:hover:not(:disabled),
 .primary-button:focus-visible:not(:disabled),
 .action-button.primary:hover:not(:disabled),
