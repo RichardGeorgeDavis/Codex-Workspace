@@ -31,6 +31,17 @@ Codex Workspace keeps repositories portable and independently runnable.
 - Keep portable MCP examples separate from real credentials and machine-specific settings.
 - Store local-only agent config, exports, and secrets in ignored locations such as `tools/local/`.
 - Do not make AI-agent setup a required dependency for normal repo runtime.
+- Promote stable, broadly useful local guidance into tracked docs or skills instead of leaving it only in private notes.
+
+## Context Cache
+
+- Keep generated context summaries under `cache/context/`.
+- Treat generated `abstract.md` and `overview.md` files as cache layers, not source-of-truth docs.
+- Keep provenance metadata such as `sources.json` alongside generated summaries where helpful.
+- Read tracked docs and manifests before trusting stale generated summaries.
+- Keep local-only retrieval logs and operator memory untracked.
+- Keep classification and summary inputs explainable where practical.
+- Keep machine-specific operator memory separate from canonical repo facts.
 
 ## Runtime Defaults
 
