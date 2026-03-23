@@ -26,10 +26,12 @@ Codex Workspace keeps repositories portable and independently runnable.
 
 ## Agent Portability
 
-- Keep portable tracked skills in `shared/skills/` or repo-local `.workspace/skills/`.
-- Treat `.agents/skills/`, `.claude/skills/`, `.github/skills/`, and similar folders as adapter targets rather than the canonical source.
+- Keep Codex-native tracked skills in repo-local `.agents/skills/`.
+- Keep portable shared skill source material in `shared/skills/` or optional repo-local `.workspace/skills/`.
+- Treat non-Codex folders such as `.claude/skills/` and `.github/skills/` as optional adapter targets rather than the canonical source.
 - Keep portable MCP examples separate from real credentials and machine-specific settings.
 - Store local-only agent config, exports, and secrets in ignored locations such as `tools/local/`.
+- Keep optional local workflow-state folders separate from tracked docs, specs, manifests, and skills.
 - Do not make AI-agent setup a required dependency for normal repo runtime.
 - Promote stable, broadly useful local guidance into tracked docs or skills instead of leaving it only in private notes.
 

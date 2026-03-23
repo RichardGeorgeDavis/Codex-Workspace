@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "name": "example-mutating-mcp",
+  "description": "Explicit opt-in template for an MCP server that can perform side effects.",
+  "transport": "stdio",
+  "command": "example-mcp-server",
+  "args": [],
+  "capabilityTier": "mutating",
+  "env": {
+    "MCP_MODE": "stdio",
+    "LOG_LEVEL": "error",
+    "DISABLE_CONSOLE_OUTPUT": "true",
+    "API_BASE_URL": "${LOCAL_ONLY}",
+    "API_TOKEN": "${LOCAL_ONLY}"
+  },
+  "allowedActions": [
+    "read",
+    "search",
+    "validate",
+    "create",
+    "update",
+    "delete"
+  ],
+  "requiredOperatorChecks": [
+    "Confirm credentials are stored outside tracked files.",
+    "Confirm the target system and blast radius are understood.",
+    "Prefer a disposable or test environment before production use."
+  ],
+  "notes": [
+    "Use this only when the workflow genuinely needs side effects.",
+    "Mutating MCP configs should usually stay local-only even if a read-only sample is tracked."
+  ]
+}

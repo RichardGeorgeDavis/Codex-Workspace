@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "name": "example-read-only-mcp",
+  "description": "Safe default template for an MCP server that can inspect or validate but not mutate external systems.",
+  "transport": "stdio",
+  "command": "example-mcp-server",
+  "args": [],
+  "capabilityTier": "read-only",
+  "env": {
+    "MCP_MODE": "stdio",
+    "LOG_LEVEL": "error",
+    "DISABLE_CONSOLE_OUTPUT": "true"
+  },
+  "allowedActions": [
+    "read",
+    "search",
+    "validate",
+    "summarize"
+  ],
+  "forbiddenActions": [
+    "create",
+    "update",
+    "delete",
+    "deploy",
+    "trigger-side-effects"
+  ],
+  "secrets": {
+    "required": [],
+    "localOnly": true
+  },
+  "notes": [
+    "Use tracked sample configs for safe defaults only.",
+    "Keep any real credentials or host-specific endpoints in ignored local config."
+  ]
+}

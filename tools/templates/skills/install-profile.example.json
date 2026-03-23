@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "name": "workspace-typescript-standard",
+  "description": "Example selective install profile for a TypeScript-heavy workspace.",
+  "executionMode": "standard",
+  "packs": [
+    "common/quality-gate",
+    "common/security-check",
+    "typescript/review"
+  ],
+  "notes": [
+    "Use this as a planning template, not as an enforced installer contract.",
+    "Only publish or sync the packs that solve a real workflow need."
+  ]
+}
