@@ -1,10 +1,6 @@
 # Codex Workspace
 
-<img src="favicon.png" alt="Codex Workspace favicon" width="64" />
-
-<!-- workspace-hub:cover:start -->
-![Codex Workspace cover](.github/assets/cover-readme-20260321.png)
-<!-- workspace-hub:cover:end -->
+<img src="favicon.png" alt="Codex Workspace favicon" width="128" />
 
 Codex Workspace is a local-first workspace structure for managing many standalone repositories on one machine without forcing them into a monorepo.
 
@@ -137,6 +133,10 @@ Supporting references:
 ## Workspace Hub
 
 Workspace Hub is the most concrete product in this repo today. It scans sibling repos, classifies them conservatively, shows runtime and metadata state, and provides start, stop, open, and preview actions without forcing all repos into one toolchain.
+
+<!-- workspace-hub:cover:start -->
+![Codex Workspace cover](.github/assets/cover-readme-20260321.png)
+<!-- workspace-hub:cover:end -->
 
 See:
 - [repos/workspace-hub/README.md](repos/workspace-hub/README.md)
