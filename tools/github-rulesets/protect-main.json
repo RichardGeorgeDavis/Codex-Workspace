@@ -1,0 +1,27 @@
+{
+  "name": "Protect main",
+  "target": "branch",
+  "source_type": "Repository",
+  "source": "RichardGeorgeDavis/Codex-Workspace",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": [
+        "refs/heads/main"
+      ],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
+    {
+      "type": "required_linear_history"
+    }
+  ],
+  "bypass_actors": []
+}
