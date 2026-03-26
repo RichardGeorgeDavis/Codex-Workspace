@@ -1,20 +1,28 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 
 import type { RepoInstall, RepoRuntime, WorkspaceRepo } from '../src/types/workspace.ts'
+import { writeFailureReport } from './failure-reports.ts'
+import { publishWorkspaceEvent } from './live-events.ts'
 
 type ManagedRuntime = {
   child: ChildProcess
+  lastFailureToken: string | null
+  relativePath: string
   snapshot: RepoRuntime
 }
 
 type ManagedInstall = {
   child: ChildProcess
+  lastFailureToken: string | null
+  relativePath: string
   snapshot: RepoInstall
 }
 
 const managedRuntimes = new Map<string, ManagedRuntime>()
 const managedInstalls = new Map<string, ManagedInstall>()
 const maxLogLines = 40
+const logEventDelayMs = 350
+const pendingLogEvents = new Map<string, ReturnType<typeof setTimeout>>()
 
 function timestamp() {
   return new Date().toISOString()
@@ -52,6 +60,69 @@ function trimLogTail(lines: string[]) {
   return lines.slice(-maxLogLines)
 }
 
+function scheduleLogEvent(
+  type: 'install-log' | 'runtime-log',
+  relativePath: string,
+  message: string,
+) {
+  const key = `${type}:${relativePath}`
+
+  if (pendingLogEvents.has(key)) {
+    return
+  }
+
+  pendingLogEvents.set(
+    key,
+    setTimeout(() => {
+      pendingLogEvents.delete(key)
+      publishWorkspaceEvent({
+        message,
+        relativePath,
+        type,
+      })
+    }, logEventDelayMs),
+  )
+}
+
+function buildFailureToken(snapshot: RepoInstall | RepoRuntime) {
+  return [
+    snapshot.status,
+    snapshot.lastExitCode ?? '',
+    snapshot.lastSignal ?? '',
+    snapshot.message ?? '',
+    snapshot.updatedAt ?? '',
+  ].join(':')
+}
+
+async function persistFailureReportIfNeeded(
+  kind: 'install' | 'runtime',
+  repo: WorkspaceRepo,
+  record: ManagedInstall | ManagedRuntime,
+) {
+  if (record.snapshot.status !== 'error') {
+    return
+  }
+
+  const nextToken = buildFailureToken(record.snapshot)
+  if (record.lastFailureToken === nextToken) {
+    return
+  }
+
+  record.lastFailureToken = nextToken
+
+  try {
+    const report = await writeFailureReport(repo, kind, record.snapshot)
+    publishWorkspaceEvent({
+      message: report.workspaceRelativePath,
+      relativePath: repo.relativePath,
+      status: kind,
+      type: 'failure-report',
+    })
+  } catch {
+    // Failure reporting is helpful but should not block runtime control.
+  }
+}
+
 function appendLog(repoPath: string, chunk: Buffer | string, stream: 'stdout' | 'stderr') {
   const text = chunk.toString().trim()
 
@@ -59,14 +130,23 @@ function appendLog(repoPath: string, chunk: Buffer | string, stream: 'stdout' | 
     return
   }
 
-  updateSnapshot(repoPath, (snapshot) => ({
-    ...snapshot,
+  const snapshot = updateSnapshot(repoPath, (currentSnapshot) => ({
+    ...currentSnapshot,
     logTail: trimLogTail([
-      ...snapshot.logTail,
+      ...currentSnapshot.logTail,
       ...text.split(/\r?\n/).map((line) => `[${stream}] ${line}`),
     ]),
     updatedAt: timestamp(),
   }))
+
+  const record = managedRuntimes.get(repoPath)
+  if (record && snapshot) {
+    scheduleLogEvent(
+      'runtime-log',
+      record.relativePath,
+      text.split(/\r?\n/).at(-1) ?? `[${stream}] log updated`,
+    )
+  }
 }
 
 function appendInstallLog(
@@ -80,14 +160,23 @@ function appendInstallLog(
     return
   }
 
-  updateInstallSnapshot(repoPath, (snapshot) => ({
-    ...snapshot,
+  const snapshot = updateInstallSnapshot(repoPath, (currentSnapshot) => ({
+    ...currentSnapshot,
     logTail: trimLogTail([
-      ...snapshot.logTail,
+      ...currentSnapshot.logTail,
       ...text.split(/\r?\n/).map((line) => `[${stream}] ${line}`),
     ]),
     updatedAt: timestamp(),
   }))
+
+  const record = managedInstalls.get(repoPath)
+  if (record && snapshot) {
+    scheduleLogEvent(
+      'install-log',
+      record.relativePath,
+      text.split(/\r?\n/).at(-1) ?? `[${stream}] log updated`,
+    )
+  }
 }
 
 function createRunningSnapshot(repo: WorkspaceRepo): RepoRuntime {
@@ -179,7 +268,15 @@ export async function startRepoRuntime(repo: WorkspaceRepo) {
 
   managedRuntimes.set(repo.path, {
     child,
+    lastFailureToken: null,
+    relativePath: repo.relativePath,
     snapshot,
+  })
+  publishWorkspaceEvent({
+    message: repo.devCommand ?? 'Runtime started.',
+    relativePath: repo.relativePath,
+    status: snapshot.status,
+    type: 'runtime',
   })
 
   child.stdout?.on('data', (chunk) => {
@@ -191,13 +288,25 @@ export async function startRepoRuntime(repo: WorkspaceRepo) {
   })
 
   child.on('error', (error) => {
-    updateSnapshot(repo.path, (currentSnapshot) => ({
+    const nextSnapshot = updateSnapshot(repo.path, (currentSnapshot) => ({
       ...currentSnapshot,
       message: error.message,
       status: 'error',
       stoppedAt: timestamp(),
       updatedAt: timestamp(),
     }))
+
+    publishWorkspaceEvent({
+      message: error.message,
+      relativePath: repo.relativePath,
+      status: nextSnapshot?.status ?? 'error',
+      type: 'runtime',
+    })
+
+    const record = managedRuntimes.get(repo.path)
+    if (record) {
+      void persistFailureReportIfNeeded('runtime', repo, record)
+    }
   })
 
   child.on('exit', (code, signal) => {
@@ -224,6 +333,17 @@ export async function startRepoRuntime(repo: WorkspaceRepo) {
       stoppedAt: timestamp(),
       updatedAt: timestamp(),
     }
+
+    publishWorkspaceEvent({
+      message: record.snapshot.message ?? undefined,
+      relativePath: record.relativePath,
+      status: record.snapshot.status,
+      type: 'runtime',
+    })
+
+    if (record.snapshot.status === 'error') {
+      void persistFailureReportIfNeeded('runtime', repo, record)
+    }
   })
 
   return snapshot
@@ -244,13 +364,20 @@ export async function stopRepoRuntime(repoPath: string) {
   try {
     process.kill(processGroupId, 'SIGTERM')
   } catch (error) {
-    updateSnapshot(repoPath, (snapshot) => ({
+    const nextSnapshot = updateSnapshot(repoPath, (snapshot) => ({
       ...snapshot,
       message:
         error instanceof Error ? error.message : 'Failed to stop process group.',
       status: 'error',
       updatedAt: timestamp(),
     }))
+    const record = managedRuntimes.get(repoPath)
+    publishWorkspaceEvent({
+      message: nextSnapshot?.message ?? 'Failed to stop runtime.',
+      relativePath: record?.relativePath ?? null,
+      status: nextSnapshot?.status ?? 'error',
+      type: 'runtime',
+    })
     throw error
   }
 
@@ -302,7 +429,15 @@ export async function runRepoInstall(repo: WorkspaceRepo) {
 
   managedInstalls.set(repo.path, {
     child,
+    lastFailureToken: null,
+    relativePath: repo.relativePath,
     snapshot,
+  })
+  publishWorkspaceEvent({
+    message: repo.installCommand ?? 'Install started.',
+    relativePath: repo.relativePath,
+    status: snapshot.status,
+    type: 'install',
   })
 
   child.stdout?.on('data', (chunk) => {
@@ -335,6 +470,18 @@ export async function runRepoInstall(repo: WorkspaceRepo) {
           updatedAt: timestamp(),
         })) ?? createIdleInstall(repo.installCommand)
 
+      publishWorkspaceEvent({
+        message: nextSnapshot.message ?? error.message,
+        relativePath: repo.relativePath,
+        status: nextSnapshot.status,
+        type: 'install',
+      })
+
+      const record = managedInstalls.get(repo.path)
+      if (record) {
+        void persistFailureReportIfNeeded('install', repo, record)
+      }
+
       settle(nextSnapshot)
     })
 
@@ -357,6 +504,18 @@ export async function runRepoInstall(repo: WorkspaceRepo) {
           status: nextStatus,
           updatedAt: timestamp(),
         })) ?? createIdleInstall(repo.installCommand)
+
+      publishWorkspaceEvent({
+        message: nextSnapshot.message ?? undefined,
+        relativePath: repo.relativePath,
+        status: nextSnapshot.status,
+        type: 'install',
+      })
+
+      const record = managedInstalls.get(repo.path)
+      if (record && nextSnapshot.status === 'error') {
+        void persistFailureReportIfNeeded('install', repo, record)
+      }
 
       settle(nextSnapshot)
     })
@@ -384,13 +543,20 @@ export async function shutdownManagedRuntimes() {
 
       const snapshot = record.snapshot
       if (snapshot.status === 'running') {
-        updateInstallSnapshot(repoPath, (currentSnapshot) => ({
+        const nextSnapshot = updateInstallSnapshot(repoPath, (currentSnapshot) => ({
           ...currentSnapshot,
           finishedAt: timestamp(),
           message: currentSnapshot.message ?? 'Install stopped during shutdown.',
           status: 'error',
           updatedAt: timestamp(),
         }))
+
+        publishWorkspaceEvent({
+          message: nextSnapshot?.message ?? 'Install stopped during shutdown.',
+          relativePath: record.relativePath,
+          status: nextSnapshot?.status ?? 'error',
+          type: 'install',
+        })
       }
     }),
   )

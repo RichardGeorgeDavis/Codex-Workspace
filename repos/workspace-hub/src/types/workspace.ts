@@ -13,6 +13,8 @@ export type RepoRuntimeStatus = 'error' | 'idle' | 'running' | 'stopped'
 
 export type RepoInstallStatus = 'error' | 'idle' | 'running' | 'succeeded'
 
+export type FailureKind = 'install' | 'runtime'
+
 export type RepoRuntime = {
   command: string | null
   lastExitCode: number | null
@@ -80,6 +82,17 @@ export type RepoRecentContext = {
   lastSelectedAt: string | null
 }
 
+export type RepoFailureReportSummary = {
+  command: string | null
+  exitCode: number | null
+  filePath: string
+  generatedAt: string
+  kind: FailureKind
+  message: string | null
+  signal: string | null
+  workspaceRelativePath: string
+}
+
 export type WorkspaceManifestRecord = {
   buildCommand?: string
   devCommand?: string
@@ -124,6 +137,42 @@ export type WorkspaceArchive = {
   relativePath: string
 }
 
+export type WorkspaceSearchResult = {
+  category: 'artifact' | 'failure-report' | 'repo'
+  filePath: string | null
+  id: string
+  matchSource: string
+  repoRelativePath: string | null
+  score: number
+  snippet: string
+  subtitle: string
+  title: string
+  workspaceRelativePath: string | null
+}
+
+export type WorkspaceSearchResponse = {
+  query: string
+  results: WorkspaceSearchResult[]
+}
+
+export type WorkspaceEvent = {
+  generatedAt: string
+  message?: string
+  relativePath: string | null
+  status?: string
+  type:
+    | 'activity'
+    | 'connected'
+    | 'cover'
+    | 'failure-report'
+    | 'install'
+    | 'install-log'
+    | 'manifest'
+    | 'metadata'
+    | 'runtime'
+    | 'runtime-log'
+}
+
 export type WorkspaceRepo = {
   buildCommand: string | null
   collection: string
@@ -131,6 +180,7 @@ export type WorkspaceRepo = {
   dependencies: RepoDependencyState
   devCommand: string | null
   externalUrl: string | null
+  failureReport: RepoFailureReportSummary | null
   git: RepoGitState
   hasManifest: boolean
   hasSavedMetadata: boolean

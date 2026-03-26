@@ -1,6 +1,8 @@
 import express, { type NextFunction, type Request, type Response } from 'express'
+import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { handleWorkspaceEvents, publishWorkspaceEvent } from './live-events.ts'
 import { waitForReachablePreview } from './preview-readiness.ts'
 import { generateRepoCover } from './repo-cover.ts'
 import { writeRepoManifest } from './repo-manifest.ts'
@@ -23,9 +25,16 @@ import {
   saveRepoMetadata,
 } from './workspace-metadata.ts'
 import { buildWorkspaceSummary, findWorkspaceRepo } from './workspace.ts'
+import { searchWorkspace } from './workspace-search.ts'
 
 const apiHost = process.env.WORKSPACE_HUB_API_HOST ?? '127.0.0.1'
 const apiPort = Number.parseInt(process.env.WORKSPACE_HUB_API_PORT ?? '4101', 10)
+const serverDir = path.dirname(fileURLToPath(import.meta.url))
+const appRoot = path.resolve(serverDir, '..')
+const configuredWorkspaceRoot = process.env.WORKSPACE_HUB_WORKSPACE_ROOT?.trim()
+const workspaceRoot = configuredWorkspaceRoot
+  ? path.resolve(configuredWorkspaceRoot)
+  : path.resolve(appRoot, '..', '..')
 const runtimeTroubleshootingPath = fileURLToPath(
   new URL('../docs/runtime-troubleshooting.md', import.meta.url),
 )
@@ -84,6 +93,35 @@ function requireObjectPayload(body: unknown, fieldName: string, message: string)
   return payload as Record<string, unknown>
 }
 
+function isPathInsideRoot(rootPath: string, candidatePath: string) {
+  const relativePath = path.relative(rootPath, candidatePath)
+
+  return (
+    relativePath === '' ||
+    (!relativePath.startsWith('..') && !path.isAbsolute(relativePath))
+  )
+}
+
+function requireTargetPath(body: unknown) {
+  if (typeof body !== 'object' || body === null) {
+    throw new Error('A workspace target path is required.')
+  }
+
+  const candidate = (body as Record<string, unknown>).path
+
+  if (typeof candidate !== 'string' || candidate.trim().length === 0) {
+    throw new Error('A workspace target path is required.')
+  }
+
+  const targetPath = path.resolve(candidate.trim())
+
+  if (!isPathInsideRoot(workspaceRoot, targetPath)) {
+    throw new Error('The requested path must stay inside the workspace root.')
+  }
+
+  return targetPath
+}
+
 app.get('/api/health', (_request: Request, response: Response) => {
   response.json({
     generatedAt: new Date().toISOString(),
@@ -91,6 +129,10 @@ app.get('/api/health', (_request: Request, response: Response) => {
     service: 'workspace-hub-api',
     status: 'ok',
   })
+})
+
+app.get('/api/events', (request: Request, response: Response) => {
+  handleWorkspaceEvents(request, response)
 })
 
 app.get(
@@ -104,6 +146,31 @@ app.get(
           getRuntimeSnapshots(),
         ),
       )
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.get(
+  '/api/search',
+  async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const query =
+        typeof request.query.q === 'string' ? request.query.q.trim() : ''
+
+      if (!query) {
+        response.status(400).json({ message: 'A search query is required.' })
+        return
+      }
+
+      const summary = await buildWorkspaceSummary(
+        apiPort,
+        getInstallSnapshots(),
+        getRuntimeSnapshots(),
+      )
+
+      response.json(await searchWorkspace(query, summary.repos))
     } catch (error) {
       next(error)
     }
@@ -146,6 +213,13 @@ app.post(
         }
 
         openTarget(repo.readmePath)
+      } else if (target === 'failure-report') {
+        if (!repo.failureReport?.filePath) {
+          response.status(400).json({ message: 'This repo does not have a failure report yet.' })
+          return
+        }
+
+        openTarget(repo.failureReport.filePath)
       } else if (target === 'preview') {
         const url = repo.previewUrl
         if (!url) {
@@ -193,6 +267,12 @@ app.post(
       }
 
       await saveRepoActivity(relativePath, 'open')
+      publishWorkspaceEvent({
+        message: target,
+        relativePath,
+        status: 'open',
+        type: 'activity',
+      })
       response.json({ ok: true })
     } catch (error) {
       next(error)
@@ -228,6 +308,12 @@ app.post(
 
         const runtime = await startRepoRuntime(repo)
         await saveRepoActivity(relativePath, 'runtime')
+        publishWorkspaceEvent({
+          message: action,
+          relativePath,
+          status: runtime.status,
+          type: 'activity',
+        })
         response.json({ runtime })
         return
       }
@@ -235,6 +321,12 @@ app.post(
       if (action === 'stop') {
         const runtime = await stopRepoRuntime(repo.path)
         await saveRepoActivity(relativePath, 'runtime')
+        publishWorkspaceEvent({
+          message: action,
+          relativePath,
+          status: runtime?.status ?? 'stopped',
+          type: 'activity',
+        })
         response.json({ runtime })
         return
       }
@@ -249,6 +341,12 @@ app.post(
 
         const runtime = await restartRepoRuntime(repo)
         await saveRepoActivity(relativePath, 'runtime')
+        publishWorkspaceEvent({
+          message: action,
+          relativePath,
+          status: runtime.status,
+          type: 'activity',
+        })
         response.json({ runtime })
         return
       }
@@ -265,6 +363,12 @@ app.post(
   async (_request: Request, response: Response, next: NextFunction) => {
     try {
       await shutdownManagedRuntimes()
+      publishWorkspaceEvent({
+        message: 'stop-all',
+        relativePath: null,
+        status: 'runtime',
+        type: 'activity',
+      })
       response.json({ ok: true })
     } catch (error) {
       next(error)
@@ -297,6 +401,12 @@ app.post(
 
       const install = await runRepoInstall(repo)
       await saveRepoActivity(relativePath, 'install')
+      publishWorkspaceEvent({
+        message: 'install',
+        relativePath,
+        status: install.status,
+        type: 'activity',
+      })
       response.json({ install })
     } catch (error) {
       next(error)
@@ -322,6 +432,12 @@ app.post(
 
       const cover = await generateRepoCover(repo)
       await saveRepoActivity(relativePath, 'open')
+      publishWorkspaceEvent({
+        message: cover.coverImagePath,
+        relativePath,
+        status: 'cover',
+        type: 'cover',
+      })
       response.json({ cover })
     } catch (error) {
       next(error)
@@ -353,6 +469,12 @@ app.post(
       }
 
       response.json({ activity: await saveRepoActivity(relativePath, 'select'), ok: true })
+      publishWorkspaceEvent({
+        message: 'select',
+        relativePath,
+        status: 'select',
+        type: 'activity',
+      })
     } catch (error) {
       next(error)
     }
@@ -389,6 +511,12 @@ app.post(
         manifestPath: result.manifestPath,
         ok: true,
       })
+      publishWorkspaceEvent({
+        message: result.manifestPath,
+        relativePath,
+        status: 'manifest',
+        type: 'manifest',
+      })
     } catch (error) {
       next(error)
     }
@@ -420,6 +548,12 @@ app.post(
         ),
       )
 
+      publishWorkspaceEvent({
+        message: 'saved',
+        relativePath,
+        status: 'metadata',
+        type: 'metadata',
+      })
       response.json({ metadata: savedMetadata, ok: true })
     } catch (error) {
       next(error)
@@ -444,6 +578,25 @@ app.post(
       }
 
       await resetRepoMetadata(relativePath)
+      publishWorkspaceEvent({
+        message: 'reset',
+        relativePath,
+        status: 'metadata',
+        type: 'metadata',
+      })
+      response.json({ ok: true })
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.post(
+  '/api/open/path',
+  (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const targetPath = requireTargetPath(request.body)
+      openTarget(targetPath)
       response.json({ ok: true })
     } catch (error) {
       next(error)

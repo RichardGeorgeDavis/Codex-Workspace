@@ -17,18 +17,23 @@ import {
   fetchWorkspaceSummary,
   generateRepoCover,
   openRepoTarget,
+  openWorkspacePath,
   recordRepoActivity,
   resetRepoMetadata,
   runRepoInstall,
   runRepoRuntimeAction,
   saveRepoMetadata,
+  searchWorkspace,
   stopAllRuntimes,
+  subscribeWorkspaceEvents,
   writeRepoManifest,
 } from '../lib/api.ts'
 import type {
   RepoType,
+  WorkspaceEvent,
   WorkspaceArchive,
   WorkspaceRepo,
+  WorkspaceSearchResult,
   WorkspaceSummary,
 } from '../types/workspace.ts'
 
@@ -50,6 +55,16 @@ function formatGeneratedAt(value: string) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value))
+}
+
+function formatLiveEvent(event: WorkspaceEvent) {
+  const eventLabel = event.type.replace(/-/g, ' ')
+
+  if (event.relativePath) {
+    return `${eventLabel} • ${event.relativePath}`
+  }
+
+  return event.message ? `${eventLabel} • ${event.message}` : eventLabel
 }
 
 function parseTimestamp(value: string | null) {
@@ -162,12 +177,20 @@ export function App({ initialThemePreference }: AppProps) {
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [actionPendingKey, setActionPendingKey] = useState<string | null>(null)
+  const [indexedSearchError, setIndexedSearchError] = useState<string | null>(null)
+  const [indexedSearchLoading, setIndexedSearchLoading] = useState(false)
+  const [indexedSearchResults, setIndexedSearchResults] = useState<WorkspaceSearchResult[]>([])
+  const [liveEventLabel, setLiveEventLabel] = useState('Waiting for live updates')
+  const [liveStatus, setLiveStatus] = useState<'connected' | 'connecting' | 'disconnected'>(
+    'connecting',
+  )
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
   const [selectedFilter, setSelectedFilter] = useState<RepoFilterValue>('all')
   const [themePreference, setThemePreference] = useState(initialThemePreference)
   const deferredSearchTerm = useDeferredValue(searchTerm)
   const lastRecordedSelectionRef = useRef<string | null>(null)
+  const liveRefreshTimeoutRef = useRef<number | null>(null)
 
   async function loadSummary(signal?: AbortSignal, showLoading = true) {
     if (showLoading) {
@@ -201,6 +224,7 @@ export function App({ initialThemePreference }: AppProps) {
   async function handleOpenAction(
     relativePath: string,
     target:
+      | 'failure-report'
       | 'manifest'
       | 'preview'
       | 'readme'
@@ -226,6 +250,20 @@ export function App({ initialThemePreference }: AppProps) {
       }
 
       setActionPendingKey(null)
+    }
+  }
+
+  async function handleOpenWorkspacePath(targetPath: string) {
+    setActionError(null)
+
+    try {
+      await openWorkspacePath(targetPath)
+    } catch (caughtError) {
+      setActionError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to open the requested workspace path.',
+      )
     }
   }
 
@@ -413,6 +451,74 @@ export function App({ initialThemePreference }: AppProps) {
     persistThemePreference(themePreference)
   }, [themePreference])
 
+  useEffect(() => {
+    const query = deferredSearchTerm.trim()
+
+    if (query.length < 2) {
+      setIndexedSearchError(null)
+      setIndexedSearchLoading(false)
+      setIndexedSearchResults([])
+      return
+    }
+
+    const controller = new AbortController()
+    setIndexedSearchLoading(true)
+    setIndexedSearchError(null)
+
+    void searchWorkspace(query, controller.signal)
+      .then((payload) => {
+        setIndexedSearchResults(payload.results)
+      })
+      .catch((caughtError) => {
+        if (controller.signal.aborted) {
+          return
+        }
+
+        setIndexedSearchError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : 'Unable to load indexed search results.',
+        )
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIndexedSearchLoading(false)
+        }
+      })
+
+    return () => {
+      controller.abort()
+    }
+  }, [deferredSearchTerm, summary?.generatedAt])
+
+  useEffect(() => {
+    const unsubscribe = subscribeWorkspaceEvents(
+      (event) => {
+        setLiveEventLabel(formatLiveEvent(event))
+
+        if (liveRefreshTimeoutRef.current !== null) {
+          return
+        }
+
+        const delay = event.type.endsWith('log') ? 500 : 120
+        liveRefreshTimeoutRef.current = window.setTimeout(() => {
+          liveRefreshTimeoutRef.current = null
+          void loadSummary(undefined, false)
+        }, delay)
+      },
+      setLiveStatus,
+    )
+
+    return () => {
+      unsubscribe()
+
+      if (liveRefreshTimeoutRef.current !== null) {
+        window.clearTimeout(liveRefreshTimeoutRef.current)
+        liveRefreshTimeoutRef.current = null
+      }
+    }
+  }, [])
+
   const availableTypes = summary
     ? [...new Set(summary.repos.map((repo) => repo.type))].sort()
     : []
@@ -492,6 +598,17 @@ export function App({ initialThemePreference }: AppProps) {
     }))
   }
 
+  function handleSelectIndexedRepo(relativePath: string) {
+    const nextRepo = summary?.repos.find((repo) => repo.relativePath === relativePath)
+
+    if (!nextRepo) {
+      return
+    }
+
+    setSelectedFilter('all')
+    setSelectedPath(nextRepo.path)
+  }
+
   return (
     <div className="app-shell">
       <header className="hero-panel reveal">
@@ -526,6 +643,7 @@ export function App({ initialThemePreference }: AppProps) {
             <div className="hero-meta">
               <span>Workspace root: {summary?.workspaceRoot ?? 'Loading...'}</span>
               <span>Last sync: {generatedAt}</span>
+              <span>{`Live updates: ${liveStatus} • ${liveEventLabel}`}</span>
             </div>
           </div>
 
@@ -539,6 +657,8 @@ export function App({ initialThemePreference }: AppProps) {
       </header>
 
       <StatusStrip
+        liveLabel={liveEventLabel}
+        liveStatus={liveStatus}
         loading={loading}
         onStopAll={() => {
           void handleStopAllAction()
@@ -561,8 +681,13 @@ export function App({ initialThemePreference }: AppProps) {
               availableTypes={availableTypes}
               filteredArchives={filteredArchives}
               filteredRepos={filteredRepos}
+              indexedSearchError={indexedSearchError}
+              indexedSearchLoading={indexedSearchLoading}
+              indexedSearchResults={indexedSearchResults}
               loading={loading}
+              onOpenIndexedPath={handleOpenWorkspacePath}
               onSearchChange={setSearchTerm}
+              onSelectIndexedRepo={handleSelectIndexedRepo}
               onSelectRepo={setSelectedPath}
               onFilterChange={setSelectedFilter}
               searchTerm={searchTerm}

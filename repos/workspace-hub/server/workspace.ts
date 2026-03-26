@@ -9,6 +9,7 @@ import type {
   RepoDependencyState,
   RepoGitState,
   RepoInstall,
+  RepoFailureReportSummary,
   RepoRecentContext,
   PreviewMode,
   RepoPreset,
@@ -21,6 +22,7 @@ import type {
   WorkspaceRepo,
   WorkspaceSummary,
 } from '../src/types/workspace.ts'
+import { readLatestFailureReports } from './failure-reports.ts'
 import { readWorkspaceMetadata, type StoredRepoMetadata } from './workspace-metadata.ts'
 
 type RepoManifest = {
@@ -1179,6 +1181,7 @@ async function buildRepoRecord(
   installSnapshots: Map<string, RepoInstall>,
   runtimeSnapshots: Map<string, RepoRuntime>,
   savedMetadata: StoredRepoMetadata | null,
+  latestFailureReports: Map<string, RepoFailureReportSummary>,
 ): Promise<WorkspaceRepo | null> {
   const { hasManifest, manifest, manifestPath } = await readRepoManifest(fullPath)
   const packageJson = await readJsonIfPresent<PackageJson>(path.join(fullPath, 'package.json'))
@@ -1191,6 +1194,7 @@ async function buildRepoRecord(
   const type = await detectRepoType(fullPath, names, packageJson, collection, manifest)
   const packageManager = detectPackageManager(names, packageJson, manifest)
   const relativePath = path.relative(workspaceRoot, fullPath)
+  const failureReport = latestFailureReports.get(relativePath) ?? null
   const recent = buildRecentContext(savedMetadata)
   const savedOverrides = buildSavedMetadata(savedMetadata)
   const manifestPreferredMode = isPreviewMode(manifest?.preferredMode)
@@ -1288,6 +1292,7 @@ async function buildRepoRecord(
     dependencies,
     devCommand: effectiveDevCommand,
     externalUrl,
+    failureReport,
     git,
     hasManifest,
     hasSavedMetadata: Boolean(savedOverrides),
@@ -1327,7 +1332,10 @@ async function discoverWorkspace(
   runtimeSnapshots: Map<string, RepoRuntime>,
 ) {
   const reposDirectoryData = await readVisibleDirectoryData(reposRoot)
-  const savedMetadataState = await readWorkspaceMetadata()
+  const [savedMetadataState, latestFailureReports] = await Promise.all([
+    readWorkspaceMetadata(),
+    readLatestFailureReports(),
+  ])
   const directoryResults = await Promise.all(
     reposDirectoryData.directoryNames.map(async (directoryName) => {
       const fullPath = path.join(reposRoot, directoryName)
@@ -1339,6 +1347,7 @@ async function discoverWorkspace(
         installSnapshots,
         runtimeSnapshots,
         savedMetadataState.repos[path.relative(workspaceRoot, fullPath)] ?? null,
+        latestFailureReports,
       )
 
       if (directRepo) {
@@ -1368,6 +1377,7 @@ async function discoverWorkspace(
               installSnapshots,
               runtimeSnapshots,
               savedMetadataState.repos[path.relative(workspaceRoot, childPath)] ?? null,
+              latestFailureReports,
             ),
           }
         }),

@@ -1,5 +1,10 @@
 import { SectionCard } from '../../components/SectionCard.tsx'
-import type { RepoType, WorkspaceArchive, WorkspaceRepo } from '../../types/workspace.ts'
+import type {
+  RepoType,
+  WorkspaceArchive,
+  WorkspaceRepo,
+  WorkspaceSearchResult,
+} from '../../types/workspace.ts'
 
 type RepoFilterValue =
   | RepoType
@@ -13,9 +18,14 @@ type RepoSnapshotProps = {
   availableTypes: RepoType[]
   filteredArchives: WorkspaceArchive[]
   filteredRepos: WorkspaceRepo[]
+  indexedSearchError: string | null
+  indexedSearchLoading: boolean
+  indexedSearchResults: WorkspaceSearchResult[]
   loading: boolean
   onFilterChange: (value: RepoFilterValue) => void
+  onOpenIndexedPath: (targetPath: string) => Promise<void>
   onSearchChange: (value: string) => void
+  onSelectIndexedRepo: (relativePath: string) => void
   onSelectRepo: (path: string) => void
   searchTerm: string
   selectedPath: string | null
@@ -29,6 +39,12 @@ type RepoSnapshotCardProps = {
 
 type ArchiveSnapshotCardProps = {
   archive: WorkspaceArchive
+}
+
+type IndexedSearchCardProps = {
+  onOpenIndexedPath: (targetPath: string) => Promise<void>
+  onSelectIndexedRepo: (relativePath: string) => void
+  result: WorkspaceSearchResult
 }
 
 function formatBranchLabel(repo: WorkspaceRepo) {
@@ -149,13 +165,67 @@ function ArchiveSnapshotCard({ archive }: ArchiveSnapshotCardProps) {
   )
 }
 
+function IndexedSearchCard({
+  onOpenIndexedPath,
+  onSelectIndexedRepo,
+  result,
+}: IndexedSearchCardProps) {
+  const { filePath, repoRelativePath } = result
+
+  return (
+    <article className="search-result-card">
+      <div className="search-result-header">
+        <strong>{result.title}</strong>
+        <span className="repo-card-tags">
+          <span className="tag">{result.category}</span>
+          <span className="tag">{result.matchSource}</span>
+        </span>
+      </div>
+
+      <p className="search-result-subtitle">{result.subtitle}</p>
+      <p className="search-result-snippet">{result.snippet}</p>
+
+      <div className="search-result-actions">
+        {repoRelativePath ? (
+          <button
+            className="action-button"
+            onClick={() => {
+              onSelectIndexedRepo(repoRelativePath)
+            }}
+            type="button"
+          >
+            Select repo
+          </button>
+        ) : null}
+
+        {filePath ? (
+          <button
+            className="action-button"
+            onClick={() => {
+              void onOpenIndexedPath(filePath)
+            }}
+            type="button"
+          >
+            Open file
+          </button>
+        ) : null}
+      </div>
+    </article>
+  )
+}
+
 export function RepoSnapshot({
   availableTypes,
   filteredArchives,
   filteredRepos,
+  indexedSearchError,
+  indexedSearchLoading,
+  indexedSearchResults,
   loading,
   onFilterChange,
+  onOpenIndexedPath,
   onSearchChange,
+  onSelectIndexedRepo,
   onSelectRepo,
   searchTerm,
   selectedPath,
@@ -207,6 +277,42 @@ export function RepoSnapshot({
           </select>
         </label>
       </div>
+
+      {searchTerm.trim().length >= 2 ? (
+        <div className="indexed-search-group">
+          <div className="discovery-section-heading">
+            <span className="discovery-section-title">Indexed search</span>
+            <span className="tag">
+              {indexedSearchLoading ? '…' : indexedSearchResults.length}
+            </span>
+          </div>
+
+          {indexedSearchError ? (
+            <div className="empty-state">
+              <strong>Indexed search is unavailable.</strong>
+              <p>{indexedSearchError}</p>
+            </div>
+          ) : indexedSearchResults.length ? (
+            <div className="search-result-list">
+              {indexedSearchResults.map((result) => (
+                <IndexedSearchCard
+                  key={result.id}
+                  onOpenIndexedPath={onOpenIndexedPath}
+                  onSelectIndexedRepo={onSelectIndexedRepo}
+                  result={result}
+                />
+              ))}
+            </div>
+          ) : indexedSearchLoading ? (
+            <p className="loading-copy">Searching indexed metadata, logs, and local artifacts...</p>
+          ) : (
+            <div className="empty-state">
+              <strong>No indexed matches yet.</strong>
+              <p>Try a broader phrase or search by branch, tag, manifest key, or error text.</p>
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {loading && !hasVisibleItems ? (
         <p className="loading-copy">Scanning workspace roots...</p>

@@ -1,4 +1,8 @@
-import type { WorkspaceSummary } from '../types/workspace.ts'
+import type {
+  WorkspaceEvent,
+  WorkspaceSearchResponse,
+  WorkspaceSummary,
+} from '../types/workspace.ts'
 
 async function readErrorMessage(response: Response) {
   try {
@@ -21,7 +25,14 @@ export async function fetchWorkspaceSummary(signal?: AbortSignal) {
 
 export async function openRepoTarget(
   relativePath: string,
-  target: 'manifest' | 'preview' | 'readme' | 'repo' | 'terminal' | 'troubleshooting',
+  target:
+    | 'failure-report'
+    | 'manifest'
+    | 'preview'
+    | 'readme'
+    | 'repo'
+    | 'terminal'
+    | 'troubleshooting',
 ) {
   const response = await fetch('/api/repos/open', {
     body: JSON.stringify({ relativePath, target }),
@@ -33,6 +44,60 @@ export async function openRepoTarget(
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
+  }
+}
+
+export async function openWorkspacePath(targetPath: string) {
+  const response = await fetch('/api/open/path', {
+    body: JSON.stringify({ path: targetPath }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+}
+
+export async function searchWorkspace(query: string, signal?: AbortSignal) {
+  const params = new URLSearchParams({ q: query })
+  const response = await fetch(`/api/search?${params.toString()}`, { signal })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return (await response.json()) as WorkspaceSearchResponse
+}
+
+export function subscribeWorkspaceEvents(
+  onEvent: (event: WorkspaceEvent) => void,
+  onStatusChange?: (status: 'connected' | 'connecting' | 'disconnected') => void,
+) {
+  onStatusChange?.('connecting')
+
+  const source = new EventSource('/api/events')
+
+  source.onopen = () => {
+    onStatusChange?.('connected')
+  }
+
+  source.onmessage = (event) => {
+    try {
+      onEvent(JSON.parse(event.data) as WorkspaceEvent)
+    } catch {
+      // Ignore malformed event payloads.
+    }
+  }
+
+  source.onerror = () => {
+    onStatusChange?.('disconnected')
+  }
+
+  return () => {
+    source.close()
   }
 }
 

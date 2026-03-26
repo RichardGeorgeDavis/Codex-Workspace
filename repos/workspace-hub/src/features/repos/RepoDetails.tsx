@@ -18,6 +18,7 @@ type RepoDetailsProps = {
   onOpenAction: (
     relativePath: string,
     target:
+      | 'failure-report'
       | 'manifest'
       | 'preview'
       | 'readme'
@@ -103,6 +104,7 @@ function buildPendingKey(
   relativePath: string,
   action:
     | 'cover'
+    | 'failure-report'
     | 'install'
     | 'manifest'
     | 'preview'
@@ -301,6 +303,12 @@ function buildTroubleshootingTips(repo: WorkspaceRepo) {
     tips.push('The repo process is running but not answering yet. Check the expected port, preview URL, and startup log output.')
   }
 
+  if (repo.failureReport) {
+    tips.push(
+      `A ${repo.failureReport.kind} failure report was recorded at ${formatRecentValue(repo.failureReport.generatedAt)}.`,
+    )
+  }
+
   if (!tips.length) {
     tips.push('No active troubleshooting warnings are present for this repo.')
   }
@@ -452,6 +460,19 @@ function RepoDetailsContent({
           type="button"
         >
           Capture cover + update README
+        </button>
+        <button
+          className="action-button"
+          disabled={
+            !repo.failureReport?.filePath ||
+            actionPendingKey === buildPendingKey(repo.relativePath, 'failure-report')
+          }
+          onClick={() => {
+            void onOpenAction(repo.relativePath, 'failure-report')
+          }}
+          type="button"
+        >
+          Open failure report
         </button>
         <button
           className="action-button"
@@ -612,6 +633,17 @@ function RepoDetailsContent({
               {repo.recent.lastActionKind
                 ? `${repo.recent.lastActionKind} at ${formatRecentValue(repo.recent.lastActionAt)}`
                 : formatRecentValue(repo.recent.lastSelectedAt)}
+            </dd>
+          </div>
+          <div className="details-row">
+            <dt>Failure report</dt>
+            <dd>
+              {repo.failureReport ? (
+                <>
+                  <span className="status-pill error">{repo.failureReport.kind}</span>
+                  {` ${formatRecentValue(repo.failureReport.generatedAt)} • ${repo.failureReport.workspaceRelativePath}`}
+                </>
+              ) : 'No failure report recorded'}
             </dd>
           </div>
         </dl>

@@ -9,3 +9,4 @@ The repo should keep only ignore scaffolding here. Real metadata files stay loca
 Typical local files:
 
 - `repo-metadata.json` for per-repo notes, tags, preferred mode, and command/URL overrides.
+- `failure-reports/*.json` for structured runtime or install failure reports with repo, Git, health, command, and log-tail context.

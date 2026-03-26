@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 import type { WorkspaceSummary } from '../../types/workspace.ts'
 
 type StatusStripProps = {
+  liveLabel: string
+  liveStatus: 'connected' | 'connecting' | 'disconnected'
   loading: boolean
   onStopAll: () => void
   stopAllPending: boolean
@@ -10,6 +12,8 @@ type StatusStripProps = {
 }
 
 export function StatusStrip({
+  liveLabel,
+  liveStatus,
   loading,
   onStopAll,
   stopAllPending,
@@ -48,6 +52,11 @@ export function StatusStrip({
       label: 'External mode',
       note: loading ? 'Reading preview defaults...' : 'Repos preferring external handling',
       value: summary?.stats.externalPreferredRepos ?? '--',
+    },
+    {
+      label: 'Live updates',
+      note: liveLabel,
+      value: liveStatus,
     },
   ]
 

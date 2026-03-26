@@ -37,7 +37,10 @@ Workspace Hub is a local control plane for people who manage many standalone rep
 - starts, stops, and restarts supported repos from one UI
 - auto-starts supported direct local repos when `Open preview` is used and the local preview is not up yet
 - shows runtime, install, Git, and dependency-readiness status
+- streams live runtime, install, cover, and activity updates from the local API
+- indexes repo metadata, manifests, recent logs, failure reports, and local agent-job artifacts for server-side search
 - stores lightweight per-repo metadata and recent activity locally
+- writes structured local failure reports for install and runtime errors
 - includes persisted appearance controls with five built-in presets and light or dark mode
 - reads and writes `.workspace/project.json` manifests when a repo needs explicit behaviour
 - captures repo cover screenshots from live previews and can insert them into repo `README.md` files
@@ -146,6 +149,8 @@ Default local endpoints:
 
 - app: `http://127.0.0.1:4100`
 - api: `http://127.0.0.1:4101/api/health`
+- events: `http://127.0.0.1:4101/api/events`
+- search: `http://127.0.0.1:4101/api/search?q=preview`
 
 ## Repo Covers
 
@@ -180,6 +185,7 @@ Workspace Hub executes repo-native commands locally. It is meant for repos you t
 
 - runtime and install commands are executed through the local shell
 - local metadata lives under `data/` and should stay untracked
+- local failure reports live under `data/failure-reports/` and should stay untracked
 - public defaults can live in `.workspace/project.json`
 - local-only overrides can live in `.workspace/project.local.json`
 
@@ -214,6 +220,7 @@ Use local override files when you want to keep your own operator notes or machin
 
 - richer dependency detection beyond Node and Composer is still pending
 - runtime state is local and in-memory, not shared across machines
+- indexed search is intentionally lightweight and local-first, not a hosted code intelligence layer
 - the tool assumes a trusted local workspace rather than untrusted repos
 - synced folders such as Google Drive, iCloud, or Dropbox can interfere with `.git` directories and should be avoided
 
