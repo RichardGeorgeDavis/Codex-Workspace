@@ -14,6 +14,7 @@ import {
   type ThemePreset,
 } from '../features/theme/theme.ts'
 import {
+  applyRepoAgentPreset,
   fetchWorkspaceSummary,
   generateRepoCover,
   openRepoTarget,
@@ -21,6 +22,7 @@ import {
   recordRepoActivity,
   resetRepoMetadata,
   runRepoInstall,
+  runRepoIntake,
   runRepoRuntimeAction,
   saveRepoMetadata,
   searchWorkspace,
@@ -29,6 +31,7 @@ import {
   writeRepoManifest,
 } from '../lib/api.ts'
 import type {
+  RepoAgentPresetId,
   RepoType,
   WorkspaceEvent,
   WorkspaceArchive,
@@ -308,6 +311,25 @@ export function App({ initialThemePreference }: AppProps) {
     }
   }
 
+  async function handleIntakeAction(relativePath: string) {
+    const pendingKey = `${relativePath}:intake`
+    setActionPendingKey(pendingKey)
+    setActionError(null)
+
+    try {
+      await runRepoIntake(relativePath)
+      await loadSummary(undefined, false)
+    } catch (caughtError) {
+      setActionError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to initialize repo docs and metadata.',
+      )
+    } finally {
+      setActionPendingKey(null)
+    }
+  }
+
   async function handleStopAllAction() {
     const pendingKey = 'runtime:stop-all'
     setActionPendingKey(pendingKey)
@@ -430,6 +452,28 @@ export function App({ initialThemePreference }: AppProps) {
         caughtError instanceof Error
           ? caughtError.message
           : 'Unable to write repo manifest.',
+      )
+    } finally {
+      setActionPendingKey(null)
+    }
+  }
+
+  async function handleApplyAgentPreset(
+    relativePath: string,
+    preset: RepoAgentPresetId,
+  ) {
+    const pendingKey = `${relativePath}:agent-preset:${preset}`
+    setActionPendingKey(pendingKey)
+    setActionError(null)
+
+    try {
+      await applyRepoAgentPreset(relativePath, preset)
+      await loadSummary(undefined, false)
+    } catch (caughtError) {
+      setActionError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to apply the repo agent preset.',
       )
     } finally {
       setActionPendingKey(null)
@@ -700,7 +744,9 @@ export function App({ initialThemePreference }: AppProps) {
             <RepoDetails
               actionError={actionError}
               actionPendingKey={actionPendingKey}
+              onApplyAgentPreset={handleApplyAgentPreset}
               onCoverAction={handleCoverAction}
+              onIntakeAction={handleIntakeAction}
               onInstallAction={handleInstallAction}
               onCopyError={setActionError}
               loading={loading}

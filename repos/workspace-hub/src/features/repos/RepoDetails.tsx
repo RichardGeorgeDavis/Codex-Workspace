@@ -1,7 +1,12 @@
 import { type ReactNode, useState } from 'react'
 
 import { SectionCard } from '../../components/SectionCard.tsx'
+import {
+  collectAgentToolingLabels,
+  formatOpenAgentConfigLabel,
+} from './agentTooling.ts'
 import type {
+  RepoAgentPresetId,
   PreviewMode,
   RepoType,
   WorkspaceManifestRecord,
@@ -11,8 +16,13 @@ import type {
 type RepoDetailsProps = {
   actionError: string | null
   actionPendingKey: string | null
+  onApplyAgentPreset: (
+    relativePath: string,
+    preset: RepoAgentPresetId,
+  ) => Promise<void>
   onCoverAction: (relativePath: string) => Promise<void>
   onCopyError: (message: string | null) => void
+  onIntakeAction: (relativePath: string) => Promise<void>
   onInstallAction: (relativePath: string) => Promise<void>
   loading: boolean
   onOpenAction: (
@@ -100,11 +110,39 @@ type ManifestDraft = {
   type: RepoType
 }
 
+const repoAgentPresetOptions: Array<{
+  description: string
+  id: RepoAgentPresetId
+  label: string
+}> = [
+  {
+    description: 'Root AGENTS.md plus tracked shared skills for official .codex/skills and optional .agents/skills compatibility mirrors.',
+    id: 'codex-baseline',
+    label: 'Codex baseline',
+  },
+  {
+    description: 'Adds tracked OMX-ready hints in .workspace/agent-stack.json without making OMX mandatory.',
+    id: 'omx-ready',
+    label: 'OMX ready',
+  },
+  {
+    description: 'Scaffolds .opencode config plus oh-my-openagent project overrides.',
+    id: 'opencode',
+    label: 'OpenCode',
+  },
+  {
+    description: 'Combines Codex baseline, OMX-ready hints, and OpenCode config.',
+    id: 'all-in-one',
+    label: 'All-in-one',
+  },
+]
+
 function buildPendingKey(
   relativePath: string,
   action:
     | 'cover'
     | 'failure-report'
+    | 'intake'
     | 'install'
     | 'manifest'
     | 'preview'
@@ -120,6 +158,13 @@ function buildPendingKey(
     | 'write-manifest',
 ) {
   return `${relativePath}:${action}`
+}
+
+function buildAgentPresetPendingKey(
+  relativePath: string,
+  preset: RepoAgentPresetId,
+) {
+  return `${relativePath}:agent-preset:${preset}`
 }
 
 function buildMetadataDraft(repo: WorkspaceRepo): MetadataDraft {
@@ -319,8 +364,10 @@ function buildTroubleshootingTips(repo: WorkspaceRepo) {
 export function RepoDetails({
   actionError,
   actionPendingKey,
+  onApplyAgentPreset,
   onCoverAction,
   onCopyError,
+  onIntakeAction,
   onInstallAction,
   loading,
   onOpenAction,
@@ -344,8 +391,10 @@ export function RepoDetails({
           key={repo.relativePath}
           actionError={actionError}
           actionPendingKey={actionPendingKey}
+          onApplyAgentPreset={onApplyAgentPreset}
           onCoverAction={onCoverAction}
           onCopyError={onCopyError}
+          onIntakeAction={onIntakeAction}
           onInstallAction={onInstallAction}
           onOpenAction={onOpenAction}
           onResetMetadata={onResetMetadata}
@@ -368,8 +417,10 @@ type RepoDetailsContentProps = Omit<RepoDetailsProps, 'loading' | 'repo'> & {
 function RepoDetailsContent({
   actionError,
   actionPendingKey,
+  onApplyAgentPreset,
   onCoverAction,
   onCopyError,
+  onIntakeAction,
   onInstallAction,
   onOpenAction,
   onResetMetadata,
@@ -385,6 +436,8 @@ function RepoDetailsContent({
   const [copyMessage, setCopyMessage] = useState<string | null>(null)
   const troubleshootingTips = buildTroubleshootingTips(repo)
   const manifestPayload = buildManifestPayload(manifestDraft)
+  const agentToolingLabels = collectAgentToolingLabels(repo.agentTooling)
+  const hasAgentTooling = agentToolingLabels.length > 0
   const manifestReady =
     manifestPayload.name.length > 0 && manifestPayload.slug.length > 0
   const hasTroubleshootingAttention =
@@ -434,6 +487,16 @@ function RepoDetailsContent({
           type="button"
         >
           Open in Terminal
+        </button>
+        <button
+          className="action-button"
+          disabled={actionPendingKey === buildPendingKey(repo.relativePath, 'intake')}
+          onClick={() => {
+            void onIntakeAction(repo.relativePath)
+          }}
+          type="button"
+        >
+          Run repo intake
         </button>
         <button
           className="action-button"
@@ -611,6 +674,18 @@ function RepoDetailsContent({
             <dd>{repo.devCommand ?? 'Not inferred yet'}</dd>
           </div>
           <div className="details-row">
+            <dt>Agent tooling</dt>
+            <dd className="tag-group">
+              {hasAgentTooling ? (
+                agentToolingLabels.map((label) => (
+                  <span key={label} className="tag">
+                    {label}
+                  </span>
+                ))
+              ) : 'No repo-local agent tooling detected'}
+            </dd>
+          </div>
+          <div className="details-row">
             <dt>Git</dt>
             <dd>
               <span className={`status-pill ${repo.git.state}`}>{repo.git.state}</span>
@@ -701,6 +776,88 @@ function RepoDetailsContent({
         </div>
 
         {copyMessage ? <p className="copy-note">{copyMessage}</p> : null}
+      </AccordionSection>
+
+      <AccordionSection
+        badge={
+          <span className={`status-pill ${hasAgentTooling ? 'ready' : 'unknown'}`}>
+            {hasAgentTooling ? 'detected' : 'none'}
+          </span>
+        }
+        title="Agent tooling"
+      >
+        <p className="section-copy">
+          Workspace Hub surfaces repo-local agent layers so official Codex, optional OMX, and OpenCode-style setups stay visible without becoming required workspace dependencies.
+        </p>
+
+        <dl className="details-list">
+          <div className="details-row">
+            <dt>AGENTS.md</dt>
+            <dd>{repo.agentTooling.agentsPath ?? 'Not detected'}</dd>
+          </div>
+          <div className="details-row">
+            <dt>Agent stack</dt>
+            <dd>{repo.agentTooling.agentStackPath ?? 'Not detected'}</dd>
+          </div>
+          <div className="details-row">
+            <dt>Agent skills (.agents)</dt>
+            <dd>{repo.agentTooling.codexSkillsPath ?? 'Not detected'}</dd>
+          </div>
+          <div className="details-row">
+            <dt>Codex config (.codex)</dt>
+            <dd>{repo.agentTooling.codexProjectConfigPath ?? 'Not detected'}</dd>
+          </div>
+          <div className="details-row">
+            <dt>Codex skills (.codex)</dt>
+            <dd>{repo.agentTooling.codexProjectSkillsPath ?? 'Not detected'}</dd>
+          </div>
+          <div className="details-row">
+            <dt>Workspace skills</dt>
+            <dd>{repo.agentTooling.workspaceSkillsPath ?? 'Not detected'}</dd>
+          </div>
+          <div className="details-row">
+            <dt>OMX</dt>
+            <dd>{repo.agentTooling.omxPath ?? 'Not detected'}</dd>
+          </div>
+          <div className="details-row">
+            <dt>OpenCode</dt>
+            <dd>{repo.agentTooling.openCodePath ?? 'Not detected'}</dd>
+          </div>
+          <div className="details-row">
+            <dt>oh-my-openagent</dt>
+            <dd>{formatOpenAgentConfigLabel(repo.agentTooling)}</dd>
+          </div>
+        </dl>
+
+        <p className="section-copy">
+          Presets write tracked repo files only. Existing files are preserved, and <code>tools/ref/</code> remains a temporary reference source for extracting base upgrades into workspace-native code, docs, templates, and skills.
+        </p>
+
+        <div className="preset-list">
+          {repoAgentPresetOptions.map((preset) => {
+            const pending =
+              actionPendingKey === buildAgentPresetPendingKey(repo.relativePath, preset.id)
+
+            return (
+              <div key={preset.id} className="preset-item">
+                <div className="preset-copy">
+                  <strong>{preset.label}</strong>
+                  <p>{preset.description}</p>
+                </div>
+                <button
+                  className="action-button"
+                  disabled={pending}
+                  onClick={() => {
+                    void onApplyAgentPreset(repo.relativePath, preset.id)
+                  }}
+                  type="button"
+                >
+                  {pending ? 'Applying...' : `Apply ${preset.label}`}
+                </button>
+              </div>
+            )
+          })}
+        </div>
       </AccordionSection>
 
       <AccordionSection
@@ -1314,6 +1471,20 @@ function RepoDetailsContent({
           </dd>
         </div>
         <div className="details-row">
+          <dt>Agent tooling</dt>
+          <dd className="tag-group">
+            {hasAgentTooling ? (
+              agentToolingLabels.map((label) => (
+                <span key={label} className="tag">
+                  {label}
+                </span>
+              ))
+            ) : (
+              'No repo-local agent tooling detected'
+            )}
+          </dd>
+        </div>
+        <div className="details-row">
           <dt>Install status</dt>
           <dd>
             <span className={`status-pill ${repo.install.status}`}>{repo.install.status}</span>
@@ -1347,6 +1518,34 @@ function RepoDetailsContent({
         <div className="details-row">
           <dt>Manifest</dt>
           <dd>{repo.manifestPath ?? 'No manifest detected'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Codex config (.codex)</dt>
+          <dd>{repo.agentTooling.codexProjectConfigPath ?? 'Not detected'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Codex skills (.codex)</dt>
+          <dd>{repo.agentTooling.codexProjectSkillsPath ?? 'Not detected'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Agent skills (.agents)</dt>
+          <dd>{repo.agentTooling.codexSkillsPath ?? 'Not detected'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>Agent stack</dt>
+          <dd>{repo.agentTooling.agentStackPath ?? 'Not detected'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>OMX</dt>
+          <dd>{repo.agentTooling.omxPath ?? 'Not detected'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>OpenCode</dt>
+          <dd>{repo.agentTooling.openCodePath ?? 'Not detected'}</dd>
+        </div>
+        <div className="details-row">
+          <dt>oh-my-openagent</dt>
+          <dd>{formatOpenAgentConfigLabel(repo.agentTooling)}</dd>
         </div>
         <div className="details-row">
           <dt>Preset</dt>

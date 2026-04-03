@@ -885,6 +885,15 @@
   align-items: center;
 }
 
+.settings-subsection + .settings-subsection {
+  margin-top: 1rem;
+}
+
+.settings-group-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+}
+
 .entry h3,
 .milestone h3 {
   margin: 0;
@@ -1249,6 +1258,38 @@
   background: var(--surface-card-subtle);
 }
 
+.preset-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.preset-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-card);
+  background: var(--surface-default);
+}
+
+.preset-copy {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.preset-copy strong,
+.preset-copy p {
+  margin: 0;
+}
+
+.preset-copy p {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
 .details-accordion {
   padding: 1rem;
 }
@@ -1560,6 +1601,7 @@ textarea:focus-visible {
   .hero-meta,
   .entry-header,
   .action-row,
+  .preset-item,
   .repo-card-header,
   .repo-card-meta,
   .repo-card-footer,
@@ -1569,5 +1611,9 @@ textarea:focus-visible {
   .theme-console-head {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .preset-item {
+    grid-template-columns: 1fr;
   }
 }

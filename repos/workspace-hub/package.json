@@ -1,7 +1,7 @@
 {
   "name": "workspace-hub",
   "private": true,
-  "version": "0.1.9",
+  "version": "1.0.0",
   "type": "module",
   "packageManager": "pnpm@9.4.0",
   "scripts": {
@@ -10,6 +10,7 @@
     "dev:api": "tsx watch server/index.ts",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b",
+    "test": "tsx --test test/**/*.test.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },

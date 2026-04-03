@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
+
+  // Keep project-level overrides small. Prefer repo AGENTS.md and tracked skills
+  // for durable guidance; use this file only for OpenCode-specific runtime behavior.
+  "categories": {
+    "deep": {
+      "prompt_append": "Follow the repo AGENTS.md and prefer tracked repo guidance over hidden state."
+    },
+    "quick": {
+      "prompt_append": "Respect existing repo conventions. Avoid adding new abstractions without a concrete need."
+    },
+    "visual-engineering": {
+      "prompt_append": "Preserve the established visual system unless the task explicitly calls for redesign."
+    }
+  },
+  "disabled_hooks": [],
+  "runtime_fallback": {
+    "enabled": true,
+    "max_fallback_attempts": 2,
+    "notify_on_fallback": true,
+    "timeout_seconds": 30
+  }
+}

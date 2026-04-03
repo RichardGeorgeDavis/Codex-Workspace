@@ -26,7 +26,8 @@ Codex Workspace keeps repositories portable and independently runnable.
 
 ## Agent Portability
 
-- Keep Codex-native tracked skills in repo-local `.agents/skills/`.
+- Keep official Codex repo-local skills in `.codex/skills/`.
+- Use `.agents/skills/` only as a tracked compatibility mirror when a repo benefits from it.
 - Keep portable shared skill source material in `shared/skills/` or optional repo-local `.workspace/skills/`.
 - Treat non-Codex folders such as `.claude/skills/` and `.github/skills/` as optional adapter targets rather than the canonical source.
 - Keep portable MCP examples separate from real credentials and machine-specific settings.

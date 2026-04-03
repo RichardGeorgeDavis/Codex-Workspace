@@ -11,7 +11,8 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") [--run] [--all] [repo-path]
 
-Sync tracked Codex skill sources into a repo's .agents/skills/ folder.
+Sync tracked Codex skill sources into a repo's .codex/skills/ folder and
+optional .agents/skills/ compatibility mirror.
 
 Default behavior is a dry run. Use --run to apply changes.
 
@@ -20,8 +21,9 @@ Source order:
 2. <repo>/.workspace/skills/
 
 Repo-local .workspace/skills/ entries overwrite shared/skills/ entries with
-the same top-level name. Unmanaged files already in .agents/skills/ are left
-alone; this script only replaces entries that come from tracked source folders.
+the same top-level name. Unmanaged files already in the target skill folders
+are left alone; this script only replaces entries that come from tracked
+source folders.
 
 Examples:
   $0 repos/workspace-hub
@@ -77,10 +79,13 @@ sync_repo() {
 
   shared_source="$workspace_root/shared/skills"
   repo_source="$repo_dir/.workspace/skills"
-  target_dir="$repo_dir/.agents/skills"
+  codex_target_dir="$repo_dir/.codex/skills"
+  compatibility_target_dir="$repo_dir/.agents/skills"
 
   printf 'Repo: %s\n' "$repo_dir"
-  printf 'Target: %s\n' "$target_dir"
+  printf 'Targets:\n'
+  printf '  %s\n' "$codex_target_dir"
+  printf '  %s\n' "$compatibility_target_dir"
 
   found_source=0
   if [ -d "$shared_source" ]; then
@@ -107,8 +112,10 @@ sync_repo() {
     printf 'Mode: apply\n'
   fi
 
-  sync_source_dir "$shared_source" "$target_dir"
-  sync_source_dir "$repo_source" "$target_dir"
+  for target_dir in "$codex_target_dir" "$compatibility_target_dir"; do
+    sync_source_dir "$shared_source" "$target_dir"
+    sync_source_dir "$repo_source" "$target_dir"
+  done
 }
 
 while [ $# -gt 0 ]; do

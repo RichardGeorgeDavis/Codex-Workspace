@@ -1,0 +1,8 @@
+{
+  // Project-level OpenCode registration for repos that intentionally support it.
+  // Upstream still publishes the package and binary as `oh-my-opencode`,
+  // but the plugin entry now prefers `oh-my-openagent`.
+  "plugin": [
+    "oh-my-openagent"
+  ]
+}

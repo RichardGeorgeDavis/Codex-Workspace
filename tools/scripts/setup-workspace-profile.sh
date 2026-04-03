@@ -92,7 +92,7 @@ check_dir_path() {
 count_tracked_skill_files() {
   find "$workspace_root" \
     \( -path '*/node_modules' -o -path '*/.git' \) -prune -o \
-    -type f \( -path '*/.agents/skills/*/SKILL.md' -o -path '*/shared/skills/*/SKILL.md' -o -path '*/.workspace/skills/*/SKILL.md' \) \
+    -type f \( -path '*/.codex/skills/*/SKILL.md' -o -path '*/.agents/skills/*/SKILL.md' -o -path '*/shared/skills/*/SKILL.md' -o -path '*/.workspace/skills/*/SKILL.md' \) \
     -print 2>/dev/null | wc -l | awk '{print $1}'
 }
 
@@ -269,7 +269,8 @@ case "$profile" in
       print_status "[ok]" "MCP templates" "$workspace_root/tools/templates/mcp"
     fi
     printf '\nNext steps\n'
-    printf -- '- Publish tracked repo skills under .agents/skills/ when a workflow becomes stable enough\n'
+    printf -- '- Publish tracked repo skills under .codex/skills/ when a workflow becomes stable enough\n'
+    printf -- '- Mirror into .agents/skills/ only when repo-local compatibility helps\n'
     printf -- '- Use tools/scripts/sync-codex-skills.sh only after you have tracked skill sources to sync\n'
     printf -- '- Keep MCP examples read-only by default and move mutating configs into local-only files when needed\n'
     printf -- '- Install upstream skills selectively with $skill-installer rather than vendoring full catalogs\n'
@@ -286,7 +287,7 @@ case "$profile" in
     printf -- '- Keep .cognetivy/ local-only by default unless a repo explicitly chooses to track it\n'
     printf -- '- Treat tracked docs, specs, manifests, and skills as canonical; treat workflow state as operational history\n'
     printf -- '- Use a workflow-state tool only as an optional local state layer for runs, events, and collections\n'
-    printf -- '- Bridge durable findings back into docs/, openspec/, or .agents/skills/ once they stabilize\n'
+    printf -- '- Bridge durable findings back into docs/, openspec/, or repo skill folders once they stabilize\n'
     ;;
   spec-driven)
     printf 'Purpose: add a tracked spec and design review layer for larger changes without making it mandatory for everyday edits.\n\n'
@@ -310,11 +311,14 @@ case "$profile" in
     check_cmd "npm" npm recommended
     check_app_path "browser" recommended "/Applications/Google Chrome.app" "$HOME/Applications/Google Chrome.app"
     check_dir_path "UI preview templates" recommended "$workspace_root/tools/templates/ui-previews"
+    check_dir_path "Playwright cache" recommended "$workspace_root/cache/playwright-browsers"
     printf '\nNext steps\n'
     printf -- '- Prefer Ladle for fast React or Vite component previews with minimal setup\n'
     printf -- '- Use Storybook when richer docs, addon surface, or publishing matters more than minimal overhead\n'
     printf -- '- Keep preview tooling repo-local instead of adding a workspace-wide Storybook or Ladle dependency\n'
     printf -- '- Use Component Story Format so the same stories stay more portable between tools\n'
+    printf -- '- Reuse the shared browser cache with: tools/scripts/install-shared-playwright-browser.sh --run chromium\n'
+    printf -- '- For local smoke runs, prefer: tools/scripts/run-with-workspace-env.sh sh -lc '"'"'npx playwright test'"'"'\n'
     ;;
   *)
     printf 'Unknown profile: %s\n' "$profile" >&2

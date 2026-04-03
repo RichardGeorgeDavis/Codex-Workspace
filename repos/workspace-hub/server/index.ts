@@ -2,9 +2,11 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { applyRepoAgentPreset, isRepoAgentPresetId } from './agent-tooling.ts'
 import { handleWorkspaceEvents, publishWorkspaceEvent } from './live-events.ts'
 import { waitForReachablePreview } from './preview-readiness.ts'
 import { generateRepoCover } from './repo-cover.ts'
+import { runRepoIntake } from './repo-intake.ts'
 import { writeRepoManifest } from './repo-manifest.ts'
 import {
   canInstallRepo,
@@ -19,6 +21,7 @@ import {
   startRepoRuntime,
   stopRepoRuntime,
 } from './runtime-manager.ts'
+import { applyWorkspaceProcessEnv } from './workspace-env.ts'
 import {
   resetRepoMetadata,
   saveRepoActivity,
@@ -35,6 +38,7 @@ const configuredWorkspaceRoot = process.env.WORKSPACE_HUB_WORKSPACE_ROOT?.trim()
 const workspaceRoot = configuredWorkspaceRoot
   ? path.resolve(configuredWorkspaceRoot)
   : path.resolve(appRoot, '..', '..')
+applyWorkspaceProcessEnv(workspaceRoot)
 const runtimeTroubleshootingPath = fileURLToPath(
   new URL('../docs/runtime-troubleshooting.md', import.meta.url),
 )
@@ -446,6 +450,38 @@ app.post(
 )
 
 app.post(
+  '/api/repos/intake',
+  async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const relativePath = requireRelativePath(request.body)
+      const repo = await findWorkspaceRepo(
+        relativePath,
+        getInstallSnapshots(),
+        getRuntimeSnapshots(),
+      )
+
+      if (!repo) {
+        response.status(404).json({ message: 'Repo not found.' })
+        return
+      }
+
+      const result = await runRepoIntake(repo, workspaceRoot)
+      await saveRepoActivity(relativePath, 'open')
+
+      publishWorkspaceEvent({
+        message: result.manifestCreated ? 'intake + manifest' : 'intake',
+        relativePath,
+        status: 'intake',
+        type: 'activity',
+      })
+      response.json({ ok: true, result })
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.post(
   '/api/repos/activity',
   async (request: Request, response: Response, next: NextFunction) => {
     try {
@@ -475,6 +511,49 @@ app.post(
         status: 'select',
         type: 'activity',
       })
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.post(
+  '/api/repos/agent-preset',
+  async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const relativePath = requireRelativePath(request.body)
+      const preset = request.body?.preset
+
+      if (!isRepoAgentPresetId(preset)) {
+        response.status(400).json({ message: 'A valid repo agent preset is required.' })
+        return
+      }
+
+      const repo = await findWorkspaceRepo(
+        relativePath,
+        getInstallSnapshots(),
+        getRuntimeSnapshots(),
+      )
+
+      if (!repo) {
+        response.status(404).json({ message: 'Repo not found.' })
+        return
+      }
+
+      const result = await applyRepoAgentPreset(
+        repo.path,
+        repo.relativePath,
+        repo.name,
+        preset,
+      )
+
+      publishWorkspaceEvent({
+        message: preset,
+        relativePath,
+        status: result.appliedFiles.length ? 'applied' : 'unchanged',
+        type: 'agent',
+      })
+      response.json({ ok: true, result })
     } catch (error) {
       next(error)
     }

@@ -1,4 +1,6 @@
 import type {
+  RepoAgentPresetId,
+  RepoAgentPresetResult,
   WorkspaceEvent,
   WorkspaceSearchResponse,
   WorkspaceSummary,
@@ -115,6 +117,20 @@ export async function runRepoInstall(relativePath: string) {
   }
 }
 
+export async function runRepoIntake(relativePath: string) {
+  const response = await fetch('/api/repos/intake', {
+    body: JSON.stringify({ relativePath }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+}
+
 export async function generateRepoCover(relativePath: string) {
   const response = await fetch('/api/repos/cover', {
     body: JSON.stringify({ relativePath }),
@@ -177,6 +193,28 @@ export async function writeRepoManifest(
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
+  }
+}
+
+export async function applyRepoAgentPreset(
+  relativePath: string,
+  preset: RepoAgentPresetId,
+) {
+  const response = await fetch('/api/repos/agent-preset', {
+    body: JSON.stringify({ preset, relativePath }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return (await response.json()) as {
+    ok: true
+    result: RepoAgentPresetResult
   }
 }
 
