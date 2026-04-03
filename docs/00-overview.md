@@ -23,7 +23,7 @@ The workspace also aims to keep agent-facing context explicit and inspectable.
 That means:
 
 - repo docs and manifests remain the primary source of truth
-- Codex-native repo skills live in `.agents/skills/`, while shared reusable skill material lives in normal tracked workspace folders
+- official Codex repo-local skills live in `.codex/skills/`, while `.agents/skills/` remains a supported compatibility mirror and shared reusable skill material lives in normal tracked workspace folders
 - generated summaries belong under `cache/`
 - local-only memory and secrets stay local
 
@@ -46,7 +46,7 @@ Codex Workspace addresses that with a practical local-first model:
 
 - keep repo facts in tracked files
 - keep generated summaries in `cache/`
-- prefer Codex-native repo skills plus portable shared sources rather than opaque tool-owned setup
+- prefer official `.codex/` repo surfaces plus portable shared sources rather than opaque tool-owned setup
 - keep local operator memory separate from tracked project knowledge
 - keep classification and retrieval observable
 

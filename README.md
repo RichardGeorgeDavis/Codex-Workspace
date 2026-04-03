@@ -91,6 +91,8 @@ Codex Workspace/
 
 First run:
 - [docs/08-first-run-and-updates.md](docs/08-first-run-and-updates.md)
+- [docs/10-release-readiness.md](docs/10-release-readiness.md)
+- `tools/scripts/bootstrap-workspace.sh`
 - `tools/scripts/doctor-workspace.sh`
 - `tools/scripts/setup-workspace-profile.sh`
 - `tools/scripts/init-agent-job-bundle.sh`
@@ -127,6 +129,7 @@ Start here:
 - [docs/07-context-cache-and-retrieval.md](docs/07-context-cache-and-retrieval.md)
 - [docs/08-first-run-and-updates.md](docs/08-first-run-and-updates.md)
 - [docs/09-new-repo-baseline.md](docs/09-new-repo-baseline.md)
+- [docs/10-release-readiness.md](docs/10-release-readiness.md)
 
 Supporting references:
 - [docs/HANDOVER.md](docs/HANDOVER.md)
@@ -154,7 +157,7 @@ Codex Workspace treats agent-facing context as normal workspace content rather t
 The practical model is:
 
 - tracked resources such as repo docs, READMEs, and manifests
-- Codex-native repo skills stored in `.agents/skills/`, with shared skill sources and templates kept in normal tracked folders
+- official Codex repo-local skills stored in `.codex/skills/`, with `.agents/skills/` supported as a workspace compatibility mirror and shared skill sources/templates kept in normal tracked folders
 - generated context summaries under `cache/context/`
 - optional local workflow-state folders such as `.cognetivy/` kept separate from canonical tracked docs
 - local-only memory and MCP config kept separate from tracked repo content
@@ -171,10 +174,22 @@ External skill catalogs such as [`openai/skills`](https://github.com/openai/skil
 
 - install only the specific skills that solve a real workflow need
 - prefer local skill installation via Codex tooling such as `$skill-installer`
-- for repo-level Codex discoverability, prefer tracked `.agents/skills/`
+- for repo-level Codex discoverability, prefer tracked `.codex/skills/` and keep `.agents/skills/` only when repo-local compatibility mirroring helps
 - keep workspace-wide reusable skill sources in `shared/skills/` and starter templates in `tools/templates/skills/`
 - keep third-party orchestration layers and generated agent setup local-only unless there is a strong reason to publish them
 - do not add the whole upstream skill catalog to `repos/`, `tools/`, or as a submodule unless there is a very specific maintenance reason
+
+If you want local reviewed copies of official upstreams for comparison, keep them under `tools/ref/` via `tools/manifests/reference-sources.json` instead of mixing them into the tracked workspace layout.
+
+## Release Readiness
+
+Use the non-destructive release gate before calling a workspace release stable:
+
+```bash
+tools/scripts/release-readiness.sh
+```
+
+The stable repo contract and `.codex/` migration note live in [docs/10-release-readiness.md](docs/10-release-readiness.md).
 
 ## Community
 
@@ -187,6 +202,6 @@ External skill catalogs such as [`openai/skills`](https://github.com/openai/skil
 - [.github/SUPPORT.md](.github/SUPPORT.md)
 - Support the work: [PayPal](https://www.paypal.com/donate/?hosted_button_id=Z9ET7KXE4MMZS)
 
-## Current Focus
+## Current Status
 
-The immediate target is a strong local workspace structure plus a practical Workspace Hub v1, with optional ServBay integration and enough documentation to make the repo understandable to outside contributors.
+The current baseline is a stable local workspace structure plus Workspace Hub 1.0, with optional ServBay integration and enough documentation and tooling to keep mixed repos practical on one machine.

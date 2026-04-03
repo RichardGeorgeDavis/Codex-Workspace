@@ -1,0 +1,44 @@
+{
+  "sources": [
+    {
+      "id": "openai-skills",
+      "name": "openai/skills",
+      "repoUrl": "https://github.com/openai/skills",
+      "archiveUrl": "https://github.com/openai/skills/archive/refs/heads/main.tar.gz",
+      "targetDir": "openai-skills-main",
+      "license": "per-skill",
+      "recommendedUse": "selective-skill-source",
+      "notes": "Treat this as a reviewed upstream catalog for selective skill installation and pattern study. Do not vendor the full catalog into the workspace."
+    },
+    {
+      "id": "openai-codex",
+      "name": "openai/codex",
+      "repoUrl": "https://github.com/openai/codex",
+      "archiveUrl": "https://github.com/openai/codex/archive/refs/heads/main.tar.gz",
+      "targetDir": "openai-codex-main",
+      "license": "Apache-2.0",
+      "recommendedUse": "official-cli-reference",
+      "notes": "Codex CLI is already available on this machine via the Codex app bundle. Keep this as a reviewed upstream for official CLI and .codex surface conventions, not as a vendored workspace dependency."
+    },
+    {
+      "id": "oh-my-codex",
+      "name": "oh-my-codex",
+      "repoUrl": "https://github.com/Yeachan-Heo/oh-my-codex",
+      "archiveUrl": "https://github.com/Yeachan-Heo/oh-my-codex/archive/refs/heads/main.tar.gz",
+      "targetDir": "oh-my-codex-main",
+      "license": "MIT",
+      "recommendedUse": "optional-local-runtime",
+      "notes": "Prefer the published package or a dedicated fork outside the workspace dependency tree. Use this snapshot for review, comparison, and selective adaptation."
+    },
+    {
+      "id": "oh-my-openagent",
+      "name": "oh-my-openagent",
+      "repoUrl": "https://github.com/code-yeongyu/oh-my-openagent",
+      "archiveUrl": "https://github.com/code-yeongyu/oh-my-openagent/archive/refs/heads/dev.tar.gz",
+      "targetDir": "oh-my-openagent-dev",
+      "license": "SUL-1.0",
+      "recommendedUse": "reference-only",
+      "notes": "Keep this as a reviewed reference unless its license and OpenCode-specific runtime are an intentional fit for your local setup."
+    }
+  ]
+}

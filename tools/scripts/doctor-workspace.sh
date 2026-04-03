@@ -5,6 +5,7 @@ workspace_root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 repos_dir="$workspace_root/repos"
 workspace_hub_dir="$repos_dir/workspace-hub"
 workspace_name=$(basename "$workspace_root")
+shared_playwright_dir="$workspace_root/cache/playwright-browsers"
 
 ok_count=0
 warn_count=0
@@ -171,6 +172,17 @@ count_skill_files_by_path() {
     -type f -path "$search_pattern" -print 2>/dev/null | wc -l | awk '{print $1}'
 }
 
+count_visible_entries() {
+  target_dir=$1
+
+  if [ ! -d "$target_dir" ]; then
+    printf '0\n'
+    return 0
+  fi
+
+  find "$target_dir" -mindepth 1 -maxdepth 1 ! -name '.DS_Store' -print 2>/dev/null | wc -l | awk '{print $1}'
+}
+
 profile_status() {
   missing=$1
   if [ -n "$missing" ]; then
@@ -258,6 +270,15 @@ else
     "$HOME/Applications/Google Chrome.app"
 fi
 
+shared_playwright_entries=$(count_visible_entries "$shared_playwright_dir")
+if [ "$shared_playwright_entries" -gt 0 ]; then
+  mark_ok "Playwright cache" "$shared_playwright_dir ($shared_playwright_entries entries)"
+elif [ -d "$shared_playwright_dir" ]; then
+  mark_warn "Playwright cache" "$shared_playwright_dir is present but empty"
+else
+  mark_warn "Playwright cache" "missing, run 'tools/scripts/install-shared-playwright-browser.sh --run chromium'"
+fi
+
 printf '\nMixed-stack tooling\n'
 check_cmd "python3" python3 recommended mixed_missing
 if command -v pip3 >/dev/null 2>&1; then
@@ -296,15 +317,25 @@ if [ -d "$workspace_root/.agents/skills" ]; then
 else
   root_repo_skills=0
 fi
+if [ -d "$workspace_root/.codex/skills" ]; then
+  root_codex_skills=$(count_skill_files_by_name "$workspace_root/.codex/skills")
+else
+  root_codex_skills=0
+fi
 shared_skills=$(count_skill_files_by_name "$workspace_root/shared/skills")
 repo_neutral_skills=$(count_skill_files_by_path "$repos_dir" "*/.workspace/skills/*/SKILL.md")
 repo_codex_skills=$(count_skill_files_by_path "$repos_dir" "*/.agents/skills/*/SKILL.md")
-user_skills=$(count_skill_files_by_name "$HOME/.agents/skills")
+repo_official_codex_skills=$(count_skill_files_by_path "$repos_dir" "*/.codex/skills/*/SKILL.md")
+repo_codex_configs=$(count_skill_files_by_path "$repos_dir" "*/.codex/config.toml")
+user_codex_skills=$(count_skill_files_by_name "$HOME/.codex/skills")
+legacy_user_skills=$(count_skill_files_by_name "$HOME/.agents/skills")
 
-mark_ok "repo skills" "root .agents/skills: $root_repo_skills, repo .agents/skills: $repo_codex_skills"
+mark_ok "repo skills" "root .codex/skills: $root_codex_skills, repo .codex/skills: $repo_official_codex_skills"
+mark_ok "compat skills" "root .agents/skills: $root_repo_skills, repo .agents/skills: $repo_codex_skills"
+mark_ok "official codex" "root .codex/skills: $root_codex_skills, repo .codex/skills: $repo_official_codex_skills, repo .codex/config.toml: $repo_codex_configs"
 mark_ok "shared skills" "shared/skills: $shared_skills, repo .workspace/skills: $repo_neutral_skills"
 
-if [ "$root_repo_skills" -eq 0 ] && [ "$repo_codex_skills" -eq 0 ] && [ "$shared_skills" -eq 0 ] && [ "$repo_neutral_skills" -eq 0 ]; then
+if [ "$root_repo_skills" -eq 0 ] && [ "$root_codex_skills" -eq 0 ] && [ "$repo_codex_skills" -eq 0 ] && [ "$repo_official_codex_skills" -eq 0 ] && [ "$repo_codex_configs" -eq 0 ] && [ "$shared_skills" -eq 0 ] && [ "$repo_neutral_skills" -eq 0 ]; then
   mark_warn "tracked skills" "none found yet in this workspace"
 else
   mark_ok "tracked skills" "tracked skill files detected"
@@ -316,10 +347,14 @@ else
   mark_warn "Codex config" "not found at ~/.codex/config.toml"
 fi
 
-if [ -d "$HOME/.agents/skills" ]; then
-  mark_ok "user skills" "$HOME/.agents/skills ($user_skills skill files)"
+if [ -d "$HOME/.codex/skills" ]; then
+  mark_ok "user skills" "$HOME/.codex/skills ($user_codex_skills skill files)"
 else
-  mark_warn "user skills" "not found at ~/.agents/skills"
+  mark_warn "user skills" "not found at ~/.codex/skills"
+fi
+
+if [ -d "$HOME/.agents/skills" ]; then
+  mark_ok "legacy skills" "$HOME/.agents/skills ($legacy_user_skills skill files)"
 fi
 
 if command -v codex >/dev/null 2>&1; then
@@ -340,7 +375,7 @@ else
   wordpress_status="optional, install ServBay or Local only if you manage WordPress here"
 fi
 
-if [ "$root_repo_skills" -eq 0 ] && [ "$repo_codex_skills" -eq 0 ] && [ "$shared_skills" -eq 0 ] && [ "$repo_neutral_skills" -eq 0 ]; then
+if [ "$root_repo_skills" -eq 0 ] && [ "$root_codex_skills" -eq 0 ] && [ "$repo_codex_skills" -eq 0 ] && [ "$repo_official_codex_skills" -eq 0 ] && [ "$repo_codex_configs" -eq 0 ] && [ "$shared_skills" -eq 0 ] && [ "$repo_neutral_skills" -eq 0 ]; then
   agent_status="ready for AGENTS.md guidance, add skills only if you want extra Codex workflows"
 else
   agent_status="ready"
@@ -355,14 +390,18 @@ printf -- '- Experimental Local: keep local-only by default\n'
 
 printf '\nSuggested next steps\n'
 printf -- '- Read docs/08-first-run-and-updates.md\n'
+printf -- '- On a fresh clone, use tools/scripts/bootstrap-workspace.sh before starting Workspace Hub\n'
+printf -- '- For shared Playwright runs outside Workspace Hub, use: eval "$(tools/scripts/print-workspace-env.sh)"\n'
+printf -- '- Or run smoke checks with: tools/scripts/run-with-workspace-env.sh sh -lc '"'"'npx playwright test'"'"'\n'
 
 if [ ! -d "$workspace_hub_dir/node_modules" ]; then
   printf -- '- Run: cd %s && pnpm install\n' "$workspace_hub_dir"
 fi
 
 printf -- '- Start Workspace Hub when ready: cd %s && pnpm dev\n' "$workspace_hub_dir"
+printf -- '- Before calling the workspace stable, run tools/scripts/release-readiness.sh\n'
 printf -- '- Review tracked repo guidance in AGENTS.md before changing repo structure or runtime rules\n'
-printf -- '- Use tools/scripts/sync-codex-skills.sh only after you have tracked skill sources to sync\n'
+printf -- '- Use tools/scripts/sync-codex-skills.sh only after you have tracked skill sources to sync into repo .codex/skills/ and optional .agents/skills/\n'
 printf -- '- Install extra upstream Codex skills selectively with $skill-installer, not by vendoring full catalogs\n'
 printf -- '- Use tools/scripts/update-all.sh only when you want to fast-forward clean sibling repos under repos/\n'
 

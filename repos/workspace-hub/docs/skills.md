@@ -20,7 +20,8 @@ If you use upstream skill catalogs such as [`openai/skills`](https://github.com/
 
 - install only the skills that solve a real workflow problem
 - prefer the agent's supported installer flow
-- keep Codex-facing repo-owned guidance in `.agents/skills/`
+- keep official Codex-facing repo-owned guidance in `.codex/skills/`
+- keep `.agents/skills/` only when the repo also wants a tracked compatibility mirror
 - use `.workspace/skills/` only if you intentionally maintain additional tool-neutral source material
 - keep third-party orchestration layers and generated agent setup local-only unless the repo explicitly chooses to publish them
 

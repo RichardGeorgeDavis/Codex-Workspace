@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-04-03
+
+- Added shared Playwright environment helpers and automatic Workspace Hub export of the shared Playwright browser cache so repo install and runtime commands reuse one browser download by default.
+- Verified the stable workspace baseline with automated checks plus live Workspace Hub smoke tests for direct-preview, external WordPress, and mixed-stack SwiftPM repos.
+- Bumped `repos/workspace-hub` to `1.0.0` and normalized release docs/scripts away from the old beta-exit wording.
+- Added a tracked repo-intake template set under `tools/templates/repo-docs/`, including a starter `README.md` template and placeholder cover image.
+- Added a Workspace Hub repo intake action that can scaffold or normalize `README.md`, inject a repo cover block, create a placeholder cover image, and write a manifest only when the repo needs explicit runtime metadata.
+- Updated the workspace docs index, handover note, Workspace Hub README, and manifest guide to reflect the new repo intake flow.
+- Added `tools/manifests/reference-sources.json` plus `tools/scripts/sync-reference-snapshots.sh` so reviewed upstream harness snapshots such as `oh-my-codex` and `oh-my-openagent` can be refreshed into ignored `tools/ref/` folders without becoming workspace dependencies.
+- Documented the recommended stance for these references: `oh-my-codex` can be trialed as an optional external layer or dedicated fork, while `oh-my-openagent` should stay reference-only unless its license and runtime are an intentional fit.
+- Added built-in Workspace Hub detection for repo-local agent surfaces including `AGENTS.md`, `.agents/skills`, OMX state, and `.opencode` / `oh-my-openagent` project config.
+- Added tracked shared skill packs, AGENTS tree scaffolding, OpenCode template assets, and an agent-tooling doctor so the useful upstream patterns now exist as workspace-native base features.
+- Added first-class Workspace Hub repo agent presets for Codex baseline, OMX-ready, OpenCode, and all-in-one setup, plus a workspace agent-environment panel that makes the local command/tooling state visible.
+- Added reviewed `openai/skills` and `openai/codex` reference entries so the tracked markdown links that are worth keeping now have a manifest-backed local review path under `tools/ref/`.
+- Extended Workspace Hub agent tooling to detect and scaffold official `.codex/` surfaces alongside `.agents/skills` and `.opencode/`.
+- Realigned the workspace docs and helper scripts so official `.codex/` surfaces are the primary Codex path, with `.agents/skills/` retained as an optional compatibility mirror.
+- Added fixture-based `workspace-hub` tests for repo-local agent tooling detection and preset scaffolding, using temp workspaces so existing `repos/` content is preserved.
+- Added `tools/scripts/bootstrap-workspace.sh`, `tools/scripts/release-readiness.sh`, and `docs/10-release-readiness.md` to define the fresh-machine path, stable contract, migration note, and beta-exit gate.
+- Replaced the placeholder `workspace-quality-gate` plugin manifest with concrete metadata and a real non-destructive release-readiness skill.
+
 ## 2026-03-26
 
 - Added live Workspace Hub event streaming, lightweight indexed search, and local structured failure reports inspired by reviewed upstream reference patterns.
@@ -7,9 +27,9 @@
 
 ## 2026-03-23
 
-- Refined the skills guidance so `.agents/skills/` is documented as the native repo-level Codex location, with `shared/skills/` as shared source material and `.workspace/skills/` as an optional secondary compatibility layer.
+- Refined the skills guidance so repo-owned Codex skills stay in tracked repo folders, with `shared/skills/` as shared source material and `.workspace/skills/` as an optional secondary compatibility layer.
 - Clarified that third-party orchestration layers and generated agent setup should remain optional local tooling rather than the canonical workspace layout.
-- Added `tools/scripts/sync-codex-skills.sh` to preview or sync tracked skill sources into repo `.agents/skills/` folders.
+- Added `tools/scripts/sync-codex-skills.sh` to preview or sync tracked skill sources into repo skill folders.
 - Added `docs/08-first-run-and-updates.md` plus `tools/scripts/doctor-workspace.sh` to define onboarding questions, setup profiles, and the recommended layered update flow.
 - Added a narrow “patterns, not platforms” note for larger agent systems: progressive skill loading, execution modes, and filesystem-backed job artifacts are in scope, while full orchestration remains local-only and optional.
 - Added starter skill templates and a selective install-profile example under `tools/templates/skills/`.

@@ -37,14 +37,19 @@ Workspace Hub is a local control plane for people who manage many standalone rep
 - starts, stops, and restarts supported repos from one UI
 - auto-starts supported direct local repos when `Open preview` is used and the local preview is not up yet
 - shows runtime, install, Git, and dependency-readiness status
+- detects repo-local agent surfaces such as `AGENTS.md`, `.agents/skills`, official `.codex/` config and skills, `.omx/`, and `.opencode/` configuration
+- applies tracked repo-local agent presets for Codex baseline, OMX-ready, OpenCode, or an all-in-one setup directly from the details panel
+- exports the shared workspace Playwright browser cache to repo install and runtime commands by default, so Playwright-based smoke runs can reuse one Chromium download
 - streams live runtime, install, cover, and activity updates from the local API
 - indexes repo metadata, manifests, recent logs, failure reports, and local agent-job artifacts for server-side search
 - stores lightweight per-repo metadata and recent activity locally
 - writes structured local failure reports for install and runtime errors
 - includes persisted appearance controls with five built-in presets and light or dark mode
+- can initialize repo intake docs by creating or tightening `README.md`, adding a repo-local cover block and placeholder image, and creating a manifest only when the repo needs explicit runtime metadata
 - reads and writes `.workspace/project.json` manifests when a repo needs explicit behaviour
 - captures repo cover screenshots from live previews and can insert them into repo `README.md` files
 - gives plain static repos a lightweight direct local server when they do not already have a dev script
+- exposes the current workspace agent environment, shared skill packs, and setup scripts so reviewed reference patterns can be promoted into the base workspace instead of left in `tools/ref/`
 
 ## Stack
 
@@ -139,11 +144,16 @@ pnpm dev
 Useful commands:
 
 ```bash
+pnpm test
 pnpm typecheck
 pnpm lint
 pnpm build
 pnpm preview
 ```
+
+The automated test suite uses temp workspaces and fixture repos so it does not
+rewrite your current `repos/` content while verifying agent detection and
+preset scaffolding.
 
 Default local endpoints:
 
@@ -152,11 +162,23 @@ Default local endpoints:
 - events: `http://127.0.0.1:4101/api/events`
 - search: `http://127.0.0.1:4101/api/search?q=preview`
 
+## Repo Intake
+
+Workspace Hub can now scaffold the first-pass repo docs for a newly added repo directly from the details panel.
+
+- `Run repo intake` creates or normalizes `README.md`
+- it injects the marked cover block and ensures a repo-local placeholder image such as `docs/cover.png` exists
+- it creates `.workspace/project.json` only when the repo looks like it needs explicit runtime metadata
+- it leaves repos with already-clear runtime behavior alone instead of forcing a manifest
+
+The intake action uses the tracked templates in `tools/templates/repo-docs/` so the starter README and placeholder cover path stay consistent across repos.
+
 ## Repo Covers
 
 Repo covers are a built-in Workspace Hub feature.
 
 - the selected repo can generate a cover from its live preview
+- the intake action can prepare the README cover block and placeholder image before a live preview exists
 - the image is stored inside that repo, not in a central workspace folder
 - Workspace Hub updates a marked block in the repo `README.md` so repeated captures replace the current cover instead of duplicating it
 - static repos with inferred direct previews can temporarily bootstrap their lightweight local server during capture

@@ -36,9 +36,39 @@ This is not meant to force every repo into one shape. The goal is to keep each r
 When useful, add small explicit metadata instead of hidden assumptions:
 
 - `.workspace/project.json` for runtime mode, launch command, preview URL, or notes
-- `README.md` for setup and run instructions
+- `.workspace/agent-stack.json` when the repo intentionally supports tracked multi-tool agent hints such as OMX-ready or OpenCode-ready setup
+- `README.md` for repo purpose, setup, run instructions, preview notes, and cover block
+- `docs/cover.png` as the default repo-local cover path, even if it starts as a placeholder
 - `HANDOVER.md` when the repo needs a resumable state document
 - repo-level `AGENTS.md` only when the repo genuinely needs rules beyond the workspace baseline
+- `.codex/skills/` and optional `.codex/config.toml` when the repo should expose official Codex repo-local surfaces
+- `.agents/skills/` only when the repo also wants a tracked compatibility mirror for workspace-native agent tooling
+
+## Repo intake when a folder first appears under `repos/`
+
+If a new repo arrives under `repos/` and it already contains setup notes or instruction files, treat those files as the first source of truth.
+
+Recommended intake order:
+
+1. Review the current repo content before adding workspace metadata.
+2. Read existing setup sources such as `README.md`, `package.json`, `composer.json`, lockfiles, shell scripts, Local notes, or repo-local instruction files.
+3. Classify the repo conservatively and choose a runtime mode only after checking the files.
+4. Create `README.md` if it is missing, or tighten the current one if it exists but does not explain setup and preview.
+5. Add a repo-local cover image reference in the README, even if the image is a placeholder at first.
+6. Add `.workspace/project.json` only when runtime behavior is not obvious from the repo files.
+7. Add repo-level `AGENTS.md`, `HANDOVER.md`, or repo-local skills only when they solve a real repo-specific need.
+
+For the initial README cover block, prefer a PNG path that Workspace Hub can later replace with a live screenshot:
+
+```md
+<!-- workspace-hub:cover:start -->
+![Repo cover](docs/cover.png)
+<!-- workspace-hub:cover:end -->
+```
+
+Use a placeholder image first if a real preview capture is not ready yet. Keeping the path as `docs/cover.png` makes later cover capture simpler and consistent with the Hub defaults.
+
+The starter files in `tools/templates/repo-docs/` are the default template source for this intake step.
 
 ## `.workspace/project.json` guidance
 
@@ -59,6 +89,7 @@ Keep the manifest lightweight. It should clarify runtime behaviour, not become a
 - Do not auto-run heavy install steps without a clear reason.
 - Do not assume one package manager across all repos.
 - Do not hard-code machine-specific paths inside repos when a relative or inferred path will do.
+- Treat `tools/ref/` as temporary reviewed source material for extracting durable workspace upgrades, not as a dependency layer.
 
 ## Minimal onboarding expectation
 
@@ -66,7 +97,9 @@ For a repo to feel workspace-ready, it should ideally have:
 
 1. a clear way to run or preview it
 2. a known runtime mode: `direct`, `external`, or explicit repo-native server mode
-3. enough docs that another person can resume work without guessing
+3. a `README.md` that captures setup, run, and preview expectations
+4. a repo-local cover image path in the README, even if it begins as a placeholder
+5. enough docs that another person can resume work without guessing
 
 ## Override rule
 

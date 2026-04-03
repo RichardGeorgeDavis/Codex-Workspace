@@ -1,4 +1,5 @@
 import { SectionCard } from '../../components/SectionCard.tsx'
+import { collectAgentToolingLabels, formatAgentToolingSummary } from './agentTooling.ts'
 import type {
   RepoType,
   WorkspaceArchive,
@@ -96,7 +97,17 @@ function formatArchiveFolder(relativePath: string) {
 function RepoSnapshotCard({ repo, selected }: RepoSnapshotCardProps) {
   const showDependencyWarning =
     repo.dependencies.state === 'missing' || repo.dependencies.state === 'unknown'
+  const agentLabels = collectAgentToolingLabels(repo.agentTooling)
   const recentLabel = formatRecentLabel(repo)
+  const footerDetail = recentLabel
+    ? recentLabel
+    : agentLabels.length
+      ? `agent ${formatAgentToolingSummary(repo.agentTooling)}`
+      : repo.runtime.pid
+        ? `pid ${repo.runtime.pid}`
+        : repo.hasManifest
+          ? 'manifest-backed'
+          : repo.detectedBy
 
   return (
     <span className={`repo-card ${selected ? 'active' : ''}`}>
@@ -108,6 +119,12 @@ function RepoSnapshotCard({ repo, selected }: RepoSnapshotCardProps) {
             {repo.runtime.status}
           </span>
           <span className="tag">{repo.type}</span>
+          {agentLabels.slice(0, 2).map((label) => (
+            <span key={label} className="tag">
+              {label}
+            </span>
+          ))}
+          {agentLabels.length > 2 ? <span className="tag">+{agentLabels.length - 2} agent</span> : null}
         </span>
       </span>
       <span className="repo-card-meta">
@@ -131,15 +148,7 @@ function RepoSnapshotCard({ repo, selected }: RepoSnapshotCardProps) {
       </span>
       <span className="repo-card-footer">
         <span>{repo.location === 'direct' ? 'direct repo' : repo.collection}</span>
-        <span>
-          {recentLabel
-            ? recentLabel
-            : repo.runtime.pid
-            ? `pid ${repo.runtime.pid}`
-            : repo.hasManifest
-              ? 'manifest-backed'
-              : repo.detectedBy}
-        </span>
+        <span>{footerDetail}</span>
       </span>
     </span>
   )

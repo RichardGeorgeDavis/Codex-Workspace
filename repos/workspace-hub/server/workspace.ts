@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
 import type {
+  RepoAgentTooling,
   RepoDependencyState,
   RepoGitState,
   RepoInstall,
@@ -22,6 +23,7 @@ import type {
   WorkspaceRepo,
   WorkspaceSummary,
 } from '../src/types/workspace.ts'
+import { readWorkspaceAgentEnvironment } from './agent-tooling.ts'
 import { readLatestFailureReports } from './failure-reports.ts'
 import { readWorkspaceMetadata, type StoredRepoMetadata } from './workspace-metadata.ts'
 
@@ -105,6 +107,26 @@ const ignoredArchiveDisplayRoots = ['repos/Check-[Sort+add]/']
 const previewModes: PreviewMode[] = ['direct', 'external', 'servbay']
 const publicManifestFileName = 'project.json'
 const localManifestFileName = 'project.local.json'
+const openAgentConfigCandidates = [
+  '.opencode/oh-my-openagent.jsonc',
+  '.opencode/oh-my-openagent.json',
+]
+const openAgentLegacyConfigCandidates = [
+  '.opencode/oh-my-opencode.jsonc',
+  '.opencode/oh-my-opencode.json',
+]
+const openCodePathCandidates = [
+  '.opencode/opencode.jsonc',
+  '.opencode/opencode.json',
+  '.opencode',
+]
+const codexProjectConfigCandidates = ['.codex/config.toml']
+const agentStackPathCandidates = ['.workspace/agent-stack.json']
+const omxPathCandidates = [
+  '.omx/setup-scope.json',
+  '.omx/state',
+  '.omx',
+]
 
 const serverFile = fileURLToPath(import.meta.url)
 const serverDir = path.dirname(serverFile)
@@ -241,6 +263,20 @@ async function readJsonIfPresent<T>(targetPath: string): Promise<T | null> {
   } catch {
     return null
   }
+}
+
+async function resolveExistingRelativePath(
+  fullPath: string,
+  candidates: string[],
+) {
+  const resolvedCandidates = await Promise.all(
+    candidates.map(async (candidate) => ({
+      candidate,
+      exists: await fileExists(path.join(fullPath, candidate)),
+    })),
+  )
+
+  return resolvedCandidates.find((entry) => entry.exists)?.candidate ?? null
 }
 
 async function readRepoManifest(rootPath: string) {
@@ -1146,6 +1182,45 @@ function detectReadmePath(fullPath: string, names: string[]) {
   return fileName ? path.join(fullPath, fileName) : null
 }
 
+async function readAgentTooling(fullPath: string): Promise<RepoAgentTooling> {
+  const [
+    hasAgentsPath,
+    hasCodexSkillsPath,
+    hasCodexProjectSkillsPath,
+    hasWorkspaceSkillsPath,
+    codexProjectConfigPath,
+    agentStackPath,
+    omxPath,
+    openCodePath,
+    openAgentConfigPath,
+    openAgentLegacyConfigPath,
+  ] = await Promise.all([
+    fileExists(path.join(fullPath, 'AGENTS.md')),
+    fileExists(path.join(fullPath, '.agents', 'skills')),
+    fileExists(path.join(fullPath, '.codex', 'skills')),
+    fileExists(path.join(fullPath, '.workspace', 'skills')),
+    resolveExistingRelativePath(fullPath, codexProjectConfigCandidates),
+    resolveExistingRelativePath(fullPath, agentStackPathCandidates),
+    resolveExistingRelativePath(fullPath, omxPathCandidates),
+    resolveExistingRelativePath(fullPath, openCodePathCandidates),
+    resolveExistingRelativePath(fullPath, openAgentConfigCandidates),
+    resolveExistingRelativePath(fullPath, openAgentLegacyConfigCandidates),
+  ])
+
+  return {
+    agentsPath: hasAgentsPath ? 'AGENTS.md' : null,
+    agentStackPath,
+    codexProjectConfigPath,
+    codexProjectSkillsPath: hasCodexProjectSkillsPath ? '.codex/skills' : null,
+    codexSkillsPath: hasCodexSkillsPath ? '.agents/skills' : null,
+    omxPath,
+    openAgentConfigPath,
+    openAgentLegacyConfigPath,
+    openCodePath,
+    workspaceSkillsPath: hasWorkspaceSkillsPath ? '.workspace/skills' : null,
+  }
+}
+
 function isRepoCandidate(names: string[], collection: string | null) {
   if (names.includes('package.json') || names.includes('composer.json')) {
     return true
@@ -1271,7 +1346,8 @@ async function buildRepoRecord(
     tags: manifestTags,
     type,
   })
-  const [health, git, dependencies] = await Promise.all([
+  const [agentTooling, health, git, dependencies] = await Promise.all([
+    readAgentTooling(fullPath),
     probeHealth(healthcheckUrl ?? resolvedPreview.previewUrl),
     readGitState(fullPath),
     readDependencyState({
@@ -1286,6 +1362,7 @@ async function buildRepoRecord(
   ])
 
   return {
+    agentTooling,
     buildCommand: effectiveBuildCommand,
     collection: collection ?? 'direct',
     detectedBy: hasManifest ? 'manifest' : 'files',
@@ -1438,6 +1515,21 @@ async function countCacheBuckets() {
   return (await readVisibleDirectories(cacheRoot)).length
 }
 
+function hasRepoAgentTooling(repo: WorkspaceRepo) {
+  return Boolean(
+    repo.agentTooling.agentsPath ||
+    repo.agentTooling.agentStackPath ||
+    repo.agentTooling.codexProjectConfigPath ||
+    repo.agentTooling.codexProjectSkillsPath ||
+    repo.agentTooling.codexSkillsPath ||
+      repo.agentTooling.omxPath ||
+      repo.agentTooling.openAgentConfigPath ||
+      repo.agentTooling.openAgentLegacyConfigPath ||
+      repo.agentTooling.openCodePath ||
+      repo.agentTooling.workspaceSkillsPath,
+  )
+}
+
 function buildMilestones(): WorkspaceMilestone[] {
   return [
     {
@@ -1481,6 +1573,11 @@ function buildMilestones(): WorkspaceMilestone[] {
       title: 'Pinned workflows',
     },
     {
+      description: 'Repo-local Codex, OMX-ready, OpenCode, and all-in-one tracked agent presets can now be scaffolded directly from the Hub.',
+      status: 'ready',
+      title: 'Agent presets',
+    },
+    {
       description: 'Last-opened and recent-activity tracking now help the hub restore a more useful working set.',
       status: 'ready',
       title: 'Recent context',
@@ -1513,8 +1610,10 @@ export async function buildWorkspaceSummary(
     installSnapshots,
     runtimeSnapshots,
   )
+  const agentEnvironment = await readWorkspaceAgentEnvironment()
 
   return {
+    agentEnvironment,
     archives,
     dataRoot,
     generatedAt: new Date().toISOString(),
@@ -1529,6 +1628,7 @@ export async function buildWorkspaceSummary(
     },
     sharedRoot,
     stats: {
+      agentEnabledRepos: repos.filter((repo) => hasRepoAgentTooling(repo)).length,
       archiveFiles: archives.length,
       cacheBuckets: await countCacheBuckets(),
       directPreferredRepos: repos.filter((repo) => repo.preferredMode === 'direct').length,
@@ -1536,6 +1636,15 @@ export async function buildWorkspaceSummary(
       externalPreferredRepos: repos.filter((repo) => repo.preferredMode === 'external').length,
       handoverDocs: await countSharedMarkdownFiles(),
       manifestBackedRepos: repos.filter((repo) => repo.hasManifest).length,
+      omxDetectedRepos: repos.filter((repo) => Boolean(repo.agentTooling.omxPath)).length,
+      opencodeConfiguredRepos: repos.filter(
+        (repo) =>
+          Boolean(
+            repo.agentTooling.openCodePath ||
+              repo.agentTooling.openAgentConfigPath ||
+              repo.agentTooling.openAgentLegacyConfigPath,
+          ),
+      ).length,
       runnableRepos: repos.filter((repo) => repo.devCommand).length,
       runningRepos: repos.filter((repo) => repo.runtime.status === 'running').length,
       topLevelEntries: topLevelEntries.length,

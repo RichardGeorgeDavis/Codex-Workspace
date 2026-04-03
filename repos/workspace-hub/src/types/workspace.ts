@@ -75,6 +75,56 @@ export type RepoSavedMetadata = {
   tags?: string[]
 }
 
+export type RepoAgentTooling = {
+  agentsPath: string | null
+  agentStackPath: string | null
+  codexProjectConfigPath: string | null
+  codexProjectSkillsPath: string | null
+  codexSkillsPath: string | null
+  omxPath: string | null
+  openAgentConfigPath: string | null
+  openAgentLegacyConfigPath: string | null
+  openCodePath: string | null
+  workspaceSkillsPath: string | null
+}
+
+export type WorkspaceAgentCommand = {
+  available: boolean
+  path: string | null
+  version: string | null
+}
+
+export type WorkspaceAgentEnvironment = {
+  agentDoctorPath: string
+  agentsTemplatePath: string | null
+  bun: WorkspaceAgentCommand
+  codex: WorkspaceAgentCommand
+  codexTemplatePath: string | null
+  initAgentsTreePath: string
+  omx: WorkspaceAgentCommand
+  opencode: WorkspaceAgentCommand
+  opencodeTemplatePath: string | null
+  referencePolicy: string
+  sharedSkillsCount: number
+  sharedSkillsPath: string
+  userCodexConfigPath: string | null
+  userOpenAgentConfigPath: string | null
+  userOpenCodeConfigPath: string | null
+}
+
+export type RepoAgentPresetId =
+  | 'all-in-one'
+  | 'codex-baseline'
+  | 'omx-ready'
+  | 'opencode'
+
+export type RepoAgentPresetResult = {
+  appliedFiles: string[]
+  notes: string[]
+  preset: RepoAgentPresetId
+  skippedFiles: string[]
+}
+
 export type RepoRecentContext = {
   lastActionAt: string | null
   lastActionKind: 'install' | 'open' | 'runtime' | 'select' | null
@@ -162,6 +212,7 @@ export type WorkspaceEvent = {
   status?: string
   type:
     | 'activity'
+    | 'agent'
     | 'connected'
     | 'cover'
     | 'failure-report'
@@ -174,6 +225,7 @@ export type WorkspaceEvent = {
 }
 
 export type WorkspaceRepo = {
+  agentTooling: RepoAgentTooling
   buildCommand: string | null
   collection: string
   detectedBy: 'files' | 'manifest'
@@ -215,6 +267,7 @@ export type WorkspaceRepo = {
 }
 
 export type WorkspaceSummary = {
+  agentEnvironment: WorkspaceAgentEnvironment
   archives: WorkspaceArchive[]
   dataRoot: string
   generatedAt: string
@@ -229,6 +282,7 @@ export type WorkspaceSummary = {
   }
   sharedRoot: string
   stats: {
+    agentEnabledRepos: number
     archiveFiles: number
     cacheBuckets: number
     directPreferredRepos: number
@@ -236,6 +290,8 @@ export type WorkspaceSummary = {
     externalPreferredRepos: number
     handoverDocs: number
     manifestBackedRepos: number
+    omxDetectedRepos: number
+    opencodeConfiguredRepos: number
     runnableRepos: number
     runningRepos: number
     topLevelEntries: number

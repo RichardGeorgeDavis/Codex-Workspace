@@ -1,0 +1,38 @@
+{
+  "name": "workspace-quality-gate",
+  "version": "1.0.0",
+  "description": "Non-destructive quality-gate checks for Codex Workspace release readiness.",
+  "author": {
+    "name": "Codex Workspace",
+    "url": "https://github.com/RichardGeorgeDavis/Codex-Workspace"
+  },
+  "homepage": "https://github.com/RichardGeorgeDavis/Codex-Workspace",
+  "repository": "https://github.com/RichardGeorgeDavis/Codex-Workspace",
+  "license": "MIT",
+  "keywords": [
+    "codex-workspace",
+    "quality-gate",
+    "workspace-hub"
+  ],
+  "skills": "./skills",
+  "interface": {
+    "displayName": "Workspace Quality Gate",
+    "shortDescription": "Runs release-readiness checks for Codex Workspace.",
+    "longDescription": "Provides a local quality-gate skill for validating workspace doctors, Workspace Hub tests/build/lint, and non-destructive stable release checks without rewriting repo content.",
+    "developerName": "Codex Workspace",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/RichardGeorgeDavis/Codex-Workspace",
+    "privacyPolicyURL": "https://github.com/RichardGeorgeDavis/Codex-Workspace",
+    "termsOfServiceURL": "https://github.com/RichardGeorgeDavis/Codex-Workspace",
+    "defaultPrompt": [
+      "Run the workspace quality gate and tell me what still blocks a stable release.",
+      "Check whether Workspace Hub is release-ready after my latest changes.",
+      "Verify that the current workspace changes preserved existing repo content."
+    ],
+    "brandColor": "#22577A"
+  }
+}

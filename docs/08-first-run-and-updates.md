@@ -14,7 +14,7 @@ What a new user gets by default is:
 
 - repo instructions from `AGENTS.md`
 - repo docs such as `README.md` and this `docs/` set
-- any tracked Codex skills found in `.agents/skills/` from the current working directory up to the repo root
+- any tracked repo-local Codex skills found in `.codex/skills/`, plus supported compatibility mirrors such as `.agents/skills/`
 
 So if we want a predictable onboarding path, we need to provide it in tracked docs and helper scripts.
 
@@ -98,7 +98,8 @@ Use this when you want more than plain `AGENTS.md` guidance.
 
 Options:
 
-- tracked repo skills in `.agents/skills/`
+- tracked repo skills in `.codex/skills/`
+- optional compatibility mirrors in `.agents/skills/`
 - shared reusable skill sources in `shared/skills/`
 - optional tool-neutral sources in `.workspace/skills/`
 - selected upstream skills installed with `$skill-installer`
@@ -106,11 +107,13 @@ Options:
 
 Current policy:
 
-- prefer tracked `.agents/skills/` for Codex-visible repo skills
+- prefer tracked `.codex/skills/` for official Codex-visible repo skills
+- keep `.agents/skills/` only when repo-local compatibility mirroring helps
 - install upstream skills selectively
 - keep secrets and machine-specific MCP config local-only
 - default MCP examples to `read-only` capability tiers and opt into `mutating` only when required
 - keep third-party orchestration local-only unless it proves itself
+- if you trial `oh-my-codex`, treat it as an optional external layer or dedicated fork, not as a normal workspace dependency
 
 ### Workflow State
 
@@ -158,6 +161,21 @@ Keep either tool repo-local.
 
 Do not make preview tooling a workspace-wide dependency for unrelated repos.
 
+If several repos use Playwright-based smoke checks, keep browser binaries in the
+shared workspace cache instead of redownloading Chromium per repo:
+
+```bash
+tools/scripts/install-shared-playwright-browser.sh
+tools/scripts/install-shared-playwright-browser.sh --run chromium
+eval "$(tools/scripts/print-workspace-env.sh)"
+tools/scripts/run-with-workspace-env.sh sh -lc 'npx playwright test'
+```
+
+For stable workspace use, prefer `cache/playwright-browsers` as the shared
+browser location. Workspace Hub now exports the shared Playwright cache path to
+repo install and runtime commands automatically, so manual export is mainly for
+shell-driven smoke runs outside the Hub.
+
 ### Experimental Local
 
 Use this for tools such as personal orchestration layers, generated agent setup, or custom daemons that are useful to one operator but should not become the workspace baseline.
@@ -165,6 +183,8 @@ Use this for tools such as personal orchestration layers, generated agent setup,
 Keep these under local-only locations such as `tools/local/`, ignored config, or your home directory.
 
 This is also where larger harness-style orchestration experiments belong if you want to trial them. Do not make a full harness part of the tracked workspace baseline unless it proves clear value first.
+
+If you keep reviewed upstream snapshots in `tools/ref/`, refresh them with `tools/scripts/sync-reference-snapshots.sh` instead of maintaining them by hand.
 
 ## Recommended first run
 
@@ -194,6 +214,19 @@ This reports:
 - optional WordPress runtime detection
 - Codex-related skill and config state
 - recommended setup profiles
+
+### 2a. Bootstrap the workspace safely
+
+Use the workspace bootstrap helper when you want one command that prepares the
+safe cache/context folders and, if needed, installs `workspace-hub`
+dependencies without touching sibling repos:
+
+```bash
+tools/scripts/bootstrap-workspace.sh
+tools/scripts/bootstrap-workspace.sh --run
+```
+
+This script does not rewrite nested repos under `repos/`.
 
 ### 3. Use the profile helper if you want guided next steps
 
@@ -234,9 +267,10 @@ Recommended order:
 For Codex:
 
 - rely on `AGENTS.md` and tracked repo docs first
-- add tracked repo skills under `.agents/skills/` when a workflow is stable enough to publish
+- add tracked repo skills under `.codex/skills/` when a workflow is stable enough to publish
+- mirror them into `.agents/skills/` only when the repo also benefits from the workspace compatibility layer
 - keep shared reusable skill source material in `shared/skills/`
-- use `tools/scripts/sync-codex-skills.sh` only when you have tracked skill sources to copy into `.agents/skills/`
+- use `tools/scripts/sync-codex-skills.sh` only when you have tracked skill sources to copy into repo skill folders
 - install upstream skills such as from `openai/skills` selectively with `$skill-installer`
 
 Do not vendor full external skill catalogs into this workspace.
@@ -321,7 +355,7 @@ pnpm dev
 
 ### 3. Refresh tracked Codex skills
 
-If tracked skill sources changed, sync them into repo `.agents/skills/` folders:
+If tracked skill sources changed, sync them into repo `.codex/skills/` folders and any `.agents/skills/` compatibility mirrors:
 
 ```bash
 tools/scripts/sync-codex-skills.sh --all
@@ -329,6 +363,17 @@ tools/scripts/sync-codex-skills.sh --run --all
 ```
 
 Use the dry run first if you want to inspect the planned changes.
+
+### 3a. Run the stable release gate before cutting releases
+
+Before treating a change set as release-ready:
+
+```bash
+tools/scripts/release-readiness.sh
+```
+
+The stable contract, support matrix, and `.codex/` migration note live in
+`docs/10-release-readiness.md`.
 
 ### 4. Update sibling repos only when intended
 
@@ -365,6 +410,16 @@ This includes:
 - experimental local-only orchestration tools
 
 These should not be treated as tracked workspace state.
+
+If you keep ignored upstream reference snapshots in `tools/ref/`, update them separately too:
+
+```bash
+tools/scripts/sync-reference-snapshots.sh --list
+tools/scripts/sync-reference-snapshots.sh oh-my-codex
+tools/scripts/sync-reference-snapshots.sh --run oh-my-codex
+```
+
+The script uses dry-run mode by default. For the current reviewed examples, `oh-my-codex` is the safer candidate for optional local integration, while `oh-my-openagent` is better treated as a reference unless its license and runtime are an intentional fit.
 
 ### 6. Restart Codex when needed
 
@@ -406,6 +461,7 @@ Do not turn onboarding into:
 - a single shared dependency tree across repos
 - a requirement that every user install ServBay, Local, or mixed-stack tooling
 - a requirement that every user install experimental orchestration layers
+- a requirement that every user add an upstream orchestration layer as a tracked workspace dependency
 - a hidden prompt or agent setup blob that cannot be inspected in normal files
 
 The workspace should stay understandable and useful even for someone who only uses the `Core` profile.

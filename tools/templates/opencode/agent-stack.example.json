@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "referencePolicy": "tools/ref is temporary reviewed references for extracting base upgrades into tracked workspace code, docs, templates, and skills",
+  "artifacts": {
+    "root": ".workspace/agent-artifacts",
+    "jobsDir": ".workspace/agent-artifacts/jobs",
+    "notesDir": ".workspace/agent-artifacts/notes"
+  },
+  "codex": {
+    "compatibilitySkillsPath": ".agents/skills",
+    "instructionsFile": "AGENTS.md",
+    "officialSkillsPath": ".codex/skills",
+    "officialConfigFile": ".codex/config.toml"
+  },
+  "omx": {
+    "doctorCommand": "omx doctor",
+    "recommendedScope": "project",
+    "setupCommand": "omx setup --scope project"
+  },
+  "opencode": {
+    "configDir": ".opencode",
+    "pluginConfig": "opencode.jsonc",
+    "runtimeConfig": "oh-my-openagent.jsonc"
+  }
+}

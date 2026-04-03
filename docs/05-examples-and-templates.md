@@ -43,6 +43,9 @@ Starter material for a tracked spec-driven layer when a change is large enough t
 ### `tools/templates/ui-previews/`
 Guidance for repo-local component previews using lightweight story files rather than a workspace-wide preview platform.
 
+### `tools/templates/repo-docs/`
+Starter material for creating a minimal repo `README.md` and a placeholder cover image when a repo lands under `repos/` without enough onboarding context.
+
 ### `tools/templates/artifacts/`
 Guidance for local task artifacts such as plans, summaries, logs, screenshots, and other outputs under `cache/context/agents/jobs/`.
 
@@ -51,6 +54,12 @@ Guidance for optional local workflow-state layers such as `.cognetivy/`, without
 
 ### `tools/templates/agents-md/`
 Guidance for optional `AGENTS.md` fragment composition when a single file grows too large to maintain cleanly.
+
+### `tools/templates/codex/`
+Starter material for official repo-local Codex setup such as `.codex/config.toml` and `.codex/skills/`.
+
+### `tools/templates/opencode/`
+Starter material for optional `.opencode/` and mixed-tool agent presets without turning OpenCode or `oh-my-openagent` into workspace dependencies.
 
 ## Example manifest notes
 
@@ -65,6 +74,15 @@ The manifest template demonstrates:
 - lightweight notes and tags
 
 Not every field is required in every real project.
+
+## Example repo-docs notes
+
+The repo-docs template demonstrates:
+
+- a minimal repo `README.md` structure
+- the Workspace Hub cover block markers
+- a repo-local `docs/cover.png` path that can start as a placeholder and later be replaced by a captured preview
+- a concise checklist for setup, run, preview, and structure notes
 
 ## Example repo index notes
 

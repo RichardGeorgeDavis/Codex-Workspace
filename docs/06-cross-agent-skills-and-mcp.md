@@ -15,11 +15,11 @@ The goal is portability:
 
 Use a layered model:
 
-1. Codex-native repo skills in `.agents/skills/`
-2. shared workspace skill sources and templates
+1. official Codex repo-local surfaces in `.codex/`
+2. shared workspace skill sources plus optional `.agents/skills/` compatibility mirrors
 3. local-only adapters and MCP config for non-Codex tools
 
-OpenAI's current Codex docs treat `.agents/skills/` as the native repo location for discoverable Codex skills, with progressive disclosure so full skill content is loaded only when needed.
+The reviewed `openai/codex` upstream snapshot uses `.codex/skills/` as the official repo-local skill surface. This workspace also supports `.agents/skills/` as a tracked compatibility layer when repos want a mirrored copy for other local tooling.
 
 Do not let every vendor-specific folder become an equal source of truth.
 
@@ -29,9 +29,10 @@ For larger changes, an optional tracked spec layer such as `openspec/` can hold 
 
 For this workspace:
 
-- use `.agents/skills/` when a tracked repo skill should be directly discoverable by Codex
+- use `.codex/skills/` when a tracked repo skill should be directly discoverable by official Codex
+- use `.agents/skills/` only when the repo also wants a workspace-native compatibility mirror
 - use `shared/skills/` for reusable workspace-wide skill source material
-- use `.workspace/skills/` only when a repo intentionally maintains a tool-neutral source layer that is later exported or synced into `.agents/skills/`
+- use `.workspace/skills/` only when a repo intentionally maintains a tool-neutral source layer that is later exported or synced into `.codex/skills/` and optional `.agents/skills/`
 - keep non-Codex adapter folders as compatibility layers rather than primary sources
 
 If `AGENTS.md` files become too large to maintain comfortably, optional composition tooling can help manage fragments.
@@ -47,12 +48,22 @@ Treat upstream skill catalogs such as [`openai/skills`](https://github.com/opena
 - use them as optional source material for selected Codex skills
 - install specific skills when they are useful
 - do not vendor the whole catalog into this workspace by default
-- keep repo-level Codex skills in `.agents/skills/`
+- keep official repo-level Codex skills in `.codex/skills/`
+- keep `.agents/skills/` only as an optional compatibility mirror when needed
 - keep shared reusable source material in `shared/skills/` and `tools/templates/skills/`
+
+The reviewed reference manifest now also includes `openai/skills` and `openai/codex` so those official upstreams can be refreshed into `tools/ref/` for local comparison when needed.
 
 Third-party orchestration layers that generate `AGENTS.md`, skills folders, or MCP config should remain optional local tooling by default rather than becoming the canonical workspace layout.
 
 Larger agent harnesses are best treated here as pattern sources rather than dependencies.
+
+If you want to study or compare an upstream harness without adopting it, keep it as an ignored reference snapshot under `tools/ref/` and refresh it with `tools/scripts/sync-reference-snapshots.sh`.
+
+Current examples:
+
+- `oh-my-codex` is a candidate optional local Codex workflow layer, but it should be installed from its own package or a dedicated fork rather than pulled into the workspace dependency tree.
+- `oh-my-openagent` is useful as a reviewed reference, but its OpenCode-specific runtime model and `SUL-1.0` license make it a poor default workspace dependency.
 
 Useful patterns to use selectively:
 
@@ -89,6 +100,10 @@ Codex Workspace/
 │           └── cursor/
 └── repos/
     └── some-repo/
+        ├── .codex/
+        │   └── skills/
+        │       └── repo-runbook/
+        │           └── SKILL.md
         ├── .agents/
         │   └── skills/
         │       └── repo-runbook/
@@ -111,7 +126,7 @@ some-repo/
 └── .github/skills/
 ```
 
-`.workspace/skills/` is optional and only needed when a repo intentionally maintains a tool-neutral source layer in addition to its Codex-native `.agents/skills/`.
+`.workspace/skills/` is optional and only needed when a repo intentionally maintains a tool-neutral source layer in addition to its official `.codex/skills/` surface and any compatibility mirrors.
 
 Non-Codex adapter folders should usually be ignored by the repo that owns them unless the repo intentionally wants to publish a specific adapter layout.
 
@@ -128,17 +143,21 @@ Examples:
 - manifest generation
 - mixed-stack troubleshooting
 
-### `repos/<repo>/.agents/skills/`
+### `repos/<repo>/.codex/skills/`
 
-Use this for tracked repo skills that should be natively discoverable by Codex.
+Use this for tracked repo skills that should be natively discoverable by official Codex.
 
 If Codex is the primary consumer, this is the default repo-level location.
 
+### `repos/<repo>/.agents/skills/`
+
+Use this only when a repo also wants a tracked compatibility mirror for workspace-native or non-official local tooling.
+
 ### `repos/<repo>/.workspace/skills/`
 
-Use this only when a repo intentionally maintains a tool-neutral source layer or multi-agent compatibility source before exporting into `.agents/skills/`.
+Use this only when a repo intentionally maintains a tool-neutral source layer or multi-agent compatibility source before exporting into `.codex/skills/` and optional `.agents/skills/`.
 
-This is optional and secondary to `.agents/skills/` for Codex.
+This is optional and secondary to `.codex/skills/` for Codex.
 
 ### `tools/templates/skills/`
 
@@ -198,6 +217,7 @@ That knowledge should live in tracked files such as:
 - `docs/`
 - `.workspace/project.json`
 - `openspec/`
+- `.codex/skills/`
 - `.agents/skills/`
 - optional `.workspace/skills/`
 
@@ -222,22 +242,23 @@ Do not rely on private local memory as the long-term home of canonical repo know
 
 ## Adapter rule
 
-For Codex, `.agents/skills/` is the native repo location rather than an adapter target.
+For official Codex repo-local skills, `.codex/skills/` is the primary target.
 
-Create additional adapters only for other tools that need them.
+`.agents/skills/` remains a workspace-native compatibility mirror when a repo wants it.
 
 That means:
 
-- track repo-level Codex skills in `.agents/skills/`
+- track repo-level Codex skills in `.codex/skills/`
+- mirror them into `.agents/skills/` only when compatibility helps
 - keep reusable source material in `shared/skills/`
-- if a repo also maintains `.workspace/skills/`, sync or export that into `.agents/skills/`
+- if a repo also maintains `.workspace/skills/`, sync or export that into `.codex/skills/` and optional `.agents/skills/`
 - create non-Codex adapter folders only when needed
 - keep generated non-Codex adapters and orchestration state local unless there is a strong reason to publish them
 - if an adapter target lives inside a repo, let that repo decide whether to ignore or publish it
 
 If you need a skill from an upstream catalog, prefer installing that one skill through the agent's supported installer flow rather than copying the upstream repository into `repos/` or `tools/`.
 
-If a repo keeps shared or tool-neutral tracked skill sources, use `tools/scripts/sync-codex-skills.sh` to preview or sync those tracked sources into `.agents/skills/`.
+If a repo keeps shared or tool-neutral tracked skill sources, use `tools/scripts/sync-codex-skills.sh` to preview or sync those tracked sources into `.codex/skills/` plus any `.agents/skills/` compatibility mirror.
 
 ## MCP rule
 

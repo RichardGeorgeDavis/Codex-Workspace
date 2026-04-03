@@ -53,7 +53,8 @@ Examples:
 
 - repo `README.md`
 - `.workspace/project.json`
-- repo-local `.agents/skills/`
+- repo-local `.codex/skills/`
+- optional repo-local `.agents/skills/` compatibility mirrors
 - workspace-wide `shared/skills/`
 - optional repo-local `.workspace/skills/` when used as a tool-neutral source layer
 - generated repo summaries in `cache/context/`
@@ -128,11 +129,12 @@ Tracked project material such as:
 
 Portable workflow guidance such as:
 
-- `repos/<repo>/.agents/skills/`
+- `repos/<repo>/.codex/skills/`
+- optional `repos/<repo>/.agents/skills/`
 - `shared/skills/`
 - optional `repos/<repo>/.workspace/skills/`
 
-In Codex-first repos, `.agents/skills/` is the native discoverable location.
+In Codex-first repos, `.codex/skills/` is the official repo-local surface. `.agents/skills/` is a supported workspace compatibility mirror.
 
 ### Local memory
 

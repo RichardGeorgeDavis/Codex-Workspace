@@ -8,6 +8,8 @@ Workspace Hub reads and writes repo manifests at:
 
 Use a manifest when a repo needs explicit runtime metadata instead of relying only on conservative detection.
 
+The repo intake action in Workspace Hub only writes a manifest when the selected repo appears to benefit from explicit runtime metadata. If the repo already looks clear from its files and inferred commands, intake leaves the manifest absent.
+
 For local-only overrides, Workspace Hub also supports:
 
 ```text

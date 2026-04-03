@@ -20,6 +20,9 @@ repos/*
 tools/ref/
 tools/local/
 .cognetivy/
+.agents/
+cache/context/
+cache/playwright-browsers/
 
 # macOS and synced-folder noise
 .DS_Store

@@ -48,8 +48,8 @@ Keep mode meaning in the skill text itself rather than depending on hidden agent
 ## Suggested workflow
 
 1. Start from a template here.
-2. Copy the skill into `shared/skills/` or a repo-local `.agents/skills/`.
+2. Copy the skill into `shared/skills/` or a repo-local `.codex/skills/`.
 3. Adjust examples, commands, and review criteria for the actual repo.
-4. Use `tools/scripts/sync-codex-skills.sh` if you maintain a tool-neutral source layer and need to sync into `.agents/skills/`.
+4. Use `tools/scripts/sync-codex-skills.sh` if you maintain a tool-neutral source layer and need to sync into `.codex/skills/` plus any `.agents/skills/` compatibility mirror.
 
 These templates are examples, not a mandatory install set.

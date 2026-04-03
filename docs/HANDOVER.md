@@ -42,12 +42,26 @@ Implemented so far:
 - repo discovery across sibling repos under `repos/`
 - conservative repo classification
 - manifest-aware repo metadata
+- repo intake scaffolding for `README.md`, cover placeholders, and conditional manifest creation
 - open actions for repo, README, manifest, preview, and terminal
 - start, stop, and restart runtime controls
 - health checks for local URLs
 - persisted per-repo metadata overrides
 - manifest authoring for `.workspace/project.json`
 - repo-local documentation under `repos/workspace-hub/docs/`
+
+## Repo intake notes
+
+The current repo intake flow in `workspace-hub` is intentionally conservative.
+
+- it uses the tracked templates in `tools/templates/repo-docs/`
+- it creates or normalizes `README.md`
+- it injects the Workspace Hub cover block and ensures a repo-local placeholder cover image exists
+- it writes `.workspace/project.json` only when the repo appears to need explicit runtime metadata
+- it keeps an existing manifest if one is already present
+- it does not auto-install dependencies or auto-start runtimes as part of intake
+
+This keeps intake focused on first-pass repo clarity rather than hidden setup side effects.
 
 ## Recommended pickup point
 
