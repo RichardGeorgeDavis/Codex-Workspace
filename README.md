@@ -170,12 +170,14 @@ See:
 - [docs/06-cross-agent-skills-and-mcp.md](docs/06-cross-agent-skills-and-mcp.md)
 - [docs/07-context-cache-and-retrieval.md](docs/07-context-cache-and-retrieval.md)
 
-External skill catalogs such as [`openai/skills`](https://github.com/openai/skills) should be treated as optional upstream sources for Codex skills, not vendored workspace dependencies.
+External skill catalogs such as [`openai/skills`](https://github.com/openai/skills) and upstream design catalogs such as [`VoltAgent/awesome-design-md`](https://github.com/VoltAgent/awesome-design-md) should be treated as optional reviewed sources, not vendored workspace dependencies.
 
 - install only the specific skills that solve a real workflow need
 - prefer local skill installation via Codex tooling such as `$skill-installer`
 - for repo-level Codex discoverability, prefer tracked `.codex/skills/` and keep `.agents/skills/` only when repo-local compatibility mirroring helps
 - keep workspace-wide reusable skill sources in `shared/skills/` and starter templates in `tools/templates/skills/`
+- keep reviewed upstream `DESIGN.md` catalogs under `tools/ref/` and copy only the specific `DESIGN.md` files a repo actually needs
+- use `tools/scripts/use-design-md.sh` when you want a stable local mirror under `cache/design-md/catalog/` or need to copy one `DESIGN.md` into a repo root quickly
 - keep third-party orchestration layers and generated agent setup local-only unless there is a strong reason to publish them
 - do not add the whole upstream skill catalog to `repos/`, `tools/`, or as a submodule unless there is a very specific maintenance reason
 

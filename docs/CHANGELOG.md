@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-04-05
+
+- Added `VoltAgent/awesome-design-md` to `tools/manifests/reference-sources.json` so the workspace can install and refresh a reviewed local snapshot of the upstream `DESIGN.md` catalog under ignored `tools/ref/`.
+- Updated the workspace docs to treat upstream `DESIGN.md` catalogs as reviewed reference material rather than workspace dependencies, and documented the `sync-reference-snapshots.sh --run voltagent-awesome-design-md` update path.
+- Added `tools/scripts/use-design-md.sh` plus ignored `cache/design-md/` so the workspace can mirror the reviewed `DESIGN.md` files into a stable local path and copy a selected `DESIGN.md` into a repo root on demand.
+
 ## 2026-04-03
 
 - Added shared Playwright environment helpers and automatic Workspace Hub export of the shared Playwright browser cache so repo install and runtime commands reuse one browser download by default.

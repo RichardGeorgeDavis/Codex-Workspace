@@ -12,3 +12,4 @@ Current reviewed examples include:
 - `openai/codex` for official Codex CLI and `.codex/` surface review
 - `oh-my-codex` for optional local Codex workflow ideas
 - `oh-my-openagent` for OpenCode-specific reference patterns
+- `VoltAgent/awesome-design-md` for reviewed upstream `DESIGN.md` catalog snapshots under `tools/ref/`

@@ -55,6 +55,7 @@ Useful maintenance scripts:
 - `tools/scripts/release-readiness.sh` runs the stable release gate: workspace doctors, `workspace-hub` test/lint/build, skill-sync dry run, and placeholder-surface checks.
 - `tools/scripts/run-with-workspace-env.sh` runs a command with the shared workspace environment, including the shared Playwright browser cache path.
 - `tools/scripts/setup-workspace-profile.sh` provides a guided, non-destructive profile check for `core`, `hub`, `mixed-stack`, `wordpress`, `agent-enhanced`, `workflow-state`, `spec-driven`, and `ui-previews`.
+- `tools/scripts/use-design-md.sh` mirrors the reviewed VoltAgent `DESIGN.md` catalog into `cache/design-md/catalog/`, lists available site ids, and can copy a selected `DESIGN.md` into a repo root.
 - `tools/scripts/sync-reference-snapshots.sh` previews or refreshes ignored upstream reference snapshots under `tools/ref/`, with dry-run mode by default.
 - `tools/scripts/sync-codex-skills.sh` previews or syncs tracked workspace skill sources into repo `.codex/skills/` folders plus optional `.agents/skills/` compatibility mirrors, with dry-run mode by default.
 - `tools/scripts/trim-git-repos.sh` performs safe Git maintenance across `repos/` by cleaning `.git` sync noise, expiring older reflog entries, and running `git gc` with a conservative prune window.

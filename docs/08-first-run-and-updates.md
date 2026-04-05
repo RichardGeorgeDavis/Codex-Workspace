@@ -417,9 +417,13 @@ If you keep ignored upstream reference snapshots in `tools/ref/`, update them se
 tools/scripts/sync-reference-snapshots.sh --list
 tools/scripts/sync-reference-snapshots.sh oh-my-codex
 tools/scripts/sync-reference-snapshots.sh --run oh-my-codex
+tools/scripts/sync-reference-snapshots.sh --run voltagent-awesome-design-md
+tools/scripts/use-design-md.sh --refresh
 ```
 
-The script uses dry-run mode by default. For the current reviewed examples, `oh-my-codex` is the safer candidate for optional local integration, while `oh-my-openagent` is better treated as a reference unless its license and runtime are an intentional fit.
+The script uses dry-run mode by default. For the current reviewed examples, `oh-my-codex` is the safer candidate for optional local integration, `oh-my-openagent` is better treated as a reference unless its license and runtime are an intentional fit, and `voltagent-awesome-design-md` is the reviewed path for installing or refreshing the local `DESIGN.md` catalog under `tools/ref/`.
+
+If you want a stable workspace-local mirror of just the `DESIGN.md` files, rebuild `cache/design-md/catalog/` with `tools/scripts/use-design-md.sh --refresh`. You can also copy a specific site file into a repo root with `tools/scripts/use-design-md.sh vercel /path/to/repo`.
 
 ### 6. Restart Codex when needed
 

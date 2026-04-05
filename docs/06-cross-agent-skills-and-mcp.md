@@ -52,7 +52,13 @@ Treat upstream skill catalogs such as [`openai/skills`](https://github.com/opena
 - keep `.agents/skills/` only as an optional compatibility mirror when needed
 - keep shared reusable source material in `shared/skills/` and `tools/templates/skills/`
 
-The reviewed reference manifest now also includes `openai/skills` and `openai/codex` so those official upstreams can be refreshed into `tools/ref/` for local comparison when needed.
+Treat upstream design catalogs such as [`VoltAgent/awesome-design-md`](https://github.com/VoltAgent/awesome-design-md) similarly:
+
+- keep the reviewed catalog as an ignored reference snapshot under `tools/ref/`
+- refresh it with `tools/scripts/sync-reference-snapshots.sh` when you want newer `DESIGN.md` files
+- copy only the specific `DESIGN.md` files a repo needs into that repo instead of making the catalog a shared runtime dependency
+
+The reviewed reference manifest now also includes `openai/skills`, `openai/codex`, and `VoltAgent/awesome-design-md` so those upstream sources can be refreshed into `tools/ref/` for local comparison when needed.
 
 Third-party orchestration layers that generate `AGENTS.md`, skills folders, or MCP config should remain optional local tooling by default rather than becoming the canonical workspace layout.
 

@@ -22,6 +22,7 @@ tools/local/
 .cognetivy/
 .agents/
 cache/context/
+cache/design-md/
 cache/playwright-browsers/
 
 # macOS and synced-folder noise
