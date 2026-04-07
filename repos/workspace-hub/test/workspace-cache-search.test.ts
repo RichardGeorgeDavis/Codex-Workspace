@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict'
+import { execFile } from 'node:child_process'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { after, before, test } from 'node:test'
+import { promisify } from 'node:util'
 
 type WorkspaceModule = typeof import('../server/workspace.ts')
 type WorkspaceSearchModule = typeof import('../server/workspace-search.ts')
 
 let tempWorkspaceRoot = ''
+const execFileAsync = promisify(execFile)
 
 async function writeTextFile(targetPath: string, content: string) {
   await mkdir(path.dirname(targetPath), { recursive: true })
@@ -25,6 +28,11 @@ async function createNodeRepo(root: string, relativePath: string) {
     path.join(root, 'repos', relativePath, 'package.json'),
     '{\n  "name": "fixture"\n}\n',
   )
+}
+
+async function initGitRepo(root: string, relativePath: string) {
+  const repoPath = path.join(root, 'repos', relativePath)
+  await execFileAsync('git', ['init'], { cwd: repoPath })
 }
 
 async function importWorkspaceModule(root: string, cacheTtlMs: string) {
@@ -139,4 +147,46 @@ test('base summary mode skips heavy diagnostics while preserving repo discovery'
   assert.equal(repo.dependencies.state, 'unknown')
   assert.match(repo.git.summary, /skipped for base summary/i)
   assert.match(repo.dependencies.reason, /skipped for base summary/i)
+})
+
+test('diagnostics mode warms git diagnostics asynchronously via worker', async () => {
+  await createNodeRepo(tempWorkspaceRoot, 'repo-git-worker')
+  await initGitRepo(tempWorkspaceRoot, 'repo-git-worker')
+  const workspaceModule = await importWorkspaceModule(tempWorkspaceRoot, '60000')
+  workspaceModule.invalidateWorkspaceSummaryCache()
+
+  const firstSummary = await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+    { includeDiagnostics: true },
+  )
+  const firstRepo = firstSummary.repos.find((entry) => entry.relativePath.endsWith('repo-git-worker'))
+  assert.ok(firstRepo)
+  assert.equal(firstRepo.git.hasGit, false)
+
+  const maxAttempts = 20
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    await new Promise((resolve) => {
+      setTimeout(resolve, 50)
+    })
+
+    const refreshedSummary = await workspaceModule.buildWorkspaceSummary(
+      4101,
+      new Map(),
+      new Map(),
+      { includeDiagnostics: true },
+    )
+    const refreshedRepo = refreshedSummary.repos.find((entry) =>
+      entry.relativePath.endsWith('repo-git-worker'),
+    )
+    assert.ok(refreshedRepo)
+
+    if (refreshedRepo.git.hasGit) {
+      assert.match(refreshedRepo.git.summary, /Git status available|No commits yet on/i)
+      return
+    }
+  }
+
+  assert.fail('Expected background diagnostics worker to warm git diagnostics.')
 })
