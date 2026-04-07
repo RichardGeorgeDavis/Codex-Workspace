@@ -16,6 +16,7 @@ import {
 import {
   applyRepoAgentPreset,
   fetchWorkspaceSummary,
+  fetchWorkspaceSummaryBase,
   generateRepoCover,
   openRepoTarget,
   openWorkspacePath,
@@ -30,9 +31,14 @@ import {
   subscribeWorkspaceEvents,
   writeRepoManifest,
 } from '../lib/api.ts'
+import {
+  mergeWorkspaceSummaryDiagnostics,
+  needsDiagnosticsHydration,
+} from '../lib/mergeWorkspaceSummary.ts'
 import type {
   RepoAgentPresetId,
   RepoType,
+  SummaryRequestReason,
   WorkspaceEvent,
   WorkspaceArchive,
   WorkspaceRepo,
@@ -175,6 +181,7 @@ function filterArchives(
 }
 
 export function App({ initialThemePreference }: AppProps) {
+  const fullHydrationCooldownMs = 4000
   const [summary, setSummary] = useState<WorkspaceSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -194,18 +201,41 @@ export function App({ initialThemePreference }: AppProps) {
   const deferredSearchTerm = useDeferredValue(searchTerm)
   const lastRecordedSelectionRef = useRef<string | null>(null)
   const liveRefreshTimeoutRef = useRef<number | null>(null)
+  const summaryRef = useRef<WorkspaceSummary | null>(null)
+  const fullHydrationRef = useRef(false)
+  const lastFullHydrationAtRef = useRef(0)
+  const softRefreshInFlightRef = useRef<Promise<void> | null>(null)
+  const softRefreshQueuedRef = useRef(false)
+  const fullHydrationRequestCountRef = useRef(0)
+  const fullHydrationSuppressedCooldownRef = useRef(0)
+  const fullHydrationSuppressedInFlightRef = useRef(0)
+  const softRefreshCoalescedCountRef = useRef(0)
 
-  async function loadSummary(signal?: AbortSignal, showLoading = true) {
-    if (showLoading) {
-      setLoading(true)
-    }
+  useEffect(() => {
+    summaryRef.current = summary
+  }, [summary])
 
+  async function loadInitialSummary(signal?: AbortSignal) {
+    setLoading(true)
     setError(null)
 
     try {
-      const nextSummary = await fetchWorkspaceSummary(signal)
+      const base = await fetchWorkspaceSummaryBase(signal, 'initial')
+      if (signal?.aborted) {
+        return
+      }
+
       startTransition(() => {
-        setSummary(nextSummary)
+        setSummary(base)
+      })
+
+      const full = await fetchWorkspaceSummary(signal, 'initial')
+      if (signal?.aborted) {
+        return
+      }
+
+      startTransition(() => {
+        setSummary(full)
       })
     } catch (caughtError) {
       if (signal?.aborted) {
@@ -218,7 +248,125 @@ export function App({ initialThemePreference }: AppProps) {
           : 'Unable to load workspace summary.',
       )
     } finally {
-      if (!signal?.aborted && showLoading) {
+      if (!signal?.aborted) {
+        setLoading(false)
+      }
+    }
+  }
+
+  async function performSoftRefresh(
+    signal?: AbortSignal,
+    reason: SummaryRequestReason = 'event',
+  ) {
+    setError(null)
+
+    try {
+      const base = await fetchWorkspaceSummaryBase(signal, reason)
+      if (signal?.aborted) {
+        return
+      }
+
+      const previous = summaryRef.current
+      const merged = mergeWorkspaceSummaryDiagnostics(base, previous)
+
+      startTransition(() => {
+        setSummary(merged)
+      })
+
+      const shouldHydrate = needsDiagnosticsHydration(merged, previous)
+      if (!shouldHydrate) {
+        return
+      }
+
+      if (fullHydrationRef.current) {
+        fullHydrationSuppressedInFlightRef.current += 1
+        return
+      }
+
+      const now = Date.now()
+      if (now - lastFullHydrationAtRef.current < fullHydrationCooldownMs) {
+        fullHydrationSuppressedCooldownRef.current += 1
+        return
+      }
+
+      fullHydrationRef.current = true
+      lastFullHydrationAtRef.current = now
+      fullHydrationRequestCountRef.current += 1
+
+      try {
+        const full = await fetchWorkspaceSummary(signal, 'hydration')
+        if (signal?.aborted) {
+          return
+        }
+
+        startTransition(() => {
+          setSummary(full)
+        })
+      } finally {
+        fullHydrationRef.current = false
+      }
+    } catch (caughtError) {
+      if (signal?.aborted) {
+        return
+      }
+
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to load workspace summary.',
+      )
+    }
+  }
+
+  async function refreshSummarySoft(
+    signal?: AbortSignal,
+    reason: SummaryRequestReason = 'event',
+  ) {
+    if (softRefreshInFlightRef.current) {
+      softRefreshQueuedRef.current = true
+      softRefreshCoalescedCountRef.current += 1
+      return softRefreshInFlightRef.current
+    }
+
+    const run = (async () => {
+      do {
+        softRefreshQueuedRef.current = false
+        await performSoftRefresh(signal, reason)
+      } while (softRefreshQueuedRef.current && !signal?.aborted)
+    })().finally(() => {
+      softRefreshInFlightRef.current = null
+      softRefreshQueuedRef.current = false
+    })
+
+    softRefreshInFlightRef.current = run
+    return run
+  }
+
+  async function refreshSummaryFull(signal?: AbortSignal) {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const full = await fetchWorkspaceSummary(signal, 'manual-refresh')
+      if (signal?.aborted) {
+        return
+      }
+
+      startTransition(() => {
+        setSummary(full)
+      })
+    } catch (caughtError) {
+      if (signal?.aborted) {
+        return
+      }
+
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to load workspace summary.',
+      )
+    } finally {
+      if (!signal?.aborted) {
         setLoading(false)
       }
     }
@@ -249,7 +397,7 @@ export function App({ initialThemePreference }: AppProps) {
       )
     } finally {
       if (target === 'preview') {
-        await loadSummary(undefined, false)
+        await refreshSummarySoft(undefined, 'action')
       }
 
       setActionPendingKey(null)
@@ -280,7 +428,7 @@ export function App({ initialThemePreference }: AppProps) {
 
     try {
       await runRepoRuntimeAction(relativePath, action)
-      await loadSummary(undefined, false)
+      await refreshSummarySoft(undefined, 'action')
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -299,7 +447,7 @@ export function App({ initialThemePreference }: AppProps) {
 
     try {
       await runRepoInstall(relativePath)
-      await loadSummary(undefined, false)
+      await refreshSummarySoft(undefined, 'action')
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -318,7 +466,7 @@ export function App({ initialThemePreference }: AppProps) {
 
     try {
       await runRepoIntake(relativePath)
-      await loadSummary(undefined, false)
+      await refreshSummarySoft(undefined, 'action')
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -337,7 +485,7 @@ export function App({ initialThemePreference }: AppProps) {
 
     try {
       await stopAllRuntimes()
-      await loadSummary(undefined, false)
+      await refreshSummarySoft(undefined, 'action')
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -356,7 +504,7 @@ export function App({ initialThemePreference }: AppProps) {
 
     try {
       await generateRepoCover(relativePath)
-      await loadSummary(undefined, false)
+      await refreshSummarySoft(undefined, 'action')
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -388,7 +536,7 @@ export function App({ initialThemePreference }: AppProps) {
 
     try {
       await saveRepoMetadata(relativePath, metadata)
-      await loadSummary(undefined, false)
+      await refreshSummarySoft(undefined, 'action')
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -407,7 +555,7 @@ export function App({ initialThemePreference }: AppProps) {
 
     try {
       await resetRepoMetadata(relativePath)
-      await loadSummary(undefined, false)
+      await refreshSummarySoft(undefined, 'action')
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -446,7 +594,7 @@ export function App({ initialThemePreference }: AppProps) {
 
     try {
       await writeRepoManifest(relativePath, manifest)
-      await loadSummary(undefined, false)
+      await refreshSummarySoft(undefined, 'action')
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -468,7 +616,7 @@ export function App({ initialThemePreference }: AppProps) {
 
     try {
       await applyRepoAgentPreset(relativePath, preset)
-      await loadSummary(undefined, false)
+      await refreshSummarySoft(undefined, 'action')
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -483,7 +631,7 @@ export function App({ initialThemePreference }: AppProps) {
   useEffect(() => {
     const controller = new AbortController()
 
-    void loadSummary(controller.signal)
+    void loadInitialSummary(controller.signal)
 
     return () => {
       controller.abort()
@@ -547,7 +695,7 @@ export function App({ initialThemePreference }: AppProps) {
         const delay = event.type.endsWith('log') ? 500 : 120
         liveRefreshTimeoutRef.current = window.setTimeout(() => {
           liveRefreshTimeoutRef.current = null
-          void loadSummary(undefined, false)
+          void refreshSummarySoft(undefined, 'event')
         }, delay)
       },
       setLiveStatus,
@@ -615,7 +763,7 @@ export function App({ initialThemePreference }: AppProps) {
 
     void recordRepoActivity(selectedRepo.relativePath, 'select')
       .then(async () => {
-        await loadSummary(undefined, false)
+        await refreshSummarySoft(undefined, 'action')
       })
       .catch((caughtError) => {
         setActionError(
@@ -627,6 +775,7 @@ export function App({ initialThemePreference }: AppProps) {
   }, [selectedRepo])
 
   const generatedAt = summary ? formatGeneratedAt(summary.generatedAt) : 'Waiting for API'
+  const refreshDebugLabel = `Refresh stats: coalesced ${softRefreshCoalescedCountRef.current}, hydration requests ${fullHydrationRequestCountRef.current}, suppressed cooldown ${fullHydrationSuppressedCooldownRef.current}, suppressed in-flight ${fullHydrationSuppressedInFlightRef.current}`
 
   function handleThemePresetChange(preset: ThemePreset) {
     setThemePreference((currentPreference) => ({
@@ -672,7 +821,7 @@ export function App({ initialThemePreference }: AppProps) {
                 className="primary-button"
                 disabled={loading}
                 onClick={() => {
-                  void loadSummary()
+                  void refreshSummaryFull()
                 }}
                 type="button"
               >
@@ -682,12 +831,22 @@ export function App({ initialThemePreference }: AppProps) {
               <a className="secondary-link" href="/api/health" rel="noreferrer" target="_blank">
                 API health
               </a>
+
+              <a
+                className="secondary-link"
+                href="/api/workspace/observability"
+                rel="noreferrer"
+                target="_blank"
+              >
+                Observability
+              </a>
             </div>
 
             <div className="hero-meta">
               <span>Workspace root: {summary?.workspaceRoot ?? 'Loading...'}</span>
               <span>Last sync: {generatedAt}</span>
               <span>{`Live updates: ${liveStatus} • ${liveEventLabel}`}</span>
+              <span title={refreshDebugLabel}>Refresh optimization active</span>
             </div>
           </div>
 

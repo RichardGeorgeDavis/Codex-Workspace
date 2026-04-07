@@ -1,4 +1,11 @@
 export type PreviewMode = 'direct' | 'external' | 'servbay'
+export type SummaryRequestReason =
+  | 'action'
+  | 'event'
+  | 'hydration'
+  | 'initial'
+  | 'manual-refresh'
+  | 'search'
 
 export type RepoType =
   | 'node-app'
@@ -229,7 +236,7 @@ export type WorkspaceRepo = {
   buildCommand: string | null
   collection: string
   detectedBy: 'files' | 'manifest'
-  diagnosticsFreshness: 'fresh' | 'stale' | 'warming'
+  diagnosticsFreshness: 'fresh' | 'skipped' | 'stale' | 'warming'
   dependencies: RepoDependencyState
   devCommand: string | null
   externalUrl: string | null

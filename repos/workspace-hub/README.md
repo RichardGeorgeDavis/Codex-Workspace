@@ -173,12 +173,32 @@ The automated test suite uses temp workspaces and fixture repos so it does not
 rewrite your current `repos/` content while verifying agent detection and
 preset scaffolding.
 
+Quick verify (optimization pass):
+
+```bash
+pnpm typecheck
+pnpm test
+curl -s "http://127.0.0.1:4101/api/workspace/summary/base?reason=event" > /dev/null
+curl -s "http://127.0.0.1:4101/api/workspace/summary?reason=manual-refresh" > /dev/null
+curl -s "http://127.0.0.1:4101/api/workspace/observability"
+```
+
 Default local endpoints:
 
 - app: `http://127.0.0.1:4100`
 - api: `http://127.0.0.1:4101/api/health`
+- observability: `http://127.0.0.1:4101/api/workspace/observability`
 - events: `http://127.0.0.1:4101/api/events`
 - search: `http://127.0.0.1:4101/api/search?q=preview`
+
+Summary endpoints:
+
+- full summary (with diagnostics): `GET /api/workspace/summary`
+- base summary (fast discovery-first): `GET /api/workspace/summary/base`
+
+The UI now prefers base summary for frequent refreshes and hydrates full diagnostics when needed.
+Observability now includes cache hit or miss counters, diagnostics cache behavior, and summary request reasons to support tuning.
+`/api/workspace/observability` now exposes a versioned schema (`observabilityVersion: 1`) with grouped sections (`discovery`, `diagnostics`, `summary`); current top-level counters remain as compatibility aliases for existing consumers.
 
 ## Repo Intake
 
@@ -269,3 +289,27 @@ Use local override files when you want to keep your own operator notes or machin
 1. Add richer dependency detection beyond Node and Composer.
 2. Tighten install guidance for more mixed-stack repo types.
 3. Expand lightweight workflow helpers only where they reduce repeated local setup work.
+
+## Next Improvements (planned)
+
+Near-term operator priorities:
+
+- monitor `GET /api/workspace/observability` for:
+  - discovery cache hit/miss balance
+  - diagnostics cache miss pressure
+  - summary request reason distribution
+- keep tuning conservative and local-first:
+  - `WORKSPACE_HUB_DISCOVERY_CACHE_TTL_MS`
+  - `WORKSPACE_HUB_DIAGNOSTICS_CACHE_TTL_MS`
+  - `WORKSPACE_HUB_DIAGNOSTICS_WORKER_CONCURRENCY`
+- use a quick triage flow when refresh feels slow:
+  1. check observability counters first
+  2. compare warm `summary/base` vs `summary` response behavior
+  3. adjust one env knob at a time and re-measure
+
+Mid-term and longer-term planned improvements:
+
+- incremental discovery indexing to reduce cold-start outliers on larger workspaces
+- per-repo diagnostics fetch path for detail-heavy workflows
+- optional extension hooks for custom repo classification and health/dependency probes
+- optional local historical observability snapshots for trend visibility
