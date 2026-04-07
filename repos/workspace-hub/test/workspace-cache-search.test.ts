@@ -164,6 +164,7 @@ test('diagnostics mode warms git diagnostics asynchronously via worker', async (
   const firstRepo = firstSummary.repos.find((entry) => entry.relativePath.endsWith('repo-git-worker'))
   assert.ok(firstRepo)
   assert.equal(firstRepo.git.hasGit, false)
+  assert.equal(firstRepo.diagnosticsFreshness, 'warming')
 
   const maxAttempts = 20
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
@@ -183,6 +184,7 @@ test('diagnostics mode warms git diagnostics asynchronously via worker', async (
     assert.ok(refreshedRepo)
 
     if (refreshedRepo.git.hasGit) {
+      assert.equal(refreshedRepo.diagnosticsFreshness, 'fresh')
       assert.match(refreshedRepo.git.summary, /Git status available|No commits yet on/i)
       return
     }

@@ -22,6 +22,8 @@
 - Added async diagnostics batching in `repos/workspace-hub/server/workspace.ts` with a background queue, diagnostics cache TTL, and configurable worker concurrency for full-summary diagnostics refresh.
 - Added worker cache-coherency invalidation so refreshed diagnostics propagate to subsequent summary reads.
 - Extended `repos/workspace-hub/test/workspace-cache-search.test.ts` with diagnostics warming coverage and confirmed updated local test-suite pass outside sandbox (`14 passed, 0 failed`).
+- Added diagnostics freshness state (`fresh`, `warming`, `stale`) to workspace repo summaries and surfaced it in repo list and details UI.
+- Updated diagnostics worker coverage to assert `warming -> fresh` transition and reconfirmed local test-suite pass (`14 passed, 0 failed`).
 
 ## 2026-04-05
 

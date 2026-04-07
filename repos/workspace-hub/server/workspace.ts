@@ -176,6 +176,7 @@ type WorkspaceSummaryBuildOptions = {
 
 type RepoDiagnostics = {
   dependencies: RepoDependencyState
+  freshness: 'fresh' | 'stale' | 'warming'
   git: RepoGitState
   health: RepoHealth
 }
@@ -1527,12 +1528,13 @@ async function buildRepoRecord(
       }),
     ])
 
-    return { dependencies, git, health }
+    return { dependencies, freshness: 'fresh', git, health }
   }
   let diagnostics: RepoDiagnostics
   if (!includeDiagnostics) {
     diagnostics = {
       dependencies: buildUnknownDependencyState(),
+      freshness: 'fresh',
       git: buildUnavailableGitState(),
       health: buildUnknownHealth(healthcheckUrl ?? resolvedPreview.previewUrl),
     }
@@ -1541,11 +1543,15 @@ async function buildRepoRecord(
     if (cachedDiagnostics && cachedDiagnostics.expiresAt > Date.now()) {
       diagnostics = cachedDiagnostics.value
     } else if (cachedDiagnostics) {
-      diagnostics = cachedDiagnostics.value
+      diagnostics = {
+        ...cachedDiagnostics.value,
+        freshness: 'stale',
+      }
       enqueueRepoDiagnostics(diagnosticsKey, diagnosticsFactory)
     } else {
       diagnostics = {
         dependencies: buildUnknownDependencyState(),
+        freshness: 'warming',
         git: buildUnavailableGitState(),
         health: buildUnknownHealth(healthcheckUrl ?? resolvedPreview.previewUrl),
       }
@@ -1558,6 +1564,7 @@ async function buildRepoRecord(
     buildCommand: effectiveBuildCommand,
     collection: collection ?? 'direct',
     detectedBy: hasManifest ? 'manifest' : 'files',
+    diagnosticsFreshness: diagnostics.freshness,
     dependencies: diagnostics.dependencies,
     devCommand: effectiveDevCommand,
     externalUrl,

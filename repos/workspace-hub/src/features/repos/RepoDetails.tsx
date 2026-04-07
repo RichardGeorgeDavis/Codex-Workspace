@@ -670,6 +670,14 @@ function RepoDetailsContent({
             </dd>
           </div>
           <div className="details-row">
+            <dt>Diagnostics freshness</dt>
+            <dd>
+              <span className={`status-pill ${repo.diagnosticsFreshness}`}>
+                {repo.diagnosticsFreshness}
+              </span>
+            </dd>
+          </div>
+          <div className="details-row">
             <dt>Dev command</dt>
             <dd>{repo.devCommand ?? 'Not inferred yet'}</dd>
           </div>

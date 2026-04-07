@@ -362,3 +362,28 @@ Verification after diagnostics worker slice:
 - `pnpm --dir "repos/workspace-hub" lint`: passed
 - `pnpm --dir "repos/workspace-hub" typecheck`: passed
 - `pnpm --dir "repos/workspace-hub" test`: passed outside sandbox in local terminal (`14 passed, 0 failed`, duration ~`2864ms`)
+
+### Implementation update (2026-04-07, diagnostics freshness indicator slice)
+
+Completed in `repos/workspace-hub`:
+
+1. Added diagnostics freshness state on repo records.
+   - `WorkspaceRepo` now includes `diagnosticsFreshness` with values: `fresh`, `warming`, `stale`.
+
+2. Surfaced freshness in UI.
+   - Added freshness status pills to repo cards in `RepoSnapshot`.
+   - Added a diagnostics freshness row in `RepoDetails` overview.
+
+3. Defined freshness transitions in summary generation.
+   - `warming`: first full-summary read before diagnostics cache is warm
+   - `stale`: expired diagnostics returned while background refresh is queued
+   - `fresh`: warm diagnostics cache or intentionally skipped diagnostics mode
+
+4. Extended worker test assertions.
+   - `workspace-cache-search` test now validates `warming -> fresh` transition during async diagnostics warmup.
+
+Verification after diagnostics freshness slice:
+
+- `pnpm --dir "repos/workspace-hub" lint`: passed
+- `pnpm --dir "repos/workspace-hub" typecheck`: passed
+- `pnpm --dir "repos/workspace-hub" test`: passed (`14 passed, 0 failed`, duration ~`2337ms`)

@@ -134,6 +134,9 @@ function RepoSnapshotCard({ repo, selected }: RepoSnapshotCardProps) {
       </span>
       <span className="repo-card-diagnostics">
         <span className="repo-card-branch">git {formatBranchLabel(repo)}</span>
+        <span className={`status-pill ${repo.diagnosticsFreshness}`}>
+          {repo.diagnosticsFreshness}
+        </span>
         <span className={`status-pill ${repo.git.visibility}`}>
           {formatGitVisibilityLabel(repo)}
         </span>
