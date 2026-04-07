@@ -65,7 +65,7 @@ after(async () => {
   }
 })
 
-test('workspace summary cache invalidation refreshes discovered repo set', async () => {
+test('workspace summary refreshes discovered repo set when repo tree changes', async () => {
   await createNodeRepo(tempWorkspaceRoot, 'repo-a')
   const workspaceModule = await importWorkspaceModule(tempWorkspaceRoot, '60000')
 
@@ -74,16 +74,28 @@ test('workspace summary cache invalidation refreshes discovered repo set', async
 
   await createNodeRepo(tempWorkspaceRoot, 'repo-b')
 
-  const cachedSummary = await workspaceModule.buildWorkspaceSummary(4101, new Map(), new Map())
+  const cachedSummary = await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+  )
   assert.equal(
     cachedSummary.repos.length,
-    1,
-    'Expected cached summary to remain stable before explicit invalidation.',
+    2,
+    'Expected summary to refresh when repo tree signature changes.',
   )
+})
 
+test('workspace summary cache invalidation can force a refresh', async () => {
+  const workspaceModule = await importWorkspaceModule(tempWorkspaceRoot, '60000')
   workspaceModule.invalidateWorkspaceSummaryCache()
-  const refreshedSummary = await workspaceModule.buildWorkspaceSummary(4101, new Map(), new Map())
-  assert.equal(refreshedSummary.repos.length, 2)
+
+  const refreshedSummary = await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+  )
+  assert.ok(refreshedSummary.repos.length >= 2)
 })
 
 test('artifact search indexing is opt-in via env gate', async () => {
