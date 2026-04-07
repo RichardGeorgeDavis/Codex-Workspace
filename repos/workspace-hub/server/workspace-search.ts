@@ -34,6 +34,10 @@ const artifactRoot = path.join(workspaceRoot, 'cache', 'context', 'agents', 'job
 const searchIndexTtlMs = 5000
 const maxIndexedFileBytes = 24 * 1024
 const maxArtifactFiles = 150
+const includeArtifactSearch = (() => {
+  const raw = process.env.WORKSPACE_HUB_SEARCH_INCLUDE_ARTIFACTS?.trim().toLowerCase()
+  return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on'
+})()
 
 let cachedDocuments:
   | {
@@ -274,6 +278,10 @@ async function buildFailureDocuments() {
 }
 
 async function buildArtifactDocuments() {
+  if (!includeArtifactSearch) {
+    return []
+  }
+
   const files = await walkArtifactFiles(artifactRoot, 4)
 
   return await Promise.all(
