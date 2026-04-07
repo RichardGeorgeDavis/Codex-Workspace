@@ -69,6 +69,9 @@ after(async () => {
   delete process.env.WORKSPACE_HUB_WORKSPACE_ROOT
 
   if (tempWorkspaceRoot) {
+    await new Promise((resolve) => {
+      setTimeout(resolve, 120)
+    })
     await rm(tempWorkspaceRoot, { force: true, recursive: true })
   }
 })
@@ -147,6 +150,7 @@ test('base summary mode skips heavy diagnostics while preserving repo discovery'
   assert.equal(repo.dependencies.state, 'unknown')
   assert.match(repo.git.summary, /skipped for base summary/i)
   assert.match(repo.dependencies.reason, /skipped for base summary/i)
+  assert.equal(repo.diagnosticsFreshness, 'skipped')
 })
 
 test('diagnostics mode warms git diagnostics asynchronously via worker', async () => {
@@ -191,4 +195,123 @@ test('diagnostics mode warms git diagnostics asynchronously via worker', async (
   }
 
   assert.fail('Expected background diagnostics worker to warm git diagnostics.')
+})
+
+test('discovery cache can be reused for base summary after diagnostics worker updates', async () => {
+  await createNodeRepo(tempWorkspaceRoot, 'repo-base-cache')
+  const workspaceModule = await importWorkspaceModule(tempWorkspaceRoot, '60000')
+  workspaceModule.invalidateWorkspaceSummaryCache()
+
+  await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+    { includeDiagnostics: false },
+  )
+  const before = workspaceModule.getWorkspaceHubObservability()
+
+  await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+    { includeDiagnostics: true },
+  )
+
+  await new Promise((resolve) => {
+    setTimeout(resolve, 120)
+  })
+
+  await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+    { includeDiagnostics: false },
+  )
+  const after = workspaceModule.getWorkspaceHubObservability()
+
+  assert.ok(
+    after.discoveryCacheHits > before.discoveryCacheHits,
+    'Expected base summary cache hits to increase even after diagnostics worker updates.',
+  )
+})
+
+test('workspace observability reports discovery and diagnostics cache counters', async () => {
+  await createNodeRepo(tempWorkspaceRoot, 'repo-observability-counters')
+  const workspaceModule = await importWorkspaceModule(tempWorkspaceRoot, '60000')
+  workspaceModule.invalidateWorkspaceSummaryCache()
+
+  await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+    { includeDiagnostics: false },
+  )
+  await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+    { includeDiagnostics: false },
+  )
+
+  await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+    { includeDiagnostics: true },
+  )
+  await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+    { includeDiagnostics: true },
+  )
+
+  const observability = workspaceModule.getWorkspaceHubObservability()
+  assert.equal(observability.observabilityVersion, 1)
+  assert.ok(observability.discovery)
+  assert.ok(observability.diagnostics)
+  assert.ok(observability.summary)
+  assert.equal(typeof observability.discovery.hits, 'number')
+  assert.equal(typeof observability.diagnostics.misses, 'number')
+  assert.equal(typeof observability.summary.requestsFull, 'number')
+  assert.ok(observability.discoveryCacheMisses >= 1)
+  assert.ok(observability.discoveryCacheHits >= 1)
+  assert.ok(observability.diagnosticsCacheMisses >= 1)
+  assert.ok(observability.discoveryCacheMaxEntries >= 1)
+})
+
+test('discovery cache enforces a bounded max entries policy', async () => {
+  const workspaceModule = await importWorkspaceModule(tempWorkspaceRoot, '60000')
+  workspaceModule.invalidateWorkspaceSummaryCache()
+
+  await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+    { includeDiagnostics: false },
+  )
+  await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map([
+      [
+        path.join(tempWorkspaceRoot, 'repos', 'repo-cache-a'),
+        {
+          command: null,
+          finishedAt: null,
+          lastExitCode: null,
+          lastSignal: null,
+          logTail: [],
+          message: null,
+          startedAt: null,
+          status: 'idle',
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    ]),
+    new Map(),
+    { includeDiagnostics: false },
+  )
+
+  const observability = workspaceModule.getWorkspaceHubObservability()
+  assert.ok(observability.discoveryCacheEntries <= observability.discoveryCacheMaxEntries)
 })

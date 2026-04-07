@@ -148,6 +148,10 @@ const workspaceDiscoveryCacheTtlMs = Number.parseInt(
   process.env.WORKSPACE_HUB_DISCOVERY_CACHE_TTL_MS ?? '1500',
   10,
 )
+const workspaceDiscoveryCacheMaxEntries = Number.parseInt(
+  process.env.WORKSPACE_HUB_DISCOVERY_CACHE_MAX_ENTRIES ?? '24',
+  10,
+)
 const diagnosticsCacheTtlMs = Number.parseInt(
   process.env.WORKSPACE_HUB_DIAGNOSTICS_CACHE_TTL_MS ?? '10000',
   10,
@@ -173,10 +177,17 @@ type VisibleDirectoryData = {
 type WorkspaceSummaryBuildOptions = {
   includeDiagnostics?: boolean
 }
+type SummaryRequestReason =
+  | 'action'
+  | 'event'
+  | 'hydration'
+  | 'initial'
+  | 'manual-refresh'
+  | 'search'
 
 type RepoDiagnostics = {
   dependencies: RepoDependencyState
-  freshness: 'fresh' | 'stale' | 'warming'
+  freshness: 'fresh' | 'skipped' | 'stale' | 'warming'
   git: RepoGitState
   health: RepoHealth
 }
@@ -187,14 +198,14 @@ type WorkspaceDiscoveryResult = {
   topLevelEntries: WorkspaceEntry[]
 }
 
-let cachedWorkspaceDiscovery:
-  | {
-      expiresAt: number
-      key: string
-      repoTreeSignature: string
-      value: WorkspaceDiscoveryResult
-    }
-  | null = null
+type WorkspaceDiscoveryCacheEntry = {
+  diagnosticsRevision: number
+  expiresAt: number
+  repoTreeSignature: string
+  value: WorkspaceDiscoveryResult
+}
+
+const workspaceDiscoveryCache = new Map<string, WorkspaceDiscoveryCacheEntry>()
 const repoDiagnosticsCache = new Map<
   string,
   {
@@ -204,6 +215,17 @@ const repoDiagnosticsCache = new Map<
 >()
 const repoDiagnosticsQueue = new Map<string, () => Promise<RepoDiagnostics>>()
 const activeDiagnosticsJobs = new Set<string>()
+let lastWorkspaceSummaryBuildAt: string | null = null
+let diagnosticsRevision = 0
+let discoveryCacheHits = 0
+let discoveryCacheMisses = 0
+let diagnosticsCacheHitsFresh = 0
+let diagnosticsCacheHitsStale = 0
+let diagnosticsCacheMisses = 0
+let summaryRequestsBase = 0
+let summaryRequestsFull = 0
+let fullHydrationRequests = 0
+const summaryRequestReasons = new Map<SummaryRequestReason, number>()
 
 function buildSnapshotCacheKey(
   installSnapshots: Map<string, RepoInstall>,
@@ -228,7 +250,87 @@ function buildSnapshotCacheKey(
 }
 
 export function invalidateWorkspaceSummaryCache() {
-  cachedWorkspaceDiscovery = null
+  workspaceDiscoveryCache.clear()
+}
+
+function incrementReason(reason: SummaryRequestReason) {
+  summaryRequestReasons.set(reason, (summaryRequestReasons.get(reason) ?? 0) + 1)
+}
+
+export function recordSummaryRequest(includeDiagnostics: boolean, reason: SummaryRequestReason) {
+  if (includeDiagnostics) {
+    summaryRequestsFull += 1
+  } else {
+    summaryRequestsBase += 1
+  }
+
+  if (reason === 'hydration') {
+    fullHydrationRequests += 1
+  }
+
+  incrementReason(reason)
+}
+
+export function getWorkspaceHubObservability() {
+  const sampleEntry = workspaceDiscoveryCache.values().next().value as
+    | WorkspaceDiscoveryCacheEntry
+    | undefined
+  const diagnostics = {
+    activeJobs: activeDiagnosticsJobs.size,
+    cacheEntries: repoDiagnosticsCache.size,
+    hitsFresh: diagnosticsCacheHitsFresh,
+    hitsStale: diagnosticsCacheHitsStale,
+    misses: diagnosticsCacheMisses,
+    queueDepth: repoDiagnosticsQueue.size,
+    ttlMs: diagnosticsCacheTtlMs,
+    workerConcurrency: Math.max(1, diagnosticsWorkerConcurrency),
+  }
+  const discovery = {
+    active: workspaceDiscoveryCache.size > 0,
+    entries: workspaceDiscoveryCache.size,
+    expiresAt: sampleEntry?.expiresAt ?? null,
+    hits: discoveryCacheHits,
+    maxEntries: Math.max(1, workspaceDiscoveryCacheMaxEntries),
+    misses: discoveryCacheMisses,
+    repoTreeSignatureSample: sampleEntry?.repoTreeSignature ?? null,
+    ttlMs: workspaceDiscoveryCacheTtlMs,
+  }
+  const summary = {
+    fullHydrationRequests,
+    lastBuildAt: lastWorkspaceSummaryBuildAt,
+    reasons: Object.fromEntries(summaryRequestReasons.entries()),
+    requestsBase: summaryRequestsBase,
+    requestsFull: summaryRequestsFull,
+  }
+
+  return {
+    observabilityVersion: 1,
+    discovery,
+    diagnostics,
+    summary,
+    // Compatibility aliases (deprecated; retained for existing clients).
+    activeDiagnosticsJobs: diagnostics.activeJobs,
+    diagnosticsCacheHitsFresh: diagnostics.hitsFresh,
+    diagnosticsCacheHitsStale: diagnostics.hitsStale,
+    diagnosticsCacheMisses: diagnostics.misses,
+    diagnosticsCacheTtlMs: diagnostics.ttlMs,
+    diagnosticsQueueDepth: diagnostics.queueDepth,
+    diagnosticsWorkerConcurrency: diagnostics.workerConcurrency,
+    discoveryCacheActive: discovery.active,
+    discoveryCacheEntries: discovery.entries,
+    discoveryCacheExpiresAt: discovery.expiresAt,
+    discoveryCacheHits: discovery.hits,
+    discoveryCacheMaxEntries: discovery.maxEntries,
+    discoveryCacheMisses: discovery.misses,
+    discoveryCacheTtlMs: discovery.ttlMs,
+    fullHydrationRequests: summary.fullHydrationRequests,
+    lastSummaryBuildAt: summary.lastBuildAt,
+    repoDiagnosticsCacheEntries: diagnostics.cacheEntries,
+    repoTreeSignatureSample: discovery.repoTreeSignatureSample,
+    summaryRequestReasons: summary.reasons,
+    summaryRequestsBase: summary.requestsBase,
+    summaryRequestsFull: summary.requestsFull,
+  }
 }
 
 function processRepoDiagnosticsQueue() {
@@ -251,9 +353,7 @@ function processRepoDiagnosticsQueue() {
           expiresAt: Date.now() + Math.max(0, diagnosticsCacheTtlMs),
           value,
         })
-        // Diagnostics were refreshed asynchronously, so invalidate the derived
-        // summary cache and allow subsequent reads to pick up warm diagnostics.
-        invalidateWorkspaceSummaryCache()
+        diagnosticsRevision += 1
       })
       .catch(() => {
         // Keep stale diagnostics when background refresh fails.
@@ -274,6 +374,48 @@ function enqueueRepoDiagnostics(key: string, factory: () => Promise<RepoDiagnost
   processRepoDiagnosticsQueue()
 }
 
+async function augmentRepoTreeSignatureSegment(dirPath: string): Promise<string> {
+  const hints: string[] = []
+
+  for (const rel of ['package.json', 'composer.json', '.git/HEAD']) {
+    try {
+      const st = await stat(path.join(dirPath, rel))
+      hints.push(`${rel}:${st.mtimeMs}`)
+    } catch {
+      // ignore
+    }
+  }
+
+  try {
+    const subs = await readdir(dirPath, { withFileTypes: true })
+    const childDirs = subs.filter((d) => d.isDirectory() && !d.name.startsWith('.')).slice(0, 24)
+
+    for (const d of childDirs) {
+      const childPath = path.join(dirPath, d.name)
+
+      try {
+        const st = await stat(childPath)
+        hints.push(`sub:${d.name}:${st.mtimeMs}`)
+
+        for (const rel of ['package.json', 'composer.json', '.git/HEAD']) {
+          try {
+            const st2 = await stat(path.join(childPath, rel))
+            hints.push(`sub:${d.name}:${rel}:${st2.mtimeMs}`)
+          } catch {
+            // ignore
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  return hints.sort((left, right) => left.localeCompare(right)).join('|')
+}
+
 async function buildReposTreeSignature() {
   try {
     const rootStat = await stat(reposRoot)
@@ -282,9 +424,12 @@ async function buildReposTreeSignature() {
     const directorySignatures = await Promise.all(
       directoryEntries.map(async (entry) => {
         const fullPath = path.join(reposRoot, entry.name)
+
         try {
           const entryStat = await stat(fullPath)
-          return `${entry.name}:${entryStat.mtimeMs}:${entryStat.size}`
+          const inner = await augmentRepoTreeSignatureSegment(fullPath)
+
+          return `${entry.name}:${entryStat.mtimeMs}:${entryStat.size}:inner:${inner}`
         } catch {
           return `${entry.name}:missing`
         }
@@ -1534,21 +1679,24 @@ async function buildRepoRecord(
   if (!includeDiagnostics) {
     diagnostics = {
       dependencies: buildUnknownDependencyState(),
-      freshness: 'fresh',
+      freshness: 'skipped',
       git: buildUnavailableGitState(),
       health: buildUnknownHealth(healthcheckUrl ?? resolvedPreview.previewUrl),
     }
   } else {
     const cachedDiagnostics = repoDiagnosticsCache.get(diagnosticsKey)
     if (cachedDiagnostics && cachedDiagnostics.expiresAt > Date.now()) {
+      diagnosticsCacheHitsFresh += 1
       diagnostics = cachedDiagnostics.value
     } else if (cachedDiagnostics) {
+      diagnosticsCacheHitsStale += 1
       diagnostics = {
         ...cachedDiagnostics.value,
         freshness: 'stale',
       }
       enqueueRepoDiagnostics(diagnosticsKey, diagnosticsFactory)
     } else {
+      diagnosticsCacheMisses += 1
       diagnostics = {
         dependencies: buildUnknownDependencyState(),
         freshness: 'warming',
@@ -1611,17 +1759,20 @@ async function discoverWorkspace(
   const includeDiagnostics = options.includeDiagnostics ?? true
   const cacheKey = `${buildSnapshotCacheKey(installSnapshots, runtimeSnapshots)}::diagnostics=${includeDiagnostics ? 'full' : 'base'}`
   const repoTreeSignature = await buildReposTreeSignature()
+  const cachedWorkspaceDiscovery = workspaceDiscoveryCache.get(cacheKey)
   if (
     cachedWorkspaceDiscovery &&
-    cachedWorkspaceDiscovery.key === cacheKey &&
-    cachedWorkspaceDiscovery.repoTreeSignature === repoTreeSignature
+    cachedWorkspaceDiscovery.repoTreeSignature === repoTreeSignature &&
+    (!includeDiagnostics || cachedWorkspaceDiscovery.diagnosticsRevision === diagnosticsRevision)
   ) {
+    discoveryCacheHits += 1
     if (cachedWorkspaceDiscovery.expiresAt <= Date.now()) {
       cachedWorkspaceDiscovery.expiresAt =
         Date.now() + Math.max(0, workspaceDiscoveryCacheTtlMs)
     }
     return cachedWorkspaceDiscovery.value
   }
+  discoveryCacheMisses += 1
 
   const reposDirectoryData = await readVisibleDirectoryData(reposRoot)
   const [savedMetadataState, latestFailureReports] = await Promise.all([
@@ -1720,11 +1871,19 @@ async function discoverWorkspace(
   })
 
   const nextValue = { archives, repos, topLevelEntries }
-  cachedWorkspaceDiscovery = {
+  workspaceDiscoveryCache.set(cacheKey, {
+    diagnosticsRevision,
     expiresAt: Date.now() + Math.max(0, workspaceDiscoveryCacheTtlMs),
-    key: cacheKey,
     repoTreeSignature,
     value: nextValue,
+  })
+  const maxEntries = Math.max(1, workspaceDiscoveryCacheMaxEntries)
+  while (workspaceDiscoveryCache.size > maxEntries) {
+    const oldestKey = workspaceDiscoveryCache.keys().next().value as string | undefined
+    if (!oldestKey) {
+      break
+    }
+    workspaceDiscoveryCache.delete(oldestKey)
   }
 
   return nextValue
@@ -1841,6 +2000,7 @@ export async function buildWorkspaceSummary(
     { includeDiagnostics },
   )
   const agentEnvironment = await readWorkspaceAgentEnvironment()
+  lastWorkspaceSummaryBuildAt = new Date().toISOString()
 
   return {
     agentEnvironment,

@@ -1,6 +1,7 @@
 import type {
   RepoAgentPresetId,
   RepoAgentPresetResult,
+  SummaryRequestReason,
   WorkspaceEvent,
   WorkspaceSearchResponse,
   WorkspaceSummary,
@@ -15,8 +16,29 @@ async function readErrorMessage(response: Response) {
   }
 }
 
-export async function fetchWorkspaceSummary(signal?: AbortSignal) {
-  const response = await fetch('/api/workspace/summary', { signal })
+function withSummaryReason(pathname: string, reason: SummaryRequestReason) {
+  const params = new URLSearchParams({ reason })
+  return `${pathname}?${params.toString()}`
+}
+
+export async function fetchWorkspaceSummary(
+  signal?: AbortSignal,
+  reason: SummaryRequestReason = 'manual-refresh',
+) {
+  const response = await fetch(withSummaryReason('/api/workspace/summary', reason), { signal })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return (await response.json()) as WorkspaceSummary
+}
+
+export async function fetchWorkspaceSummaryBase(
+  signal?: AbortSignal,
+  reason: SummaryRequestReason = 'event',
+) {
+  const response = await fetch(withSummaryReason('/api/workspace/summary/base', reason), { signal })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))

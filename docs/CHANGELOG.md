@@ -24,6 +24,22 @@
 - Extended `repos/workspace-hub/test/workspace-cache-search.test.ts` with diagnostics warming coverage and confirmed updated local test-suite pass outside sandbox (`14 passed, 0 failed`).
 - Added diagnostics freshness state (`fresh`, `warming`, `stale`) to workspace repo summaries and surfaced it in repo list and details UI.
 - Updated diagnostics worker coverage to assert `warming -> fresh` transition and reconfirmed local test-suite pass (`14 passed, 0 failed`).
+- Updated base-summary diagnostics freshness semantics so `includeDiagnostics: false` reports `skipped` instead of `fresh`, and extended test coverage accordingly.
+- Updated the app refresh strategy to prefer `GET /api/workspace/summary/base` for frequent refreshes while hydrating full diagnostics via `GET /api/workspace/summary` when needed.
+- Added `src/lib/mergeWorkspaceSummary.ts` to preserve prior diagnostics on base refreshes and avoid unnecessary full-summary fetches.
+- Added Workspace Hub observability output (`/api/workspace/observability`) plus `/api/health` extension with diagnostics queue depth, active workers, cache metadata, and last summary build time.
+- Expanded repo-tree signature detection in discovery caching to include nested repo hints (`package.json`, `composer.json`, `.git/HEAD`) for better automatic cache refresh behavior.
+- Added diagnostics freshness pill styling for `skipped`, `warming`, `stale`, and `fresh`.
+- Optimized frontend summary refresh behavior in `repos/workspace-hub/src/app/App.tsx` with soft-refresh dedupe and queued coalescing to avoid overlapping refresh work during bursty live events.
+- Added reason-tagged summary requests (`?reason=`) for better tuning visibility.
+- Reworked discovery caching in `repos/workspace-hub/server/workspace.ts` from a single cache slot to keyed cache entries so base and full summary caches can coexist without unnecessary cross-eviction.
+- Replaced diagnostics-worker-triggered full discovery cache invalidation with diagnostics revision tracking for full-summary freshness checks.
+- Expanded observability payload with discovery and diagnostics cache counters plus summary request counts and reason breakdowns.
+- Added optimization-focused test coverage in `repos/workspace-hub/test/workspace-cache-search.test.ts` for base cache reuse after diagnostics updates and observability counter behavior.
+- Added optimization quick-verify commands and observability guidance to `repos/workspace-hub/README.md`.
+- Added a phased “planned next steps” roadmap in `docs/HANDOVER.md` covering immediate, mid-term, and long-term performance and expansion priorities with success criteria, risks, and rollback guidance.
+- Added a concise operator-facing “Next Improvements (planned)” section in `repos/workspace-hub/README.md` for observability checks, safe tuning knobs, and triage workflow guidance.
+- Added a versioned observability schema (`observabilityVersion: 1`) with grouped `discovery`, `diagnostics`, and `summary` sections while keeping legacy top-level fields as compatibility aliases.
 
 ## 2026-04-05
 

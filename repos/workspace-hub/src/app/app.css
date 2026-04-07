@@ -1502,6 +1502,26 @@
   color: var(--status-neutral-color);
 }
 
+.status-pill.skipped {
+  background: var(--status-muted-background);
+  color: var(--status-muted-color);
+}
+
+.status-pill.fresh {
+  background: var(--status-success-background);
+  color: var(--status-success-color);
+}
+
+.status-pill.stale {
+  background: var(--status-warning-background);
+  color: var(--status-warning-color);
+}
+
+.status-pill.warming {
+  background: var(--status-info-background);
+  color: var(--status-info-color);
+}
+
 .log-tail {
   margin: 0;
   padding: 0.85rem;

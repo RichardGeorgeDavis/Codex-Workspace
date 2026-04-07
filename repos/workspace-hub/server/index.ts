@@ -30,7 +30,9 @@ import {
 import {
   buildWorkspaceSummary,
   findWorkspaceRepo,
+  getWorkspaceHubObservability,
   invalidateWorkspaceSummaryCache,
+  recordSummaryRequest,
 } from './workspace.ts'
 import { searchWorkspace } from './workspace-search.ts'
 
@@ -130,6 +132,23 @@ function requireTargetPath(body: unknown) {
   return targetPath
 }
 
+function parseSummaryReason(
+  value: unknown,
+): 'action' | 'event' | 'hydration' | 'initial' | 'manual-refresh' | 'search' {
+  if (
+    value === 'action' ||
+    value === 'event' ||
+    value === 'hydration' ||
+    value === 'initial' ||
+    value === 'manual-refresh' ||
+    value === 'search'
+  ) {
+    return value
+  }
+
+  return 'manual-refresh'
+}
+
 function invalidateWorkspaceCaches() {
   invalidateWorkspaceSummaryCache()
 }
@@ -140,6 +159,14 @@ app.get('/api/health', (_request: Request, response: Response) => {
     port: apiPort,
     service: 'workspace-hub-api',
     status: 'ok',
+    workspaceHub: getWorkspaceHubObservability(),
+  })
+})
+
+app.get('/api/workspace/observability', (_request: Request, response: Response) => {
+  response.json({
+    generatedAt: new Date().toISOString(),
+    ...getWorkspaceHubObservability(),
   })
 })
 
@@ -149,8 +176,10 @@ app.get('/api/events', (request: Request, response: Response) => {
 
 app.get(
   '/api/workspace/summary',
-  async (_request: Request, response: Response, next: NextFunction) => {
+  async (request: Request, response: Response, next: NextFunction) => {
     try {
+      const reason = parseSummaryReason(request.query.reason)
+      recordSummaryRequest(true, reason)
       response.json(
         await buildWorkspaceSummary(
           apiPort,
@@ -166,8 +195,10 @@ app.get(
 
 app.get(
   '/api/workspace/summary/base',
-  async (_request: Request, response: Response, next: NextFunction) => {
+  async (request: Request, response: Response, next: NextFunction) => {
     try {
+      const reason = parseSummaryReason(request.query.reason)
+      recordSummaryRequest(false, reason)
       response.json(
         await buildWorkspaceSummary(
           apiPort,
@@ -194,6 +225,7 @@ app.get(
         return
       }
 
+      recordSummaryRequest(true, 'search')
       const summary = await buildWorkspaceSummary(
         apiPort,
         getInstallSnapshots(),

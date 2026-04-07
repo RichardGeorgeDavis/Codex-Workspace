@@ -387,3 +387,158 @@ Verification after diagnostics freshness slice:
 - `pnpm --dir "repos/workspace-hub" lint`: passed
 - `pnpm --dir "repos/workspace-hub" typecheck`: passed
 - `pnpm --dir "repos/workspace-hub" test`: passed (`14 passed, 0 failed`, duration ~`2337ms`)
+
+### Implementation update (2026-04-07, recommendations applied slice)
+
+Completed in `repos/workspace-hub`:
+
+1. UI refresh split now prefers base summary and hydrates full diagnostics when needed.
+   - App refreshes now use `GET /api/workspace/summary/base` as the fast path for high-frequency updates.
+   - Initial load and fallback hydration still use `GET /api/workspace/summary` for full diagnostics.
+   - Added `src/lib/mergeWorkspaceSummary.ts` to retain previously known diagnostics during base refreshes.
+
+2. Base-summary diagnostics freshness is now explicit.
+   - `diagnosticsFreshness` now supports `skipped` and base mode reports `skipped` when diagnostics are intentionally omitted.
+   - Updated tests in `repos/workspace-hub/test/workspace-cache-search.test.ts` to assert `skipped` behavior.
+
+3. Observability was added for diagnostics and cache tuning.
+   - New endpoint: `GET /api/workspace/observability`.
+   - `/api/health` now includes `workspaceHub` observability payload with queue depth, active diagnostics jobs, cache metadata, and last summary build time.
+
+4. Repo-tree signature depth was expanded.
+   - Discovery cache signature now includes nested repo hints (`package.json`, `composer.json`, `.git/HEAD`) under top-level `repos/` entries.
+   - This improves automatic refresh detection without requiring explicit invalidation for common nested changes.
+
+5. UI diagnostics freshness styling was completed.
+   - Added status-pill variants for `skipped`, `warming`, `stale`, and `fresh` so diagnostics state is visually distinct.
+
+Verification after recommendations-applied slice:
+
+- `pnpm --dir "repos/workspace-hub" test`: passed (`14 passed, 0 failed`)
+- `pnpm --dir "repos/workspace-hub" typecheck`: passed
+
+### Implementation update (2026-04-07, optimization and observability slice)
+
+Completed in `repos/workspace-hub`:
+
+1. Frontend refresh coalescing and merge efficiency.
+   - Added soft-refresh in-flight dedupe and queued coalescing in `src/app/App.tsx` so bursty event streams do not trigger overlapping base refreshes.
+   - Added hydration cooldown suppression tracking and a non-blocking telemetry signal for suppressed hydration attempts.
+   - Kept base-first refresh strategy and reduced unnecessary object churn by returning the unmodified summary object when diagnostics merge produces no changes in `src/lib/mergeWorkspaceSummary.ts`.
+
+2. Discovery cache structure and diagnostics invalidation behavior.
+   - Replaced single discovery cache slot with keyed cache entries so base and full summary caches can coexist.
+   - Diagnostics worker completion now increments a diagnostics revision instead of fully clearing discovery cache.
+   - Full summary cache entries are invalidated logically by diagnostics revision checks; base summaries continue to reuse valid discovery cache entries.
+
+3. Observability counters and request reason tracking.
+   - Added counters for discovery cache hits/misses, diagnostics cache hit-state distribution, summary request totals, and reason breakdown.
+   - Added summary request reason support on both summary routes (`?reason=...`) and wired frontend calls with explicit reasons.
+   - Added a versioned observability response shape (`observabilityVersion: 1`) with grouped sections: `discovery`, `diagnostics`, and `summary`.
+   - Retained existing top-level observability fields as compatibility aliases for current clients.
+
+4. Test coverage expansion.
+   - Extended `repos/workspace-hub/test/workspace-cache-search.test.ts` with:
+     - base cache reuse after diagnostics worker updates
+     - observability counter assertions for discovery and diagnostics cache behavior
+
+Verification after optimization slice:
+
+- `pnpm --dir "repos/workspace-hub" typecheck`: passed
+- `pnpm --dir "repos/workspace-hub" test`: passed (`16 passed, 0 failed`)
+
+Measured timing snapshot (5 requests each, local run):
+
+- pre-change:
+  - base summary avg ~`269.72ms` (cold-first outlier ~`1333.96ms`, warm ~`3-4ms`)
+  - full summary avg ~`15.57ms`
+- post-change:
+  - base summary avg ~`279.97ms` (cold-first outlier ~`1385.64ms`, warm ~`3-4ms`)
+  - full summary avg ~`15.36ms`
+
+Interpretation:
+
+- warm path remains fast and stable
+- cold-first request still dominates average in small samples
+- new counters now make refresh/caching behavior inspectable for larger-window tuning
+
+## Planned next steps roadmap (phased)
+
+This section is intent-only planning for the next optimization and expansion cycle. It documents what should be prioritized next; it does not indicate completed work.
+
+### Phase 1 (Immediate, 1-2 weeks)
+
+Priority: high
+
+1. Add practical SSE burst guardrails and operating thresholds.
+   - Define expected event burst bands (normal, elevated, overload) and action thresholds using existing observability counters.
+   - Add operator-facing tuning guidance for `WORKSPACE_HUB_DISCOVERY_CACHE_TTL_MS`, `WORKSPACE_HUB_DIAGNOSTICS_CACHE_TTL_MS`, and `WORKSPACE_HUB_DIAGNOSTICS_WORKER_CONCURRENCY`.
+   - Success target:
+     - stable UI responsiveness during event bursts
+     - no overlapping refresh storm behavior under normal local workloads
+
+2. Add endpoint-level latency tracking policy for summary APIs.
+   - Track and report warm and cold latency snapshots for:
+     - `GET /api/workspace/summary/base`
+     - `GET /api/workspace/summary`
+   - Success target:
+     - warm base summary median remains low and predictable
+     - full summary remains bounded and explainable by diagnostics state
+
+3. Tighten short-run performance triage workflow.
+   - Publish a small operator triage checklist (what counters to inspect first and which knobs are safe to adjust).
+   - Success target:
+     - reduced time to explain and correct performance regressions in local runs
+
+Risks and rollback:
+- risk: overtuning TTLs can increase staleness or churn
+- rollback: revert env tuning to defaults and re-check observability counters before deeper changes
+
+### Phase 2 (Mid-term, 3-6 weeks)
+
+Priority: medium
+
+1. Incremental discovery indexing.
+   - Introduce optional incremental discovery index to reduce first-hit outliers while preserving conservative detection behavior.
+   - Success target:
+     - lower cold-start variance on large workspaces
+     - no reduction in discovery correctness
+
+2. Per-repo diagnostics fetch for detail view.
+   - Add a targeted diagnostics endpoint for selected repo details so full summary does less heavy lifting.
+   - Success target:
+     - reduced diagnostics pressure from list-level refresh
+     - clearer freshness semantics per selected repo
+
+3. Summary payload projection for list-first view.
+   - Support a slimmer list projection for high-frequency refresh paths while keeping full detail payload available.
+   - Success target:
+     - lower payload transfer and parsing overhead on repeated refreshes
+
+Risks and rollback:
+- risk: API shape drift can confuse clients
+- rollback: keep full summary as fallback path and gate projection behavior behind explicit request flags
+
+### Phase 3 (Long-term, 2-3 months)
+
+Priority: strategic
+
+1. Plugin-style extension points for repo classification and diagnostics.
+   - Add optional hooks for custom repo classifiers, dependency checks, and health probes.
+   - Keep extension points opt-in and local-first.
+
+2. Local historical observability snapshots.
+   - Add optional local persistence for key counters to improve trend visibility over time.
+   - Keep off by default and avoid external telemetry dependencies.
+
+3. Expansion guardrails and compatibility constraints.
+   - Preserve core workspace rules:
+     - independent repo runtime behavior
+     - no forced shared installs
+     - optional integrations only
+   - Require explicit config gates for expansion features.
+
+Success criteria for roadmap execution:
+- planned work remains clearly separated from completed work
+- each phase has measurable outcomes before advancing
+- performance and expansion changes stay aligned with workspace baseline rules
