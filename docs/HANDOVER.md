@@ -334,3 +334,31 @@ Verification after incremental invalidation slice:
 - `pnpm --dir "repos/workspace-hub" lint`: passed
 - `pnpm --dir "repos/workspace-hub" typecheck`: passed
 - `pnpm --dir "repos/workspace-hub" test`: passed outside sandbox in local terminal (`13 passed, 0 failed`, duration ~`2518ms`)
+
+### Implementation update (2026-04-07, diagnostics batching worker slice)
+
+Completed in `repos/workspace-hub`:
+
+1. Added background diagnostics batching.
+   - `server/workspace.ts` now queues and processes diagnostics refresh work asynchronously with configurable concurrency.
+   - New env controls:
+     - `WORKSPACE_HUB_DIAGNOSTICS_WORKER_CONCURRENCY` (default `4`)
+     - `WORKSPACE_HUB_DIAGNOSTICS_CACHE_TTL_MS` (default `10000`)
+
+2. Added diagnostics cache semantics for full summary mode.
+   - Full summary reads now return quickly with:
+     - warm cached diagnostics when fresh
+     - stale diagnostics while a background refresh is queued
+     - conservative placeholders on first hit while diagnostics warm asynchronously
+
+3. Added cache-coherency fix after worker refresh.
+   - When worker refresh completes, it now invalidates workspace summary cache so the next summary read can surface updated diagnostics.
+
+4. Added and validated worker-focused test coverage.
+   - Extended `repos/workspace-hub/test/workspace-cache-search.test.ts` with async diagnostics warming coverage.
+
+Verification after diagnostics worker slice:
+
+- `pnpm --dir "repos/workspace-hub" lint`: passed
+- `pnpm --dir "repos/workspace-hub" typecheck`: passed
+- `pnpm --dir "repos/workspace-hub" test`: passed outside sandbox in local terminal (`14 passed, 0 failed`, duration ~`2864ms`)

@@ -148,6 +148,14 @@ const workspaceDiscoveryCacheTtlMs = Number.parseInt(
   process.env.WORKSPACE_HUB_DISCOVERY_CACHE_TTL_MS ?? '1500',
   10,
 )
+const diagnosticsCacheTtlMs = Number.parseInt(
+  process.env.WORKSPACE_HUB_DIAGNOSTICS_CACHE_TTL_MS ?? '10000',
+  10,
+)
+const diagnosticsWorkerConcurrency = Number.parseInt(
+  process.env.WORKSPACE_HUB_DIAGNOSTICS_WORKER_CONCURRENCY ?? '4',
+  10,
+)
 const gitVisibilityCache = new Map<
   string,
   {
@@ -166,6 +174,12 @@ type WorkspaceSummaryBuildOptions = {
   includeDiagnostics?: boolean
 }
 
+type RepoDiagnostics = {
+  dependencies: RepoDependencyState
+  git: RepoGitState
+  health: RepoHealth
+}
+
 type WorkspaceDiscoveryResult = {
   archives: WorkspaceArchive[]
   repos: WorkspaceRepo[]
@@ -180,6 +194,15 @@ let cachedWorkspaceDiscovery:
       value: WorkspaceDiscoveryResult
     }
   | null = null
+const repoDiagnosticsCache = new Map<
+  string,
+  {
+    expiresAt: number
+    value: RepoDiagnostics
+  }
+>()
+const repoDiagnosticsQueue = new Map<string, () => Promise<RepoDiagnostics>>()
+const activeDiagnosticsJobs = new Set<string>()
 
 function buildSnapshotCacheKey(
   installSnapshots: Map<string, RepoInstall>,
@@ -205,6 +228,49 @@ function buildSnapshotCacheKey(
 
 export function invalidateWorkspaceSummaryCache() {
   cachedWorkspaceDiscovery = null
+}
+
+function processRepoDiagnosticsQueue() {
+  while (
+    activeDiagnosticsJobs.size < Math.max(1, diagnosticsWorkerConcurrency) &&
+    repoDiagnosticsQueue.size > 0
+  ) {
+    const nextEntry = repoDiagnosticsQueue.entries().next()
+    if (nextEntry.done) {
+      break
+    }
+
+    const [key, factory] = nextEntry.value
+    repoDiagnosticsQueue.delete(key)
+    activeDiagnosticsJobs.add(key)
+
+    void factory()
+      .then((value) => {
+        repoDiagnosticsCache.set(key, {
+          expiresAt: Date.now() + Math.max(0, diagnosticsCacheTtlMs),
+          value,
+        })
+        // Diagnostics were refreshed asynchronously, so invalidate the derived
+        // summary cache and allow subsequent reads to pick up warm diagnostics.
+        invalidateWorkspaceSummaryCache()
+      })
+      .catch(() => {
+        // Keep stale diagnostics when background refresh fails.
+      })
+      .finally(() => {
+        activeDiagnosticsJobs.delete(key)
+        processRepoDiagnosticsQueue()
+      })
+  }
+}
+
+function enqueueRepoDiagnostics(key: string, factory: () => Promise<RepoDiagnostics>) {
+  if (activeDiagnosticsJobs.has(key) || repoDiagnosticsQueue.has(key)) {
+    return
+  }
+
+  repoDiagnosticsQueue.set(key, factory)
+  processRepoDiagnosticsQueue()
 }
 
 async function buildReposTreeSignature() {
@@ -1445,35 +1511,61 @@ async function buildRepoRecord(
     type,
   })
   const agentTooling = await readAgentTooling(fullPath)
-  const [health, git, dependencies] = includeDiagnostics
-    ? await Promise.all([
-        probeHealth(healthcheckUrl ?? resolvedPreview.previewUrl),
-        readGitState(fullPath),
-        readDependencyState({
-          buildCommand: effectiveBuildCommand,
-          devCommand: effectiveDevCommand,
-          fullPath,
-          installCommand,
-          names,
-          packageManager,
-          previewCommand,
-        }),
-      ])
-    : [buildUnknownHealth(healthcheckUrl ?? resolvedPreview.previewUrl), buildUnavailableGitState(), buildUnknownDependencyState()]
+  const diagnosticsKey = fullPath
+  const diagnosticsFactory = async (): Promise<RepoDiagnostics> => {
+    const [health, git, dependencies] = await Promise.all([
+      probeHealth(healthcheckUrl ?? resolvedPreview.previewUrl),
+      readGitState(fullPath),
+      readDependencyState({
+        buildCommand: effectiveBuildCommand,
+        devCommand: effectiveDevCommand,
+        fullPath,
+        installCommand,
+        names,
+        packageManager,
+        previewCommand,
+      }),
+    ])
+
+    return { dependencies, git, health }
+  }
+  let diagnostics: RepoDiagnostics
+  if (!includeDiagnostics) {
+    diagnostics = {
+      dependencies: buildUnknownDependencyState(),
+      git: buildUnavailableGitState(),
+      health: buildUnknownHealth(healthcheckUrl ?? resolvedPreview.previewUrl),
+    }
+  } else {
+    const cachedDiagnostics = repoDiagnosticsCache.get(diagnosticsKey)
+    if (cachedDiagnostics && cachedDiagnostics.expiresAt > Date.now()) {
+      diagnostics = cachedDiagnostics.value
+    } else if (cachedDiagnostics) {
+      diagnostics = cachedDiagnostics.value
+      enqueueRepoDiagnostics(diagnosticsKey, diagnosticsFactory)
+    } else {
+      diagnostics = {
+        dependencies: buildUnknownDependencyState(),
+        git: buildUnavailableGitState(),
+        health: buildUnknownHealth(healthcheckUrl ?? resolvedPreview.previewUrl),
+      }
+      enqueueRepoDiagnostics(diagnosticsKey, diagnosticsFactory)
+    }
+  }
 
   return {
     agentTooling,
     buildCommand: effectiveBuildCommand,
     collection: collection ?? 'direct',
     detectedBy: hasManifest ? 'manifest' : 'files',
-    dependencies,
+    dependencies: diagnostics.dependencies,
     devCommand: effectiveDevCommand,
     externalUrl,
     failureReport,
-    git,
+    git: diagnostics.git,
     hasManifest,
     hasSavedMetadata: Boolean(savedOverrides),
-    health,
+    health: diagnostics.health,
     healthcheckUrl,
     isPinned: savedOverrides?.pinned ?? false,
     install,

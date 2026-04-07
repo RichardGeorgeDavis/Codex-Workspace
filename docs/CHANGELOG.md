@@ -19,6 +19,9 @@
 - Added incremental discovery invalidation in `repos/workspace-hub/server/workspace.ts` by tracking a lightweight repo-tree signature so cached discovery can be reused when unchanged and refreshed automatically when repo folders change.
 - Updated workspace cache tests in `repos/workspace-hub/test/workspace-cache-search.test.ts` to verify both repo-tree-driven refresh and explicit cache invalidation behavior.
 - Confirmed updated local test-suite pass outside sandbox with `pnpm --dir "repos/workspace-hub" test` (`13 passed, 0 failed`).
+- Added async diagnostics batching in `repos/workspace-hub/server/workspace.ts` with a background queue, diagnostics cache TTL, and configurable worker concurrency for full-summary diagnostics refresh.
+- Added worker cache-coherency invalidation so refreshed diagnostics propagate to subsequent summary reads.
+- Extended `repos/workspace-hub/test/workspace-cache-search.test.ts` with diagnostics warming coverage and confirmed updated local test-suite pass outside sandbox (`14 passed, 0 failed`).
 
 ## 2026-04-05
 
