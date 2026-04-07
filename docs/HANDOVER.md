@@ -284,3 +284,28 @@ Verification after Phase 3:
 - `pnpm --dir "repos/workspace-hub" lint`: passed
 - `pnpm --dir "repos/workspace-hub" typecheck`: passed
 - `pnpm --dir "repos/workspace-hub" test`: passed outside sandbox in local terminal (`11 passed, 0 failed`, duration ~`2886ms`)
+
+### Implementation update (2026-04-07, base summary split slice)
+
+Completed in `repos/workspace-hub`:
+
+1. Added a lightweight summary endpoint.
+   - New API route: `GET /api/workspace/summary/base`
+   - Uses `buildWorkspaceSummary(..., { includeDiagnostics: false })`.
+
+2. Added diagnostics toggle for summary generation.
+   - `buildWorkspaceSummary()` now accepts optional `{ includeDiagnostics?: boolean }` (default remains full diagnostics).
+   - Base mode preserves repo discovery while skipping heavier probes.
+
+3. Added base-mode behavior and coverage.
+   - Base mode returns conservative diagnostics placeholders:
+     - health: `unknown`
+     - git: `unavailable` with skipped-summary note
+     - dependencies: `unknown` with skipped-summary note
+   - Added test coverage in `repos/workspace-hub/test/workspace-cache-search.test.ts`.
+
+Verification after base-summary slice:
+
+- `pnpm --dir "repos/workspace-hub" lint`: passed
+- `pnpm --dir "repos/workspace-hub" typecheck`: passed
+- `pnpm --dir "repos/workspace-hub" test`: passed outside sandbox in local terminal (`12 passed, 0 failed`, duration ~`3114ms`)

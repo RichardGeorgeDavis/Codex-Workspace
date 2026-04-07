@@ -14,6 +14,8 @@
 - Implemented Phase 3 portability updates in `repos/workspace-hub/server/runtime-manager.ts` with platform-aware open-target and terminal command resolution for `darwin`, `linux`, and `win32`, plus explicit unsupported-platform and missing-launcher errors.
 - Added `repos/workspace-hub/test/runtime-openers.test.ts` to validate opener command resolution and unsupported-platform behavior.
 - Confirmed updated local test-suite pass outside sandbox with `pnpm --dir "repos/workspace-hub" test` (`11 passed, 0 failed`).
+- Added a split summary path with lightweight diagnostics mode: new `GET /api/workspace/summary/base` route and optional `includeDiagnostics` toggle in workspace summary building.
+- Added base-summary test coverage in `repos/workspace-hub/test/workspace-cache-search.test.ts` and confirmed local test-suite pass outside sandbox (`12 passed, 0 failed`).
 
 ## 2026-04-05
 

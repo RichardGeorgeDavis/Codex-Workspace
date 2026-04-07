@@ -162,6 +162,10 @@ type VisibleDirectoryData = {
   names: string[]
 }
 
+type WorkspaceSummaryBuildOptions = {
+  includeDiagnostics?: boolean
+}
+
 type WorkspaceDiscoveryResult = {
   archives: WorkspaceArchive[]
   repos: WorkspaceRepo[]
@@ -545,6 +549,26 @@ function buildUnknownHealth(url: string | null): RepoHealth {
     httpStatus: null,
     state: 'unknown',
     url,
+  }
+}
+
+function buildUnavailableGitState(): RepoGitState {
+  return {
+    branch: null,
+    hasGit: false,
+    remoteUrl: null,
+    state: 'unavailable',
+    summary: 'Git diagnostics skipped for base summary.',
+    visibility: 'unknown',
+    visibilitySource: 'none',
+  }
+}
+
+function buildUnknownDependencyState(): RepoDependencyState {
+  return {
+    installPath: null,
+    reason: 'Dependency diagnostics skipped for base summary.',
+    state: 'unknown',
   }
 }
 
@@ -1302,6 +1326,7 @@ async function buildRepoRecord(
   runtimeSnapshots: Map<string, RepoRuntime>,
   savedMetadata: StoredRepoMetadata | null,
   latestFailureReports: Map<string, RepoFailureReportSummary>,
+  includeDiagnostics: boolean,
 ): Promise<WorkspaceRepo | null> {
   const { hasManifest, manifest, manifestPath } = await readRepoManifest(fullPath)
   const packageJson = await readJsonIfPresent<PackageJson>(path.join(fullPath, 'package.json'))
@@ -1391,20 +1416,22 @@ async function buildRepoRecord(
     tags: manifestTags,
     type,
   })
-  const [agentTooling, health, git, dependencies] = await Promise.all([
-    readAgentTooling(fullPath),
-    probeHealth(healthcheckUrl ?? resolvedPreview.previewUrl),
-    readGitState(fullPath),
-    readDependencyState({
-      buildCommand: effectiveBuildCommand,
-      devCommand: effectiveDevCommand,
-      fullPath,
-      installCommand,
-      names,
-      packageManager,
-      previewCommand,
-    }),
-  ])
+  const agentTooling = await readAgentTooling(fullPath)
+  const [health, git, dependencies] = includeDiagnostics
+    ? await Promise.all([
+        probeHealth(healthcheckUrl ?? resolvedPreview.previewUrl),
+        readGitState(fullPath),
+        readDependencyState({
+          buildCommand: effectiveBuildCommand,
+          devCommand: effectiveDevCommand,
+          fullPath,
+          installCommand,
+          names,
+          packageManager,
+          previewCommand,
+        }),
+      ])
+    : [buildUnknownHealth(healthcheckUrl ?? resolvedPreview.previewUrl), buildUnavailableGitState(), buildUnknownDependencyState()]
 
   return {
     agentTooling,
@@ -1452,8 +1479,10 @@ async function buildRepoRecord(
 async function discoverWorkspace(
   installSnapshots: Map<string, RepoInstall>,
   runtimeSnapshots: Map<string, RepoRuntime>,
+  options: WorkspaceSummaryBuildOptions = {},
 ) {
-  const cacheKey = buildSnapshotCacheKey(installSnapshots, runtimeSnapshots)
+  const includeDiagnostics = options.includeDiagnostics ?? true
+  const cacheKey = `${buildSnapshotCacheKey(installSnapshots, runtimeSnapshots)}::diagnostics=${includeDiagnostics ? 'full' : 'base'}`
   if (
     cachedWorkspaceDiscovery &&
     cachedWorkspaceDiscovery.key === cacheKey &&
@@ -1479,6 +1508,7 @@ async function discoverWorkspace(
         runtimeSnapshots,
         savedMetadataState.repos[path.relative(workspaceRoot, fullPath)] ?? null,
         latestFailureReports,
+        includeDiagnostics,
       )
 
       if (directRepo) {
@@ -1509,6 +1539,7 @@ async function discoverWorkspace(
               runtimeSnapshots,
               savedMetadataState.repos[path.relative(workspaceRoot, childPath)] ?? null,
               latestFailureReports,
+              includeDiagnostics,
             ),
           }
         }),
@@ -1657,7 +1688,9 @@ export async function findWorkspaceRepo(
   runtimeSnapshots: Map<string, RepoRuntime>,
 ) {
   const normalizedRelativePath = relativePath.replace(/^\/+/, '')
-  const { repos } = await discoverWorkspace(installSnapshots, runtimeSnapshots)
+  const { repos } = await discoverWorkspace(installSnapshots, runtimeSnapshots, {
+    includeDiagnostics: true,
+  })
 
   return repos.find((repo) => repo.relativePath === normalizedRelativePath) ?? null
 }
@@ -1666,10 +1699,13 @@ export async function buildWorkspaceSummary(
   apiPort: number,
   installSnapshots: Map<string, RepoInstall>,
   runtimeSnapshots: Map<string, RepoRuntime>,
+  options: WorkspaceSummaryBuildOptions = {},
 ): Promise<WorkspaceSummary> {
+  const includeDiagnostics = options.includeDiagnostics ?? true
   const { archives, repos, topLevelEntries } = await discoverWorkspace(
     installSnapshots,
     runtimeSnapshots,
+    { includeDiagnostics },
   )
   const agentEnvironment = await readWorkspaceAgentEnvironment()
 
