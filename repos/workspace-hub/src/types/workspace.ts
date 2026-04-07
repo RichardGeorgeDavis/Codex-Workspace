@@ -229,6 +229,7 @@ export type WorkspaceRepo = {
   buildCommand: string | null
   collection: string
   detectedBy: 'files' | 'manifest'
+  diagnosticsFreshness: 'fresh' | 'stale' | 'warming'
   dependencies: RepoDependencyState
   devCommand: string | null
   externalUrl: string | null
