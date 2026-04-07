@@ -261,3 +261,26 @@ Follow-up tests added for this slice:
 - `repos/workspace-hub/test/workspace-cache-search.test.ts`
   - verifies workspace summary cache behavior stays stable before explicit invalidation and refreshes after `invalidateWorkspaceSummaryCache()`
   - verifies artifact search indexing remains disabled by default and only returns artifact results when `WORKSPACE_HUB_SEARCH_INCLUDE_ARTIFACTS=true`
+
+### Implementation update (2026-04-07, Phase 3 portability slice)
+
+Completed in `repos/workspace-hub`:
+
+1. Platform-aware open command resolution.
+   - Added platform-specific resolver functions in `server/runtime-manager.ts` for open-target and terminal actions.
+   - Current mappings:
+     - `darwin`: `open` (+ `-a Terminal` for terminal open)
+     - `linux`: `xdg-open` for open-target, and `x-terminal-emulator` / `gnome-terminal` / `konsole` for terminal open when available
+     - `win32`: `cmd /c start` patterns for open-target and terminal open
+
+2. Explicit unsupported-platform and missing-launcher errors.
+   - Open and terminal actions now throw clear errors when the platform is unsupported or required launchers are unavailable.
+
+3. Focused portability test coverage.
+   - Added `repos/workspace-hub/test/runtime-openers.test.ts` for resolver behavior on supported and unsupported platforms.
+
+Verification after Phase 3:
+
+- `pnpm --dir "repos/workspace-hub" lint`: passed
+- `pnpm --dir "repos/workspace-hub" typecheck`: passed
+- `pnpm --dir "repos/workspace-hub" test`: passed outside sandbox in local terminal (`11 passed, 0 failed`, duration ~`2886ms`)

@@ -11,6 +11,9 @@
 - Verified post-change quality gates for this slice with `pnpm --dir "repos/workspace-hub" lint` and `pnpm --dir "repos/workspace-hub" typecheck`.
 - Added focused server tests in `repos/workspace-hub/test/workspace-cache-search.test.ts` to cover cache invalidation behavior and artifact search env-gating behavior.
 - Confirmed full local test-suite pass outside sandbox with `pnpm --dir "repos/workspace-hub" test` (`5 passed, 0 failed`).
+- Implemented Phase 3 portability updates in `repos/workspace-hub/server/runtime-manager.ts` with platform-aware open-target and terminal command resolution for `darwin`, `linux`, and `win32`, plus explicit unsupported-platform and missing-launcher errors.
+- Added `repos/workspace-hub/test/runtime-openers.test.ts` to validate opener command resolution and unsupported-platform behavior.
+- Confirmed updated local test-suite pass outside sandbox with `pnpm --dir "repos/workspace-hub" test` (`11 passed, 0 failed`).
 
 ## 2026-04-05
 

@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'node:child_process'
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 
 import type { RepoInstall, RepoRuntime, WorkspaceRepo } from '../src/types/workspace.ts'
 import { writeFailureReport } from './failure-reports.ts'
@@ -23,6 +23,11 @@ const managedInstalls = new Map<string, ManagedInstall>()
 const maxLogLines = 40
 const logEventDelayMs = 350
 const pendingLogEvents = new Map<string, ReturnType<typeof setTimeout>>()
+
+type SpawnCommand = {
+  args: string[]
+  command: string
+}
 
 function timestamp() {
   return new Date().toISOString()
@@ -562,8 +567,100 @@ export async function shutdownManagedRuntimes() {
   )
 }
 
+function hasShellCommand(command: string) {
+  try {
+    const probe = spawnSync('sh', ['-lc', `command -v ${command}`], {
+      stdio: 'ignore',
+    })
+    return probe.status === 0
+  } catch {
+    return false
+  }
+}
+
+export function resolveOpenTargetCommand(
+  target: string,
+  platform: NodeJS.Platform = process.platform,
+): SpawnCommand {
+  if (platform === 'darwin') {
+    return {
+      args: [target],
+      command: 'open',
+    }
+  }
+
+  if (platform === 'linux') {
+    if (!hasShellCommand('xdg-open')) {
+      throw new Error('No supported URL/file opener found on Linux (expected xdg-open).')
+    }
+
+    return {
+      args: [target],
+      command: 'xdg-open',
+    }
+  }
+
+  if (platform === 'win32') {
+    return {
+      args: ['/c', 'start', '""', target],
+      command: 'cmd',
+    }
+  }
+
+  throw new Error(`Opening files is not supported on platform "${platform}".`)
+}
+
+export function resolveOpenInTerminalCommand(
+  target: string,
+  platform: NodeJS.Platform = process.platform,
+): SpawnCommand {
+  if (platform === 'darwin') {
+    return {
+      args: ['-a', 'Terminal', target],
+      command: 'open',
+    }
+  }
+
+  if (platform === 'linux') {
+    if (hasShellCommand('x-terminal-emulator')) {
+      return {
+        args: ['--working-directory', target],
+        command: 'x-terminal-emulator',
+      }
+    }
+
+    if (hasShellCommand('gnome-terminal')) {
+      return {
+        args: ['--working-directory', target],
+        command: 'gnome-terminal',
+      }
+    }
+
+    if (hasShellCommand('konsole')) {
+      return {
+        args: ['--workdir', target],
+        command: 'konsole',
+      }
+    }
+
+    throw new Error(
+      'No supported terminal launcher found on Linux (expected x-terminal-emulator, gnome-terminal, or konsole).',
+    )
+  }
+
+  if (platform === 'win32') {
+    return {
+      args: ['/c', 'start', 'wt', '-d', target],
+      command: 'cmd',
+    }
+  }
+
+  throw new Error(`Opening terminal is not supported on platform "${platform}".`)
+}
+
 export function openTarget(target: string) {
-  const child = spawn('open', [target], {
+  const opener = resolveOpenTargetCommand(target)
+  const child = spawn(opener.command, opener.args, {
     detached: true,
     stdio: 'ignore',
   })
@@ -572,7 +669,8 @@ export function openTarget(target: string) {
 }
 
 export function openInTerminal(target: string) {
-  const child = spawn('open', ['-a', 'Terminal', target], {
+  const opener = resolveOpenInTerminalCommand(target)
+  const child = spawn(opener.command, opener.args, {
     detached: true,
     stdio: 'ignore',
   })
