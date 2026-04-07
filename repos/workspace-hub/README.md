@@ -112,6 +112,24 @@ export WORKSPACE_HUB_SCREENSHOT_SETTLE_MS="5000"
 export WORKSPACE_HUB_SCREENSHOT_VIRTUAL_TIME_MS="10000"
 ```
 
+If you want to tune workspace discovery caching for summary refreshes, set:
+
+```bash
+export WORKSPACE_HUB_DISCOVERY_CACHE_TTL_MS="1500"
+```
+
+`WORKSPACE_HUB_DISCOVERY_CACHE_TTL_MS` is in milliseconds and defaults to `1500`.
+Set it to `0` to effectively disable caching for debugging.
+
+If you want indexed search to include local agent-job artifacts under `cache/context/agents/jobs`, enable:
+
+```bash
+export WORKSPACE_HUB_SEARCH_INCLUDE_ARTIFACTS="true"
+```
+
+`WORKSPACE_HUB_SEARCH_INCLUDE_ARTIFACTS` is disabled by default to reduce accidental indexing of local artifact content.
+Accepted truthy values are `1`, `true`, `yes`, and `on`.
+
 ## About `repos/`
 
 `repos/` should remain in the workspace.
