@@ -16,6 +16,9 @@
 - Confirmed updated local test-suite pass outside sandbox with `pnpm --dir "repos/workspace-hub" test` (`11 passed, 0 failed`).
 - Added a split summary path with lightweight diagnostics mode: new `GET /api/workspace/summary/base` route and optional `includeDiagnostics` toggle in workspace summary building.
 - Added base-summary test coverage in `repos/workspace-hub/test/workspace-cache-search.test.ts` and confirmed local test-suite pass outside sandbox (`12 passed, 0 failed`).
+- Added incremental discovery invalidation in `repos/workspace-hub/server/workspace.ts` by tracking a lightweight repo-tree signature so cached discovery can be reused when unchanged and refreshed automatically when repo folders change.
+- Updated workspace cache tests in `repos/workspace-hub/test/workspace-cache-search.test.ts` to verify both repo-tree-driven refresh and explicit cache invalidation behavior.
+- Confirmed updated local test-suite pass outside sandbox with `pnpm --dir "repos/workspace-hub" test` (`13 passed, 0 failed`).
 
 ## 2026-04-05
 

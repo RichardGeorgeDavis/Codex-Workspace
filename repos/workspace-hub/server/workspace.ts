@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { type Dirent } from 'node:fs'
-import { access, readFile, readdir } from 'node:fs/promises'
+import { access, readFile, readdir, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
@@ -176,6 +176,7 @@ let cachedWorkspaceDiscovery:
   | {
       expiresAt: number
       key: string
+      repoTreeSignature: string
       value: WorkspaceDiscoveryResult
     }
   | null = null
@@ -204,6 +205,33 @@ function buildSnapshotCacheKey(
 
 export function invalidateWorkspaceSummaryCache() {
   cachedWorkspaceDiscovery = null
+}
+
+async function buildReposTreeSignature() {
+  try {
+    const rootStat = await stat(reposRoot)
+    const rootEntries = await readVisibleEntries(reposRoot)
+    const directoryEntries = rootEntries.filter((entry) => entry.isDirectory())
+    const directorySignatures = await Promise.all(
+      directoryEntries.map(async (entry) => {
+        const fullPath = path.join(reposRoot, entry.name)
+        try {
+          const entryStat = await stat(fullPath)
+          return `${entry.name}:${entryStat.mtimeMs}:${entryStat.size}`
+        } catch {
+          return `${entry.name}:missing`
+        }
+      }),
+    )
+
+    directorySignatures.sort((left, right) => left.localeCompare(right))
+    return [
+      `root:${rootStat.mtimeMs}:${rootStat.size}`,
+      `dirs:${directorySignatures.join('|')}`,
+    ].join('::')
+  } catch {
+    return 'repos-root-unavailable'
+  }
 }
 
 function isVisible(name: string) {
@@ -1483,11 +1511,16 @@ async function discoverWorkspace(
 ) {
   const includeDiagnostics = options.includeDiagnostics ?? true
   const cacheKey = `${buildSnapshotCacheKey(installSnapshots, runtimeSnapshots)}::diagnostics=${includeDiagnostics ? 'full' : 'base'}`
+  const repoTreeSignature = await buildReposTreeSignature()
   if (
     cachedWorkspaceDiscovery &&
     cachedWorkspaceDiscovery.key === cacheKey &&
-    cachedWorkspaceDiscovery.expiresAt > Date.now()
+    cachedWorkspaceDiscovery.repoTreeSignature === repoTreeSignature
   ) {
+    if (cachedWorkspaceDiscovery.expiresAt <= Date.now()) {
+      cachedWorkspaceDiscovery.expiresAt =
+        Date.now() + Math.max(0, workspaceDiscoveryCacheTtlMs)
+    }
     return cachedWorkspaceDiscovery.value
   }
 
@@ -1591,6 +1624,7 @@ async function discoverWorkspace(
   cachedWorkspaceDiscovery = {
     expiresAt: Date.now() + Math.max(0, workspaceDiscoveryCacheTtlMs),
     key: cacheKey,
+    repoTreeSignature,
     value: nextValue,
   }
 

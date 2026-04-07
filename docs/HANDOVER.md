@@ -309,3 +309,28 @@ Verification after base-summary slice:
 - `pnpm --dir "repos/workspace-hub" lint`: passed
 - `pnpm --dir "repos/workspace-hub" typecheck`: passed
 - `pnpm --dir "repos/workspace-hub" test`: passed outside sandbox in local terminal (`12 passed, 0 failed`, duration ~`3114ms`)
+
+### Implementation update (2026-04-07, incremental discovery invalidation slice)
+
+Completed in `repos/workspace-hub`:
+
+1. Added repo-tree signature based cache reuse.
+   - Workspace discovery cache now tracks a lightweight `repos/` tree signature (root + immediate child directory stats).
+   - Cached discovery can be reused past TTL when snapshot state and repo-tree signature are unchanged.
+
+2. Added automatic refresh trigger on repo-tree changes.
+   - Discovery now re-runs when repo tree signature changes (for example, new repo folder appears), even without explicit cache invalidation.
+
+3. Preserved explicit invalidation behavior.
+   - `invalidateWorkspaceSummaryCache()` remains supported for guaranteed refresh in action flows.
+
+4. Updated cache behavior tests.
+   - `repos/workspace-hub/test/workspace-cache-search.test.ts` now verifies:
+     - summary refresh when repo tree changes
+     - explicit invalidation still forces refresh
+
+Verification after incremental invalidation slice:
+
+- `pnpm --dir "repos/workspace-hub" lint`: passed
+- `pnpm --dir "repos/workspace-hub" typecheck`: passed
+- `pnpm --dir "repos/workspace-hub" test`: passed outside sandbox in local terminal (`13 passed, 0 failed`, duration ~`2518ms`)
