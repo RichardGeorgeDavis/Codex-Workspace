@@ -165,6 +165,24 @@ app.get(
 )
 
 app.get(
+  '/api/workspace/summary/base',
+  async (_request: Request, response: Response, next: NextFunction) => {
+    try {
+      response.json(
+        await buildWorkspaceSummary(
+          apiPort,
+          getInstallSnapshots(),
+          getRuntimeSnapshots(),
+          { includeDiagnostics: false },
+        ),
+      )
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.get(
   '/api/search',
   async (request: Request, response: Response, next: NextFunction) => {
     try {

@@ -107,3 +107,24 @@ test('artifact search indexing is opt-in via env gate', async () => {
   const enabledResult = await searchEnabled.searchWorkspace(token, [])
   assert.ok(enabledResult.results.some((entry) => entry.category === 'artifact'))
 })
+
+test('base summary mode skips heavy diagnostics while preserving repo discovery', async () => {
+  const workspaceModule = await importWorkspaceModule(tempWorkspaceRoot, '60000')
+  workspaceModule.invalidateWorkspaceSummaryCache()
+
+  const baseSummary = await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+    { includeDiagnostics: false },
+  )
+
+  assert.ok(baseSummary.repos.length >= 1)
+
+  const repo = baseSummary.repos[0]
+  assert.equal(repo.health.state, 'unknown')
+  assert.equal(repo.git.state, 'unavailable')
+  assert.equal(repo.dependencies.state, 'unknown')
+  assert.match(repo.git.summary, /skipped for base summary/i)
+  assert.match(repo.dependencies.reason, /skipped for base summary/i)
+})
