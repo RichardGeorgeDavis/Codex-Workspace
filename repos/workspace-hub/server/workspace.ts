@@ -18,6 +18,7 @@ import type {
   RepoRuntime,
   RepoType,
   WorkspaceArchive,
+  WorkspaceEntry,
   WorkspaceManifestRecord,
   WorkspaceMilestone,
   WorkspaceRepo,
@@ -143,6 +144,10 @@ const execFileAsync = promisify(execFile)
 const staticPreviewPortBase = 4300
 const staticPreviewPortRange = 1000
 const gitVisibilityCacheTtlMs = 15 * 60 * 1000
+const workspaceDiscoveryCacheTtlMs = Number.parseInt(
+  process.env.WORKSPACE_HUB_DISCOVERY_CACHE_TTL_MS ?? '1500',
+  10,
+)
 const gitVisibilityCache = new Map<
   string,
   {
@@ -155,6 +160,46 @@ type VisibleDirectoryData = {
   archiveFiles: WorkspaceArchive[]
   directoryNames: string[]
   names: string[]
+}
+
+type WorkspaceDiscoveryResult = {
+  archives: WorkspaceArchive[]
+  repos: WorkspaceRepo[]
+  topLevelEntries: WorkspaceEntry[]
+}
+
+let cachedWorkspaceDiscovery:
+  | {
+      expiresAt: number
+      key: string
+      value: WorkspaceDiscoveryResult
+    }
+  | null = null
+
+function buildSnapshotCacheKey(
+  installSnapshots: Map<string, RepoInstall>,
+  runtimeSnapshots: Map<string, RepoRuntime>,
+) {
+  const installKey = [...installSnapshots.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(
+      ([repoPath, snapshot]) =>
+        `${repoPath}:${snapshot.status}:${snapshot.updatedAt ?? ''}:${snapshot.lastExitCode ?? ''}:${snapshot.lastSignal ?? ''}`,
+    )
+    .join('|')
+  const runtimeKey = [...runtimeSnapshots.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(
+      ([repoPath, snapshot]) =>
+        `${repoPath}:${snapshot.status}:${snapshot.updatedAt ?? ''}:${snapshot.pid ?? ''}:${snapshot.lastExitCode ?? ''}:${snapshot.lastSignal ?? ''}`,
+    )
+    .join('|')
+
+  return `install(${installSnapshots.size})=${installKey}::runtime(${runtimeSnapshots.size})=${runtimeKey}`
+}
+
+export function invalidateWorkspaceSummaryCache() {
+  cachedWorkspaceDiscovery = null
 }
 
 function isVisible(name: string) {
@@ -1408,6 +1453,15 @@ async function discoverWorkspace(
   installSnapshots: Map<string, RepoInstall>,
   runtimeSnapshots: Map<string, RepoRuntime>,
 ) {
+  const cacheKey = buildSnapshotCacheKey(installSnapshots, runtimeSnapshots)
+  if (
+    cachedWorkspaceDiscovery &&
+    cachedWorkspaceDiscovery.key === cacheKey &&
+    cachedWorkspaceDiscovery.expiresAt > Date.now()
+  ) {
+    return cachedWorkspaceDiscovery.value
+  }
+
   const reposDirectoryData = await readVisibleDirectoryData(reposRoot)
   const [savedMetadataState, latestFailureReports] = await Promise.all([
     readWorkspaceMetadata(),
@@ -1502,7 +1556,14 @@ async function discoverWorkspace(
     return left.collection.localeCompare(right.collection)
   })
 
-  return { archives, repos, topLevelEntries }
+  const nextValue = { archives, repos, topLevelEntries }
+  cachedWorkspaceDiscovery = {
+    expiresAt: Date.now() + Math.max(0, workspaceDiscoveryCacheTtlMs),
+    key: cacheKey,
+    value: nextValue,
+  }
+
+  return nextValue
 }
 
 async function countSharedMarkdownFiles() {

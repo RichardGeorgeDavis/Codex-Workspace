@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-04-07
+
+- Added a project review addendum to `docs/HANDOVER.md` covering implementation findings, prioritized remediation phases, and immediate improvement actions for `repos/workspace-hub`.
+- Documented current review conclusions in handover format: performance risk from repeated full summary scans, API error-message exposure, macOS-first open-target behavior, artifact-index privacy concerns, and backend test coverage gaps.
+- Captured the practical follow-up sequence in the handover note: summary caching and invalidation, safer API error responses, cross-platform opener adapters, artifact-index gating, and targeted runtime/search/preview tests.
+- Recorded the latest verification snapshot in handover: `pnpm lint` and `pnpm typecheck` passed in `repos/workspace-hub`, while `pnpm test` was blocked in the sandboxed run by a `tsx` IPC permission error.
+- Added a pre-Codex checklist and reusable implementation handoff prompt to `docs/HANDOVER.md` so the next Codex pass can execute against explicit performance, privacy, portability, and test-coverage expectations.
+- Implemented first remediation slice in `repos/workspace-hub`: snapshot-keyed workspace discovery caching plus explicit invalidation hooks on mutating routes, generic client-safe 500 responses with server-side error logging, and opt-in artifact indexing via `WORKSPACE_HUB_SEARCH_INCLUDE_ARTIFACTS`.
+- Verified post-change quality gates for this slice with `pnpm --dir "repos/workspace-hub" lint` and `pnpm --dir "repos/workspace-hub" typecheck`.
+- Added focused server tests in `repos/workspace-hub/test/workspace-cache-search.test.ts` to cover cache invalidation behavior and artifact search env-gating behavior.
+- Confirmed full local test-suite pass outside sandbox with `pnpm --dir "repos/workspace-hub" test` (`5 passed, 0 failed`).
+
 ## 2026-04-05
 
 - Added `VoltAgent/awesome-design-md` to `tools/manifests/reference-sources.json` so the workspace can install and refresh a reviewed local snapshot of the upstream `DESIGN.md` catalog under ignored `tools/ref/`.

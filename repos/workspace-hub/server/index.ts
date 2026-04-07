@@ -27,7 +27,11 @@ import {
   saveRepoActivity,
   saveRepoMetadata,
 } from './workspace-metadata.ts'
-import { buildWorkspaceSummary, findWorkspaceRepo } from './workspace.ts'
+import {
+  buildWorkspaceSummary,
+  findWorkspaceRepo,
+  invalidateWorkspaceSummaryCache,
+} from './workspace.ts'
 import { searchWorkspace } from './workspace-search.ts'
 
 const apiHost = process.env.WORKSPACE_HUB_API_HOST ?? '127.0.0.1'
@@ -124,6 +128,10 @@ function requireTargetPath(body: unknown) {
   }
 
   return targetPath
+}
+
+function invalidateWorkspaceCaches() {
+  invalidateWorkspaceSummaryCache()
 }
 
 app.get('/api/health', (_request: Request, response: Response) => {
@@ -271,6 +279,7 @@ app.post(
       }
 
       await saveRepoActivity(relativePath, 'open')
+      invalidateWorkspaceCaches()
       publishWorkspaceEvent({
         message: target,
         relativePath,
@@ -312,6 +321,7 @@ app.post(
 
         const runtime = await startRepoRuntime(repo)
         await saveRepoActivity(relativePath, 'runtime')
+        invalidateWorkspaceCaches()
         publishWorkspaceEvent({
           message: action,
           relativePath,
@@ -325,6 +335,7 @@ app.post(
       if (action === 'stop') {
         const runtime = await stopRepoRuntime(repo.path)
         await saveRepoActivity(relativePath, 'runtime')
+        invalidateWorkspaceCaches()
         publishWorkspaceEvent({
           message: action,
           relativePath,
@@ -345,6 +356,7 @@ app.post(
 
         const runtime = await restartRepoRuntime(repo)
         await saveRepoActivity(relativePath, 'runtime')
+        invalidateWorkspaceCaches()
         publishWorkspaceEvent({
           message: action,
           relativePath,
@@ -367,6 +379,7 @@ app.post(
   async (_request: Request, response: Response, next: NextFunction) => {
     try {
       await shutdownManagedRuntimes()
+      invalidateWorkspaceCaches()
       publishWorkspaceEvent({
         message: 'stop-all',
         relativePath: null,
@@ -405,6 +418,7 @@ app.post(
 
       const install = await runRepoInstall(repo)
       await saveRepoActivity(relativePath, 'install')
+      invalidateWorkspaceCaches()
       publishWorkspaceEvent({
         message: 'install',
         relativePath,
@@ -436,6 +450,7 @@ app.post(
 
       const cover = await generateRepoCover(repo)
       await saveRepoActivity(relativePath, 'open')
+      invalidateWorkspaceCaches()
       publishWorkspaceEvent({
         message: cover.coverImagePath,
         relativePath,
@@ -467,6 +482,7 @@ app.post(
 
       const result = await runRepoIntake(repo, workspaceRoot)
       await saveRepoActivity(relativePath, 'open')
+      invalidateWorkspaceCaches()
 
       publishWorkspaceEvent({
         message: result.manifestCreated ? 'intake + manifest' : 'intake',
@@ -505,6 +521,7 @@ app.post(
       }
 
       response.json({ activity: await saveRepoActivity(relativePath, 'select'), ok: true })
+      invalidateWorkspaceCaches()
       publishWorkspaceEvent({
         message: 'select',
         relativePath,
@@ -547,6 +564,7 @@ app.post(
         preset,
       )
 
+      invalidateWorkspaceCaches()
       publishWorkspaceEvent({
         message: preset,
         relativePath,
@@ -590,6 +608,7 @@ app.post(
         manifestPath: result.manifestPath,
         ok: true,
       })
+      invalidateWorkspaceCaches()
       publishWorkspaceEvent({
         message: result.manifestPath,
         relativePath,
@@ -627,6 +646,7 @@ app.post(
         ),
       )
 
+      invalidateWorkspaceCaches()
       publishWorkspaceEvent({
         message: 'saved',
         relativePath,
@@ -657,6 +677,7 @@ app.post(
       }
 
       await resetRepoMetadata(relativePath)
+      invalidateWorkspaceCaches()
       publishWorkspaceEvent({
         message: 'reset',
         relativePath,
@@ -692,10 +713,11 @@ app.use(
   ) => {
     void _next
 
-    const message =
-      error instanceof Error ? error.message : 'Unknown Workspace Hub error'
-
-    response.status(500).json({ message })
+    const message = error instanceof Error ? error.message : 'Unknown Workspace Hub error'
+    console.error(`[workspace-hub-api] ${message}`)
+    response.status(500).json({
+      message: 'Workspace Hub could not complete this request. Check server logs for details.',
+    })
   },
 )
 

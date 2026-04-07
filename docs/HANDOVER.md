@@ -138,3 +138,126 @@ If continuing implementation, read in this order:
 2. `CHANGELOG.md`
 3. `03-workspace-hub-build-spec.md`
 4. `../../repos/workspace-hub/README.md` if working inside the Hub repo
+
+## Project review addendum (2026-04-07)
+
+This addendum captures the latest implementation review of `repos/workspace-hub` and should be treated as the current technical pickup note.
+
+### Findings (ordered by severity)
+
+1. High: workspace summary refreshes can become expensive at scale.
+   - `buildWorkspaceSummary()` triggers full discovery and per-repo checks repeatedly.
+   - `buildRepoRecord()` performs health probes and Git checks for each repo during summary generation.
+   - SSE-driven UI refresh behavior increases the cost of this pattern as workspace size grows.
+
+2. Medium: API error responses currently return raw internal error messages.
+   - The global Express error middleware sends `error.message` to clients.
+   - This may expose internal path or command details that should remain server-side.
+
+3. Medium: open-target behavior is currently macOS-first.
+   - `openTarget()` and `openInTerminal()` rely on `open` and `open -a Terminal`.
+   - This limits portability for Linux and Windows operator environments.
+
+4. Medium: indexed search includes agent artifact cache content.
+   - Search indexing reads files from `cache/context/agents/jobs`.
+   - This may surface sensitive local notes or job output in UI search results.
+
+5. Low: test coverage does not yet match backend feature surface.
+   - Existing tests focus primarily on agent tooling and preset scaffolding.
+   - Runtime manager, preview readiness, and workspace search paths need broader coverage.
+
+### Prioritized plan
+
+1. Phase 1 (stability and performance)
+   - Introduce summary/discovery caching with explicit invalidation on repo actions.
+   - Split summary generation into fast baseline data and slower deep diagnostics.
+
+2. Phase 2 (security and privacy)
+   - Sanitize API 500 responses for client payloads and keep internal details server-side.
+   - Add explicit controls for indexing artifact content (opt-in preferred).
+
+3. Phase 3 (portability)
+   - Add OS-aware adapters for open and terminal actions across `darwin`, `linux`, and `win32`.
+   - Provide clear fallback messages when no supported opener is available.
+
+4. Phase 4 (quality and confidence)
+   - Expand tests for runtime lifecycle behavior, search indexing and ranking, and preview polling edge cases.
+
+### Immediate implementation improvements
+
+- Add a `safeErrorMessage()` helper for API responses and keep detailed errors in server logs only.
+- Add memoization and lightweight invalidation for workspace discovery results.
+- Debounce or scope health probing so non-selected repos are not probed on every refresh.
+- Add `WORKSPACE_HUB_SEARCH_INCLUDE_ARTIFACTS` (default `false`) to control artifact indexing.
+- Add targeted tests for:
+  - runtime start, stop, restart, and failure-report writing
+  - search result scoring and artifact opt-in behavior
+  - preview reachability timeout and retry handling
+
+### Verification snapshot from review run
+
+- `pnpm lint`: passed in `repos/workspace-hub`
+- `pnpm typecheck`: passed in `repos/workspace-hub`
+- `pnpm test`: passed outside sandbox in local terminal (`5 passed, 0 failed`)
+
+### Pre-Codex checklist (do now, low risk)
+
+These are practical tasks that can be completed before switching back to Codex implementation mode so later review has clearer evidence and less context rebuilding.
+
+1. Run tests outside sandbox and capture output.
+   - Run `pnpm --dir "repos/workspace-hub" test` in a normal local terminal.
+   - Paste or summarize pass/fail output into this handover section.
+   - Goal: remove uncertainty from the current sandbox-only `EPERM` test block.
+
+2. Add a short baseline performance snapshot.
+   - Record timings for `GET /api/workspace/summary` with current repo count (for example 5 runs, cold and warm).
+   - Note repo count and average response time in this file.
+   - Goal: create a measurable before-state for caching and summary optimization work.
+
+3. Confirm privacy stance for artifact indexing.
+   - Decide whether agent artifact indexing should be default-on or default-off.
+   - If default-off is preferred, note the intended env flag name and default here before implementation.
+   - Goal: lock product intent before code changes.
+
+4. Lock portability expectation for open actions.
+   - Confirm target support scope (`darwin` only for now, or `darwin` + `linux` + `win32`).
+   - Document expected behavior when platform opener is unavailable.
+   - Goal: avoid ambiguous cross-platform behavior during implementation.
+
+5. Define test expansion minimum for the next change set.
+   - Require at least one test for runtime lifecycle, one for search indexing behavior, and one for preview readiness timeout handling.
+   - Record the intended test file names before implementation starts.
+   - Goal: ensure backend feature growth comes with proportionate coverage.
+
+### Codex review handoff prompt (ready to reuse)
+
+Use this prompt when resuming in Codex to keep implementation aligned with this review:
+
+"Implement Phase 1 and Phase 2 items from `docs/HANDOVER.md` project review addendum: (1) summary/discovery caching with clear invalidation on repo actions, (2) safe client-facing API error messaging, and (3) artifact-index gating via env flag. Keep behavior backward-compatible, add focused tests for changed server modules, and update handover verification notes with timing and test results."
+
+### Implementation update (2026-04-07, first slice completed)
+
+Completed in `repos/workspace-hub`:
+
+1. Summary and discovery caching with explicit invalidation.
+   - Added snapshot-keyed discovery cache in `server/workspace.ts` with configurable TTL via `WORKSPACE_HUB_DISCOVERY_CACHE_TTL_MS` (default `1500` ms).
+   - Added `invalidateWorkspaceSummaryCache()` and wired invalidation through mutating routes in `server/index.ts` (open activity, runtime actions, install, cover, intake, metadata, manifest, presets, stop-all).
+
+2. Safer client-facing API error behavior.
+   - Updated global error middleware in `server/index.ts` to log internal error details server-side and return a generic 500 response message to clients.
+
+3. Artifact-index gating for search.
+   - Added `WORKSPACE_HUB_SEARCH_INCLUDE_ARTIFACTS` in `server/workspace-search.ts`.
+   - Artifact indexing is now opt-in; default behavior excludes agent-job artifact files from search documents.
+
+Verification after implementation:
+
+- `pnpm --dir "repos/workspace-hub" lint`: passed
+- `pnpm --dir "repos/workspace-hub" typecheck`: passed
+- `pnpm --dir "repos/workspace-hub" test`: passed outside sandbox in local terminal (`5 passed, 0 failed`, duration ~`2798ms`)
+
+Follow-up tests added for this slice:
+
+- `repos/workspace-hub/test/workspace-cache-search.test.ts`
+  - verifies workspace summary cache behavior stays stable before explicit invalidation and refreshes after `invalidateWorkspaceSummaryCache()`
+  - verifies artifact search indexing remains disabled by default and only returns artifact results when `WORKSPACE_HUB_SEARCH_INCLUDE_ARTIFACTS=true`
