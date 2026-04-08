@@ -2,6 +2,7 @@
 
 ## 2026-04-08
 
+- Bumped the workspace baseline release to `v1.1.0` and updated `repos/workspace-hub` to `1.1.0` to match the new capability lifecycle, Workspace memory, and Hub UX surface area.
 - Added an explicit new-repo intake process for public site clone or rip requests, clarifying the expected distinction between deployed mirrors, working local reference copies, and clean rebuilds.
 - Added a dedicated repo-docs template for public-site reference repos so `repos/` intake can record source URL, capture date, fetch method, local serve path, and limitations consistently.
 - Added fallback guidance for blocked mirror downloads: provide direct asset URLs to the user in chat and store any user-downloaded copies in a repo-local `ref/` folder with source notes.
@@ -62,7 +63,7 @@
 - Expanded observability payload with discovery and diagnostics cache counters plus summary request counts and reason breakdowns.
 - Added optimization-focused test coverage in `repos/workspace-hub/test/workspace-cache-search.test.ts` for base cache reuse after diagnostics updates and observability counter behavior.
 - Added optimization quick-verify commands and observability guidance to `repos/workspace-hub/README.md`.
-- Added a concise operator-facing “Next Improvements (planned)” section in `repos/workspace-hub/README.md` for observability checks, safe tuning knobs, and triage workflow guidance.
+- Added a concise operator-facing follow-up section in `repos/workspace-hub/README.md` for observability checks, safe tuning knobs, and triage workflow guidance.
 - Added a versioned observability schema (`observabilityVersion: 1`) with grouped `discovery`, `diagnostics`, and `summary` sections while keeping legacy top-level fields as compatibility aliases.
 
 ## 2026-04-05

@@ -12,8 +12,8 @@ Use it after reading the core handover pack when you need to understand:
 
 Current release baseline:
 
-- workspace release tag: `v1.0.0`
-- `repos/workspace-hub` version: `1.0.0`
+- workspace release tag: `v1.1.0`
+- `repos/workspace-hub` version: `1.1.0`
 - stable release gate passed on `2026-04-03`
 
 ## Canonical doc location
@@ -163,9 +163,9 @@ Status: complete and validated, assuming the separate MemPalace Hub work is alre
 - Workspace Hub now reads capability data from the tracked registry
 - installable abilities and core services have a dedicated capability panel
 - repo layout preference now supports `split` and `discovery-first`
-- `discovery-first` keeps Repo Discovery full width and only shows repo details after selection
+- `discovery-first` keeps Repo Discovery full width, shows an inline discovery prompt before selection, and expands the selected repo with inline details instead of rendering a second downstream selection block
 - indexed search now includes installable capabilities and supports result-type filtering
-- settings now make the current layout mode and capability lifecycle path more explicit
+- Appearance now owns the repo layout toggle while Workspace configuration reflects the active layout and capability counts
 - selected repo details now hydrate eager diagnostics through a repo-specific endpoint instead of triggering automatic whole-workspace full-summary hydration
 - observability now tracks eager repo-details request counts and timing alongside discovery and diagnostics counters
 
@@ -201,7 +201,7 @@ Live Hub acceptance was also exercised against the running app on 2026-04-08:
 - `npx playwright screenshot --wait-for-selector 'text=Workspace memory' ...`
 - `npx playwright screenshot --wait-for-selector 'text=Workspace Capabilities' ...`
 - `npx playwright screenshot --wait-for-selector 'text=Repo Discovery' ...`
-- `npx playwright screenshot --load-storage /tmp/workspace-hub-discovery-storage.json --wait-for-selector 'text=Selection required' ...`
+- `npx playwright screenshot --load-storage /tmp/workspace-hub-discovery-storage.json --wait-for-selector 'text=Select a repo to open details.' ...`
 
 Observed runtime result:
 
@@ -210,7 +210,7 @@ Observed runtime result:
 - indexed search returned both the `MemPalace` service and the `VoltAgent/awesome-design-md` capability for `q=memory`
 - repo-details hydration returned `detailLevel: detail` for `repos/workspace-hub`
 - repo-details observability counters incremented after the detail fetch
-- browser-level smoke confirmed the live presence of `Workspace memory`, `Workspace Capabilities`, `Repo Discovery`, and the `discovery-first` empty-selection state
+- browser-level smoke confirmed the live presence of `Workspace memory`, `Workspace Capabilities`, `Repo Discovery`, the discovery-first inline empty-state prompt, and the inline selected-repo details flow
 
 Current operator expectation:
 
