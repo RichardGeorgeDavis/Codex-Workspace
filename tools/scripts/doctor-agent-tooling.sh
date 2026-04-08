@@ -104,6 +104,7 @@ done
 for script_path in \
   "$workspace_root/tools/scripts/init-agents-tree.sh" \
   "$workspace_root/tools/scripts/doctor-agent-tooling.sh" \
+  "$workspace_root/tools/scripts/update-github-refs.sh" \
   "$workspace_root/tools/scripts/sync-reference-snapshots.sh"
 do
   if [ -f "$script_path" ]; then

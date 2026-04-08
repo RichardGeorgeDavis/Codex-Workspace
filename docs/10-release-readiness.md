@@ -30,6 +30,7 @@ change:
 - `.workspace/agent-stack.json` is the tracked multi-tool hint layer when needed
 - `.opencode/` and `.omx/` stay optional
 - `tools/ref/` remains reviewed reference-only material, not a runtime dependency
+- `tools/manifests/workspace-capabilities.json` is the tracked registry for installable workspace abilities and core services
 
 ## Release checklist
 
@@ -39,7 +40,13 @@ Run these before calling a release stable or after changes that could affect the
 2. `tools/scripts/doctor-workspace.sh`
 3. `tools/scripts/doctor-agent-tooling.sh`
 4. `tools/scripts/release-readiness.sh`
-5. Open Workspace Hub and verify a direct-preview repo, an external-preview repo, and one mixed-stack repo still behave correctly
+5. Review public-facing files and metadata that should mention the change:
+   - root `README.md`
+   - `docs/README.md`
+   - `docs/CHANGELOG.md`
+   - relevant repo-local docs such as `repos/workspace-hub/README.md`
+   - optional wiki/navigation pages under `docs/wiki/` when public navigation should surface the feature
+6. Open Workspace Hub and verify a direct-preview repo, an external-preview repo, and one mixed-stack repo still behave correctly
 
 Do not skip the manual repo check just because automated verification passed.
 
@@ -63,6 +70,7 @@ Do not skip the manual repo check just because automated verification passed.
 - shared Playwright browser cache under `cache/playwright-browsers`
 - shared shell helpers for Playwright and other workspace-wide env defaults via `tools/scripts/print-workspace-env.sh` and `tools/scripts/run-with-workspace-env.sh`
 - Local or ServBay for WordPress-oriented workflows
+- workspace abilities under `repos/abilities/` when they are explicitly installed and documented
 
 ### Not part of the stable baseline
 
@@ -70,6 +78,7 @@ Do not skip the manual repo check just because automated verification passed.
 - placeholder plugins or TODO manifest surfaces
 - forcing every repo into one dependency tree
 - mandatory OpenCode, OMX, Bun, ServBay, or Local installs
+- mandatory `gh auth login` as part of baseline clone or release verification
 
 ## Migration note
 

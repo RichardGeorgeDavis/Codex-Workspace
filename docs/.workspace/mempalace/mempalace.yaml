@@ -1,0 +1,10 @@
+wing: docs
+rooms:
+- name: documentation
+  description: Files from wiki/
+  keywords:
+  - documentation
+  - wiki
+- name: general
+  description: Files that don't fit other rooms
+  keywords: []

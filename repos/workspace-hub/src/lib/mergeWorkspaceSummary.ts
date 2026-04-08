@@ -1,4 +1,25 @@
-import type { WorkspaceSummary } from '../types/workspace.ts'
+import type { WorkspaceRepo, WorkspaceSummary } from '../types/workspace.ts'
+
+function mergeProjectedRepo(
+  incoming: WorkspaceRepo,
+  previous: WorkspaceRepo,
+): WorkspaceRepo {
+  return {
+    ...incoming,
+    detailLevel: 'detail',
+    install: {
+      ...incoming.install,
+      logTail: previous.install.logTail,
+    },
+    notes: previous.notes,
+    runtime: {
+      ...incoming.runtime,
+      logTail: previous.runtime.logTail,
+    },
+    savedMetadata: previous.savedMetadata,
+    suggestedManifest: previous.suggestedManifest,
+  }
+}
 
 export function needsDiagnosticsHydration(
   merged: WorkspaceSummary,
@@ -32,23 +53,35 @@ export function mergeWorkspaceSummaryDiagnostics(
   let changed = false
 
   const repos = base.repos.map((repo) => {
+      const prior = prevByPath.get(repo.path)
+
       if (repo.diagnosticsFreshness !== 'skipped') {
+        if (repo.detailLevel === 'list' && prior?.detailLevel === 'detail') {
+          changed = true
+          return mergeProjectedRepo(repo, prior)
+        }
+
         return repo
       }
 
-      const prior = prevByPath.get(repo.path)
       if (!prior || prior.diagnosticsFreshness === 'skipped') {
         return repo
       }
 
       changed = true
-      return {
+      const mergedRepo = {
         ...repo,
         dependencies: prior.dependencies,
         diagnosticsFreshness: prior.diagnosticsFreshness,
         git: prior.git,
         health: prior.health,
       }
+
+      if (mergedRepo.detailLevel === 'list' && prior.detailLevel === 'detail') {
+        return mergeProjectedRepo(mergedRepo, prior)
+      }
+
+      return mergedRepo
     })
 
   if (!changed) {
@@ -57,6 +90,31 @@ export function mergeWorkspaceSummaryDiagnostics(
 
   return {
     ...base,
+    repos,
+  }
+}
+
+export function mergeWorkspaceRepoDetails(
+  summary: WorkspaceSummary,
+  detailedRepo: WorkspaceRepo,
+): WorkspaceSummary {
+  let changed = false
+
+  const repos = summary.repos.map((repo) => {
+    if (repo.path !== detailedRepo.path) {
+      return repo
+    }
+
+    changed = true
+    return detailedRepo
+  })
+
+  if (!changed) {
+    return summary
+  }
+
+  return {
+    ...summary,
     repos,
   }
 }

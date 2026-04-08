@@ -6,6 +6,9 @@ repos_dir="$workspace_root/repos"
 workspace_hub_dir="$repos_dir/workspace-hub"
 workspace_name=$(basename "$workspace_root")
 shared_playwright_dir="$workspace_root/cache/playwright-browsers"
+mempalace_wrapper="$workspace_root/tools/bin/workspace-memory"
+mempalace_repo="$workspace_root/tools/mempalace"
+mempalace_shared_root="$workspace_root/shared/mempalace"
 
 ok_count=0
 warn_count=0
@@ -231,6 +234,8 @@ fi
 
 printf '\nCore tools\n'
 check_cmd "git" git required core_missing
+check_cmd "curl" curl recommended core_missing
+check_cmd "tar" tar recommended core_missing
 check_cmd "rg" rg recommended core_missing
 check_cmd "jq" jq recommended core_missing
 check_fd
@@ -296,6 +301,35 @@ fi
 check_cmd "uv" uv recommended ""
 check_cmd "composer" composer recommended mixed_missing
 check_cmd "wp" wp recommended mixed_missing
+
+printf '\nCore services\n'
+if [ -x "$mempalace_wrapper" ]; then
+  mark_ok "workspace-memory" "$mempalace_wrapper"
+else
+  mark_fail "workspace-memory" "missing executable wrapper"
+fi
+
+if [ -d "$mempalace_repo/.git" ]; then
+  mark_ok "MemPalace repo" "$mempalace_repo"
+else
+  mark_warn "MemPalace repo" "missing, run 'tools/bin/workspace-memory install'"
+fi
+
+if [ -d "$mempalace_shared_root" ]; then
+  mark_ok "MemPalace shared" "$mempalace_shared_root"
+else
+  mark_warn "MemPalace shared" "missing"
+fi
+
+if [ -x "$mempalace_wrapper" ]; then
+  mempalace_status=$("$mempalace_wrapper" status 2>/dev/null || true)
+  if [ -n "$mempalace_status" ]; then
+    printf '%s\n' "$mempalace_status" | while IFS= read -r status_line; do
+      [ -n "$status_line" ] || continue
+      printf '        %-22s %s\n' "MemPalace" "$status_line"
+    done
+  fi
+fi
 
 printf '\nOptional local runtimes\n'
 servbay_present=0
@@ -403,6 +437,7 @@ printf -- '- Before calling the workspace stable, run tools/scripts/release-read
 printf -- '- Review tracked repo guidance in AGENTS.md before changing repo structure or runtime rules\n'
 printf -- '- Use tools/scripts/sync-codex-skills.sh only after you have tracked skill sources to sync into repo .codex/skills/ and optional .agents/skills/\n'
 printf -- '- Install extra upstream Codex skills selectively with $skill-installer, not by vendoring full catalogs\n'
+printf -- '- Use tools/scripts/update-github-refs.sh when you want reviewed GitHub refs or managed upstream repos updated\n'
 printf -- '- Use tools/scripts/update-all.sh only when you want to fast-forward clean sibling repos under repos/\n'
 
 printf '\nSummary: %s ok, %s warnings, %s failures\n' "$ok_count" "$warn_count" "$fail_count"

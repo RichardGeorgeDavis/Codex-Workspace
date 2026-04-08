@@ -16,6 +16,7 @@ import type {
 type RepoDetailsProps = {
   actionError: string | null
   actionPendingKey: string | null
+  embedded?: boolean
   onApplyAgentPreset: (
     relativePath: string,
     preset: RepoAgentPresetId,
@@ -364,6 +365,7 @@ function buildTroubleshootingTips(repo: WorkspaceRepo) {
 export function RepoDetails({
   actionError,
   actionPendingKey,
+  embedded = false,
   onApplyAgentPreset,
   onCoverAction,
   onCopyError,
@@ -377,11 +379,43 @@ export function RepoDetails({
   onWriteManifest,
   repo,
 }: RepoDetailsProps) {
+  if (embedded) {
+    if (!repo) {
+      return null
+    }
+
+    return (
+      <div className="repo-details-embedded">
+        <div className="repo-details-embedded-header">
+          <span className="repo-card-selection-label">Selection</span>
+          <strong>{repo.name} selected.</strong>
+          <p>Runtime details, manifests, overrides, and repo actions for the active repository.</p>
+        </div>
+        <RepoDetailsContent
+          key={repo.relativePath}
+          actionError={actionError}
+          actionPendingKey={actionPendingKey}
+          onApplyAgentPreset={onApplyAgentPreset}
+          onCoverAction={onCoverAction}
+          onCopyError={onCopyError}
+          onIntakeAction={onIntakeAction}
+          onInstallAction={onInstallAction}
+          onOpenAction={onOpenAction}
+          onResetMetadata={onResetMetadata}
+          onRuntimeAction={onRuntimeAction}
+          onSaveMetadata={onSaveMetadata}
+          onWriteManifest={onWriteManifest}
+          repo={repo}
+        />
+      </div>
+    )
+  }
+
   return (
     <SectionCard
-      body="This panel reflects the current selection from the repo list, exposes the core repo actions, persists manual overrides, and can write repo manifests."
+      body="Runtime details, manifests, overrides, and repo actions for the active repository."
       className="tall reveal delayed"
-      eyebrow="Selection"
+      eyebrow="Repo Details"
       title={repo?.name ?? 'Repo details'}
     >
       {loading && !repo ? (

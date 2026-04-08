@@ -11,7 +11,7 @@ This workspace must:
 - separate shared tooling from project-specific dependencies
 - keep repositories portable and self-contained
 - improve install and workflow performance by centralising caches and utility scripts
-- support a later Workspace Hub application
+- support the Workspace Hub application as a first-class repo in the workspace
 - remain compatible with ServBay, Local, and direct local repo execution
 
 ## Root path
@@ -32,12 +32,20 @@ Codex Workspace/
 │   ├── 03-workspace-hub-build-spec.md
 │   ├── 04-build-order-and-dod.md
 │   ├── 05-examples-and-templates.md
+│   ├── 06-cross-agent-skills-and-mcp.md
+│   ├── 07-context-cache-and-retrieval.md
+│   ├── 08-first-run-and-updates.md
+│   ├── 09-new-repo-baseline.md
+│   ├── 10-release-readiness.md
+│   ├── 11-core-memory-and-reference-promotion.md
+│   ├── 12-maintainer-runbook.md
 │   ├── HANDOVER.md
 │   └── CHANGELOG.md
 ├── repos/
 ├── tools/
 │   ├── bin/
 │   ├── scripts/
+│   ├── ref/
 │   ├── templates/
 │   └── manifests/
 ├── cache/
@@ -62,6 +70,8 @@ Examples:
 
 ```text
 repos/
+├── abilities/
+│   └── voltagent-awesome-design-md/
 ├── workspace-hub/
 ├── wp-client-site/
 ├── static-portfolio/
@@ -76,6 +86,8 @@ Use this for:
 - shell helpers
 - bootstrap scripts
 - clone/update helpers
+- reviewed reference snapshots under `tools/ref/`
+- tracked codebases that become core workspace services under `tools/<service>/`
 - templates for repo manifests
 - templates for `.codex` config if needed
 - source lists and supporting manifests
@@ -100,6 +112,29 @@ Purpose:
 
 ### `shared/`
 Holds workspace-facing metadata and shared standards.
+
+This is also the right home for durable per-user data owned by a core workspace service.
+
+Examples:
+
+- `shared/repo-index.json`
+- `shared/standards.md`
+- `shared/<service>/<user>/...`
+
+## Reviewed source taxonomy
+
+Use one explicit placement model when new reviewed upstream sources are introduced:
+
+- `reference-only` for reviewed snapshots under `tools/ref/`
+- `ability` for optional installable repos under `repos/abilities/<slug>/`
+- `repo-level adoption` for normal tracked repos under `repos/`
+- `core service` for tracked runtime code under `tools/<service>/` with durable state in `shared/<service>/<user>/` and disposable state in `cache/<service>/<user>/`
+
+Current examples:
+
+- `MemPalace` is a core service
+- `VoltAgent/awesome-design-md` is an optional ability
+- `openai/skills`, `openai/codex`, `oh-my-codex`, and `oh-my-openagent` stay reference-only unless promoted later
 
 ## Core workspace rules
 
@@ -130,6 +165,7 @@ Examples:
 - `tools/scripts/bootstrap-node.sh`
 - `tools/bin/open-repo`
 - `tools/bin/repo-status`
+- `tools/<service>/` for a tracked fork that becomes part of how the workspace itself works
 
 ### Rule 4: canonical handover docs belong in `docs/`
 The `docs/` folder is the source of truth for:
@@ -155,6 +191,8 @@ This workspace should support, but not require, the following machine-level tool
 - `ripgrep`
 - `fd`
 - `tree`
+
+`gh` is recommended when a maintainer or contributor manages forks, pull requests, or reviewed upstream mirrors. `gh auth login` is optional setup, not a baseline workspace requirement.
 
 ### Node / JS
 - Volta, `fnm`, or similar Node version manager
@@ -263,6 +301,8 @@ Codex may:
 - create templates in `tools/templates/`
 - create or update `shared/repo-index.json`
 - create the `workspace-hub` repo
+- create `repos/abilities/` entries when an optional ability is intentionally adopted
+- create `tools/ref/` snapshots only as reviewed reference material
 - add sensible defaults for repo metadata
 
 Codex must not:
@@ -281,6 +321,9 @@ Clone multiple repositories into `repos/` from a source list.
 ### `update-all.sh`
 Loop through repos and run a safe Git update such as fast-forward pull where appropriate.
 
+### `manage-workspace-capabilities.sh`
+Install, update, enable, disable, or uninstall tracked workspace abilities and core services without mixing them into the normal repo-group update path.
+
 ### `detect-repo-type.sh`
 Inspect a repo and infer likely type based on known files.
 
@@ -297,4 +340,5 @@ This handover is complete when Codex can create a workspace that:
 - uses shared caches for performance
 - has a clear place for scripts, docs, and metadata
 - has a dedicated `workspace-hub` repo inside `repos/`
+- has a clear placement model for reviewed references, abilities, normal repos, and core services
 - does not conflate infrastructure with runtime orchestration

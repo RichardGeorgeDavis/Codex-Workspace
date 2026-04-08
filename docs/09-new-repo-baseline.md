@@ -43,6 +43,14 @@ When useful, add small explicit metadata instead of hidden assumptions:
 - repo-level `AGENTS.md` only when the repo genuinely needs rules beyond the workspace baseline
 - `.codex/skills/` and optional `.codex/config.toml` when the repo should expose official Codex repo-local surfaces
 - `.agents/skills/` only when the repo also wants a tracked compatibility mirror for workspace-native agent tooling
+- a repo-local `Next Batches` section in `README.md`, `HANDOVER.md`, or tracked `openspec/changes/.../tasks.md` when the work is large enough to need end-to-end implementation batches
+
+For public site reference copies, also prefer a short acquisition note in `README.md` or `HANDOVER.md` that records:
+
+- source URL
+- capture date
+- fetch method
+- whether the repo is a deployed mirror, a working local reference copy, or a rebuild
 
 ## Repo intake when a folder first appears under `repos/`
 
@@ -57,6 +65,9 @@ Recommended intake order:
 5. Add a repo-local cover image reference in the README, even if the image is a placeholder at first.
 6. Add `.workspace/project.json` only when runtime behavior is not obvious from the repo files.
 7. Add repo-level `AGENTS.md`, `HANDOVER.md`, or repo-local skills only when they solve a real repo-specific need.
+8. If README, HANDOVER, or durable setup docs were created or materially updated, run `tools/bin/workspace-memory save-repo <repo-name>` so the shared memory layer captures the repo state, related workspace docs, and the current Codex thread in one closeout step.
+
+For MemPalace target metadata, prefer `.workspace/mempalace/` inside the repo rather than dropping `mempalace.yaml` or `entities.json` at the repo root.
 
 For the initial README cover block, prefer a PNG path that Workspace Hub can later replace with a live screenshot:
 
@@ -69,6 +80,71 @@ For the initial README cover block, prefer a PNG path that Workspace Hub can lat
 Use a placeholder image first if a real preview capture is not ready yet. Keeping the path as `docs/cover.png` makes later cover capture simpler and consistent with the Hub defaults.
 
 The starter files in `tools/templates/repo-docs/` are the default template source for this intake step.
+
+## Implementation batches
+
+Use batches when a repo has enough pending work that a future chat should be able to pick up one complete slice at a time.
+
+Preferred placement:
+
+1. workspace-wide batches live in `docs/HANDOVER.md`
+2. repo-specific larger work lives in tracked `openspec/changes/.../tasks.md`
+3. if a repo does not use `openspec/`, keep a short `Next Batches` section in `README.md` or `HANDOVER.md`
+
+Each batch should be end-to-end and include:
+
+- the user-facing outcome
+- the files or surfaces likely to change
+- the verification command or acceptance check
+- any dependency on another batch landing first
+
+## Special intake for site clone or rip requests
+
+When a user asks for a site "clone" or "rip" and a new repo is added under `repos/`, default to a cautious reference-copy workflow.
+
+Treat the request as one of these three outcomes:
+
+1. a deployed mirror
+2. a working local reference copy
+3. a clean rebuild
+
+Do not present a public-site mirror as if it were the original source project.
+
+### Naming and classification
+
+- Prefer neutral repo names such as `site-name-reference`, `site-name-mirror`, or `site-name-rebuild`.
+- Avoid naming a mirrored repo as though it were the official upstream source.
+- Default mirrored frontend copies to `direct` runtime.
+- Use `.workspace/project.json` when the repo needs an explicit note that it is a reference snapshot rather than a normal source repo.
+
+### Intake process
+
+1. Record the public source URL and the capture date in `README.md` or `HANDOVER.md`.
+2. State the acquisition method clearly, such as `wget`, `httrack`, or manual asset capture.
+3. Document what the repo is: deployed mirror, working local reference copy, or rebuild.
+4. Document what is not present: original source files, build tooling, history, server-side code, private APIs, and environment variables unless they were actually supplied.
+5. Serve the repo through a lightweight local server for testing; do not treat `file://` opening as the default verification path.
+6. Inspect and note remaining remote dependencies such as absolute asset URLs, remote APIs, dynamic chunks, fonts, models, or config files.
+7. If some files cannot be fetched automatically because of permissions, hotlink protections, expiring URLs, or other blockers, give the direct URLs to the user in chat so they can download them manually.
+8. Place those manually supplied files in a repo-local `ref/` folder and document their original URLs and intended paths in `README.md` or `HANDOVER.md`.
+9. If long-term editing or ownership is the real goal, create a separate rebuild repo instead of mutating the raw mirror into a pseudo-source project.
+
+### Recommended repo shape for a public-site reference copy
+
+- `README.md` should explain source, status, local run path, and limitations.
+- `HANDOVER.md` should track inspection findings, unresolved remote dependencies, and rebuild recommendations when the work will continue.
+- `ref/` can hold manually downloaded fallback assets that could not be fetched automatically.
+- `docs/cover.png` should still be used for the Workspace Hub cover block.
+- Keep the mirrored output independently runnable on its own terms; do not immediately wrap it in unrelated workspace tooling.
+
+### Example use case
+
+For a request such as a local copy of `https://particles.casberry.in/`, the baseline stance should be:
+
+- first create a reference repo for the public frontend capture
+- serve it locally and test what still works
+- document remote dependencies and missing source-level context
+- create a separate rebuild repo only if maintainable editing is required
 
 ## `.workspace/project.json` guidance
 
@@ -90,6 +166,8 @@ Keep the manifest lightweight. It should clarify runtime behaviour, not become a
 - Do not assume one package manager across all repos.
 - Do not hard-code machine-specific paths inside repos when a relative or inferred path will do.
 - Treat `tools/ref/` as temporary reviewed source material for extracting durable workspace upgrades, not as a dependency layer.
+- If a repo depends on an optional workspace ability, document that dependency explicitly instead of assuming the ability is installed.
+- If a new GitHub source has not yet been classified, do not place it under `repos/` by default. Start with the intake process in `docs/11-core-memory-and-reference-promotion.md`.
 
 ## Minimal onboarding expectation
 

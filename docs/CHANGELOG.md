@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-04-08
+
+- Added an explicit new-repo intake process for public site clone or rip requests, clarifying the expected distinction between deployed mirrors, working local reference copies, and clean rebuilds.
+- Added a dedicated repo-docs template for public-site reference repos so `repos/` intake can record source URL, capture date, fetch method, local serve path, and limitations consistently.
+- Added fallback guidance for blocked mirror downloads: provide direct asset URLs to the user in chat and store any user-downloaded copies in a repo-local `ref/` folder with source notes.
+- Added `docs/11-core-memory-and-reference-promotion.md` to define the workspace source taxonomy and the promotion path from reviewed GitHub references in `tools/ref/` to abilities, repo-level adoption, and core workspace services.
+- Recorded the current architecture decision that MemPalace should become a core workspace memory service rather than a normal repo under `repos/`.
+- Updated the root README, docs index, overview, workspace handover, context and retrieval note, first-run guidance, and handover summary to reflect the new core-service model and the MemPalace promotion plan.
+- Added a handover follow-up note to apply the same promotion process to other reviewed GitHub references as a later phase.
+- Expanded the new core-service note with an explicit intake and classification process for any pasted GitHub URL or new `tools/ref/` source, including default review-first handling and placement rules for `reference-only`, `ability`, `repo-level adoption`, and `core service`.
+- Integrated MemPalace as a working core workspace service: added `tools/bin` wrappers, a tracked capability registry, bootstrap and doctor support, user-scoped durable state under `shared/mempalace/`, user-scoped cache under `cache/mempalace/`, and initial Workspace Hub service and search support.
+- Moved repo and docs MemPalace target metadata under `.workspace/mempalace/`, added conversation-ingest wrappers including `workspace-memory mine-convos` and `workspace-memory mine-codex`, and added a local no-op telemetry override so Chroma telemetry noise can be suppressed at the workspace runtime layer.
+- Added readable Codex transcript export support under `shared/mempalace/<user>/exports/codex/`, plus explicit `workspace-memory save-repo`, `save-workspace`, and `mine-codex-current` closeout commands so a chat can save repo, docs, and live Codex-thread memory without the Hub UI running.
+- Added curated default MemPalace repo-mining excludes for lockfiles and common generated output, filtered low-signal sources out of Layer 1 wake-up, and added a dedicated Workspace Hub memory page with target context plus a safe command surface for the workspace-owned MemPalace wrappers.
+- Added `tools/scripts/manage-workspace-capabilities.sh` plus `tools/manifests/workspace-capabilities.json` so installable workspace abilities and core services now share one lifecycle command.
+- Kept `tools/scripts/update-github-refs.sh` as a compatibility wrapper for update-only GitHub-ref flows.
+- Promoted repo-group updates to a tracked default manifest at `tools/manifests/repo-groups.json`, while keeping `repo-groups.example.json` as a sample shape.
+- Reclassified `VoltAgent/awesome-design-md` as an optional ability under `repos/abilities/voltagent-awesome-design-md` and updated the local `DESIGN.md` tooling/docs accordingly.
+- Updated Workspace Hub to read capability registry data, expose capability lifecycle actions in the UI, and persist a repo layout preference with `split` and `discovery-first` modes.
+- Synced the public-facing docs set so the root README, docs index, and older handover notes now all describe Workspace memory, the reviewed-source taxonomy, optional abilities, and the optional `gh auth login` and ServBay stance consistently.
+- Added a reusable live Hub acceptance block to `docs/HANDOVER.md` and `repos/workspace-hub/README.md` covering base summary, capability-aware search, repo-details hydration, Workspace memory, Workspace Capabilities, Repo Discovery, and `discovery-first` rendering checks.
+- Corrected the legacy compatibility manifest note for `VoltAgent/awesome-design-md` so it no longer points at the old `repos/core/` placement.
+- Added `GET /api/capabilities` to `workspace-hub` as a read-only capability snapshot endpoint and surfaced its installed or enabled or reference-only counts directly in the Workspace Capabilities panel.
+- Added focused snapshot-stat coverage in `repos/workspace-hub/test/workspace-capabilities.test.ts` and updated the Hub README and handover docs to include the new endpoint in verification and smoke flows.
+
 ## 2026-04-07
 
 - Added a project review addendum to `docs/HANDOVER.md` covering implementation findings, prioritized remediation phases, and immediate improvement actions for `repos/workspace-hub`.
@@ -37,7 +62,6 @@
 - Expanded observability payload with discovery and diagnostics cache counters plus summary request counts and reason breakdowns.
 - Added optimization-focused test coverage in `repos/workspace-hub/test/workspace-cache-search.test.ts` for base cache reuse after diagnostics updates and observability counter behavior.
 - Added optimization quick-verify commands and observability guidance to `repos/workspace-hub/README.md`.
-- Added a phased “planned next steps” roadmap in `docs/HANDOVER.md` covering immediate, mid-term, and long-term performance and expansion priorities with success criteria, risks, and rollback guidance.
 - Added a concise operator-facing “Next Improvements (planned)” section in `repos/workspace-hub/README.md` for observability checks, safe tuning knobs, and triage workflow guidance.
 - Added a versioned observability schema (`observabilityVersion: 1`) with grouped `discovery`, `diagnostics`, and `summary` sections while keeping legacy top-level fields as compatibility aliases.
 

@@ -1,5 +1,8 @@
+import { type ReactNode, useState } from 'react'
+
 import { SectionCard } from '../../components/SectionCard.tsx'
 import { collectAgentToolingLabels, formatAgentToolingSummary } from './agentTooling.ts'
+import type { RepoLayoutMode } from '../layout/repoLayout.ts'
 import type {
   RepoType,
   WorkspaceArchive,
@@ -10,9 +13,7 @@ import type {
 type RepoFilterValue =
   | RepoType
   | 'all'
-  | 'archived'
   | 'external'
-  | 'non-archived'
   | 'runnable'
 
 type RepoSnapshotProps = {
@@ -26,11 +27,17 @@ type RepoSnapshotProps = {
   onFilterChange: (value: RepoFilterValue) => void
   onOpenIndexedPath: (targetPath: string) => Promise<void>
   onSearchChange: (value: string) => void
+  onSelectIndexedCapability: (capabilityId: string) => void
   onSelectIndexedRepo: (relativePath: string) => void
+  onSelectIndexedService: (serviceId: string) => void
   onSelectRepo: (path: string) => void
+  onToggleArchived: () => void
+  repoLayoutMode: RepoLayoutMode
   searchTerm: string
+  selectedRepoInlineDetails: ReactNode
   selectedPath: string | null
   selectedFilter: RepoFilterValue
+  showArchived: boolean
 }
 
 type RepoSnapshotCardProps = {
@@ -44,9 +51,19 @@ type ArchiveSnapshotCardProps = {
 
 type IndexedSearchCardProps = {
   onOpenIndexedPath: (targetPath: string) => Promise<void>
+  onSelectIndexedCapability: (capabilityId: string) => void
   onSelectIndexedRepo: (relativePath: string) => void
+  onSelectIndexedService: (serviceId: string) => void
   result: WorkspaceSearchResult
 }
+
+type IndexedSearchFilterValue =
+  | 'all'
+  | 'artifact'
+  | 'capability'
+  | 'failure-report'
+  | 'repo'
+  | 'service'
 
 function formatBranchLabel(repo: WorkspaceRepo) {
   if (repo.git.branch) {
@@ -94,7 +111,10 @@ function formatArchiveFolder(relativePath: string) {
   return segments.slice(0, -1).join('/') || 'repos'
 }
 
-function RepoSnapshotCard({ repo, selected }: RepoSnapshotCardProps) {
+function RepoSnapshotCard({
+  repo,
+  selected,
+}: RepoSnapshotCardProps) {
   const showDependencyWarning =
     repo.dependencies.state === 'missing' || repo.dependencies.state === 'unknown'
   const agentLabels = collectAgentToolingLabels(repo.agentTooling)
@@ -179,10 +199,12 @@ function ArchiveSnapshotCard({ archive }: ArchiveSnapshotCardProps) {
 
 function IndexedSearchCard({
   onOpenIndexedPath,
+  onSelectIndexedCapability,
   onSelectIndexedRepo,
+  onSelectIndexedService,
   result,
 }: IndexedSearchCardProps) {
-  const { filePath, repoRelativePath } = result
+  const { capabilityId, filePath, repoRelativePath, serviceId } = result
 
   return (
     <article className="search-result-card">
@@ -207,6 +229,30 @@ function IndexedSearchCard({
             type="button"
           >
             Select repo
+          </button>
+        ) : null}
+
+        {serviceId ? (
+          <button
+            className="action-button"
+            onClick={() => {
+              onSelectIndexedService(serviceId)
+            }}
+            type="button"
+          >
+            View service
+          </button>
+        ) : null}
+
+        {capabilityId ? (
+          <button
+            className="action-button"
+            onClick={() => {
+              onSelectIndexedCapability(capabilityId)
+            }}
+            type="button"
+          >
+            Open capability
           </button>
         ) : null}
 
@@ -237,16 +283,28 @@ export function RepoSnapshot({
   onFilterChange,
   onOpenIndexedPath,
   onSearchChange,
+  onSelectIndexedCapability,
   onSelectIndexedRepo,
+  onSelectIndexedService,
   onSelectRepo,
+  onToggleArchived,
+  repoLayoutMode,
   searchTerm,
+  selectedRepoInlineDetails,
   selectedPath,
   selectedFilter,
+  showArchived,
 }: RepoSnapshotProps) {
-  const showRepoSection = selectedFilter !== 'archived'
-  const showArchiveSection = selectedFilter === 'all' || selectedFilter === 'archived'
-  const showGroupedHeadings = showRepoSection && showArchiveSection && filteredArchives.length > 0
+  const [indexedSearchFilter, setIndexedSearchFilter] =
+    useState<IndexedSearchFilterValue>('all')
+  const showRepoSection = true
+  const showArchiveSection = showArchived && filteredArchives.length > 0
+  const showGroupedHeadings = showRepoSection && showArchiveSection
   const hasVisibleItems = filteredRepos.length > 0 || filteredArchives.length > 0
+  const visibleIndexedResults =
+    indexedSearchFilter === 'all'
+      ? indexedSearchResults
+      : indexedSearchResults.filter((result) => result.category === indexedSearchFilter)
 
   return (
     <SectionCard
@@ -261,6 +319,7 @@ export function RepoSnapshot({
           <input
             onChange={(event) => {
               onSearchChange(event.target.value)
+              setIndexedSearchFilter('all')
             }}
             placeholder="name, path, type, tag, archive"
             type="search"
@@ -277,8 +336,6 @@ export function RepoSnapshot({
             value={selectedFilter}
           >
             <option value="all">All items</option>
-            <option value="non-archived">Non-archived repos</option>
-            <option value="archived">Archived files</option>
             <option value="runnable">Runnable repos</option>
             <option value="external">External repos</option>
             {availableTypes.map((type) => (
@@ -288,6 +345,14 @@ export function RepoSnapshot({
             ))}
           </select>
         </label>
+
+        <button
+          className={`action-button repo-archive-toggle ${showArchived ? 'active' : ''}`}
+          onClick={onToggleArchived}
+          type="button"
+        >
+          {showArchived ? 'Hide archived' : 'Show archived'}
+        </button>
       </div>
 
       {searchTerm.trim().length >= 2 ? (
@@ -295,8 +360,32 @@ export function RepoSnapshot({
           <div className="discovery-section-heading">
             <span className="discovery-section-title">Indexed search</span>
             <span className="tag">
-              {indexedSearchLoading ? '…' : indexedSearchResults.length}
+              {indexedSearchLoading ? '…' : visibleIndexedResults.length}
             </span>
+          </div>
+
+          <div className="search-filter-row" role="group" aria-label="Indexed search filters">
+            {(
+              [
+                ['all', 'All'],
+                ['repo', 'Repos'],
+                ['service', 'Services'],
+                ['capability', 'Capabilities'],
+                ['failure-report', 'Failures'],
+                ['artifact', 'Artifacts'],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                className={`search-filter-chip ${indexedSearchFilter === value ? 'active' : ''}`}
+                onClick={() => {
+                  setIndexedSearchFilter(value)
+                }}
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           {indexedSearchError ? (
@@ -304,13 +393,15 @@ export function RepoSnapshot({
               <strong>Indexed search is unavailable.</strong>
               <p>{indexedSearchError}</p>
             </div>
-          ) : indexedSearchResults.length ? (
+          ) : visibleIndexedResults.length ? (
             <div className="search-result-list">
-              {indexedSearchResults.map((result) => (
+              {visibleIndexedResults.map((result) => (
                 <IndexedSearchCard
                   key={result.id}
                   onOpenIndexedPath={onOpenIndexedPath}
+                  onSelectIndexedCapability={onSelectIndexedCapability}
                   onSelectIndexedRepo={onSelectIndexedRepo}
+                  onSelectIndexedService={onSelectIndexedService}
                   result={result}
                 />
               ))}
@@ -319,8 +410,8 @@ export function RepoSnapshot({
             <p className="loading-copy">Searching indexed metadata, logs, and local artifacts...</p>
           ) : (
             <div className="empty-state">
-              <strong>No indexed matches yet.</strong>
-              <p>Try a broader phrase or search by branch, tag, manifest key, or error text.</p>
+              <strong>No indexed matches for this filter yet.</strong>
+              <p>Try a broader phrase or switch to another result type such as repos, capabilities, or services.</p>
             </div>
           )}
         </div>
@@ -330,6 +421,13 @@ export function RepoSnapshot({
         <p className="loading-copy">Scanning workspace roots...</p>
       ) : hasVisibleItems ? (
         <div className="discovery-groups">
+          {repoLayoutMode === 'discovery-first' && !selectedPath ? (
+            <div className="discovery-inline-guide">
+              <strong>Select a repo to open details.</strong>
+              <p>Discovery-first keeps Repo Discovery full width until you explicitly choose one.</p>
+            </div>
+          ) : null}
+
           {showRepoSection && filteredRepos.length ? (
             <div className="discovery-group">
               {showGroupedHeadings ? (
@@ -339,19 +437,38 @@ export function RepoSnapshot({
                 </div>
               ) : null}
               <ul className="repo-list">
-                {filteredRepos.map((repo) => (
-                  <li key={repo.path}>
-                    <button
-                      className="repo-button"
-                      onClick={() => {
-                        onSelectRepo(repo.path)
-                      }}
-                      type="button"
+                {filteredRepos.map((repo) => {
+                  const isSelected = repo.path === selectedPath
+                  const showInlineDetails =
+                    repoLayoutMode === 'discovery-first' && isSelected
+
+                  return (
+                    <li
+                      key={repo.path}
+                      className={`repo-list-item-shell ${
+                        showInlineDetails ? 'with-inline-details active' : ''
+                      }`}
                     >
-                      <RepoSnapshotCard repo={repo} selected={repo.path === selectedPath} />
-                    </button>
-                  </li>
-                ))}
+                      <button
+                        className="repo-button"
+                        onClick={() => {
+                          onSelectRepo(repo.path)
+                        }}
+                        type="button"
+                      >
+                        <RepoSnapshotCard
+                          repo={repo}
+                          selected={isSelected}
+                        />
+                      </button>
+                      {showInlineDetails ? (
+                        <div className="repo-card-selection repo-inline-details-shell">
+                          {selectedRepoInlineDetails}
+                        </div>
+                      ) : null}
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           ) : null}
@@ -375,9 +492,7 @@ export function RepoSnapshot({
       ) : (
         <div className="empty-state">
           <strong>No items match the current filter.</strong>
-          <p>
-            Try clearing the search or switching between archived and non-archived items.
-          </p>
+          <p>Try clearing the search, changing the repo filter, or toggling archived items.</p>
         </div>
       )}
     </SectionCard>

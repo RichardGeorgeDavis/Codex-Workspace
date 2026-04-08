@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "name": "core",
+      "repos": [
+        "workspace-hub"
+      ]
+    },
+    {
+      "name": "frontend",
+      "repos": [
+        "workspace-hub"
+      ]
+    },
+    {
+      "name": "wordpress",
+      "repos": []
+    }
+  ]
+}

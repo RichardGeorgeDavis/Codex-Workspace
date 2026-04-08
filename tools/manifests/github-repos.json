@@ -1,0 +1,14 @@
+{
+  "sources": [
+    {
+      "id": "voltagent-awesome-design-md",
+      "name": "VoltAgent/awesome-design-md",
+      "repoUrl": "https://github.com/VoltAgent/awesome-design-md.git",
+      "repoPath": "abilities/voltagent-awesome-design-md",
+      "group": "abilities",
+      "recommendedUse": "ability",
+      "refreshDesignCatalog": true,
+      "notes": "Legacy compatibility record only. The canonical tracked source now lives in tools/manifests/workspace-capabilities.json, where this repo is classified as the optional ability repos/abilities/voltagent-awesome-design-md."
+    }
+  ]
+}

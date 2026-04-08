@@ -1,0 +1,18 @@
+{
+  "services": [
+    {
+      "id": "mempalace",
+      "name": "MemPalace",
+      "category": "memory",
+      "repoUrl": "https://github.com/milla-jovovich/mempalace.git",
+      "repoPath": "tools/mempalace",
+      "docsPath": "docs/11-core-memory-and-reference-promotion.md",
+      "sharedRoot": "shared/mempalace",
+      "cacheRoot": "cache/mempalace",
+      "installCommand": "tools/bin/workspace-memory install",
+      "runtimeCommand": "tools/bin/mempalace-start",
+      "syncCommand": "tools/bin/mempalace-sync",
+      "notes": "Workspace-level long-term memory and retrieval service. Keep service code in tools/, durable per-user state in shared/, and disposable runtime artifacts in cache/."
+    }
+  ]
+}

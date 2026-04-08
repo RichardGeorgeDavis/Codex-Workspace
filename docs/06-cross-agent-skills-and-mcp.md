@@ -54,11 +54,12 @@ Treat upstream skill catalogs such as [`openai/skills`](https://github.com/opena
 
 Treat upstream design catalogs such as [`VoltAgent/awesome-design-md`](https://github.com/VoltAgent/awesome-design-md) similarly:
 
-- keep the reviewed catalog as an ignored reference snapshot under `tools/ref/`
-- refresh it with `tools/scripts/sync-reference-snapshots.sh` when you want newer `DESIGN.md` files
+- classify it as an optional workspace `ability`
+- keep the managed catalog as a standalone repo under `repos/abilities/voltagent-awesome-design-md`
+- refresh it with `tools/scripts/manage-workspace-capabilities.sh update --run voltagent-awesome-design-md` when you want newer `DESIGN.md` files
 - copy only the specific `DESIGN.md` files a repo needs into that repo instead of making the catalog a shared runtime dependency
 
-The reviewed reference manifest now also includes `openai/skills`, `openai/codex`, and `VoltAgent/awesome-design-md` so those upstream sources can be refreshed into `tools/ref/` for local comparison when needed.
+The reviewed update flow now uses one classification-aware lifecycle: snapshot sources such as `openai/skills` and `openai/codex` stay under `tools/ref/`, optional abilities such as `VoltAgent/awesome-design-md` live under `repos/abilities/`, and core workspace services live under `tools/`.
 
 Third-party orchestration layers that generate `AGENTS.md`, skills folders, or MCP config should remain optional local tooling by default rather than becoming the canonical workspace layout.
 

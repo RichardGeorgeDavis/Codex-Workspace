@@ -1,0 +1,40 @@
+wing: workspace_hub
+rooms:
+- name: testing
+  description: Files from test/
+  keywords:
+  - testing
+  - test
+- name: backend
+  description: Files from server/
+  keywords:
+  - backend
+  - server
+- name: documentation
+  description: Files from docs/
+  keywords:
+  - documentation
+  - docs
+- name: public
+  description: Files from public/
+  keywords:
+  - public
+  - public
+- name: data
+  description: Files from data/
+  keywords:
+  - data
+  - data
+- name: src
+  description: Files from src/
+  keywords:
+  - src
+  - src
+- name: frontend
+  description: Files from components/
+  keywords:
+  - frontend
+  - components
+- name: general
+  description: Files that don't fit other rooms
+  keywords: []

@@ -25,6 +25,8 @@ That means:
 - repo docs and manifests remain the primary source of truth
 - official Codex repo-local skills live in `.codex/skills/`, while `.agents/skills/` remains a supported compatibility mirror and shared reusable skill material lives in normal tracked workspace folders
 - generated summaries belong under `cache/`
+- core workspace services belong under `tools/` with durable per-user data under `shared/`
+- reviewed upstream sources should be classified explicitly as `reference-only`, `ability`, `repo-level adoption`, or `core service`
 - local-only memory and secrets stay local
 
 The intended result is a filesystem-first context model that is easier to inspect and less opaque than ad hoc prompt assembly.
@@ -80,10 +82,25 @@ Each repository remains independently runnable in the way that best suits it:
 - Vite / Three.js / WebGL projects via their dev server
 - other stacks according to their own tooling
 
+Alongside those layers, the workspace may also adopt a small number of core workspace services when a capability supports the whole workspace rather than one repo.
+
+Examples:
+
+- shared workspace tooling in `tools/`
+- per-user durable service state in `shared/`
+- long-term memory and retrieval infrastructure such as MemPalace
+
 The context model follows the same principle:
 - tracked repo resources are the canonical source of truth
 - generated summaries are helper layers
 - local memory is private until promoted intentionally
+
+Current reviewed-source taxonomy:
+
+- `reference-only`: reviewed snapshots under `tools/ref/`
+- `ability`: optional installable repos under `repos/abilities/`
+- `repo-level adoption`: normal tracked repos under `repos/`
+- `core service`: tracked runtime code under `tools/` with durable state in `shared/` and disposable state in `cache/`
 
 ## Important architectural rule
 
@@ -152,3 +169,4 @@ Suggested order:
 5. implement direct local runtime support
 6. add ServBay integration where useful
 7. refine launch rules and project status tracking
+8. update public-facing docs when workspace-wide features such as Workspace memory or capability lifecycle changes land

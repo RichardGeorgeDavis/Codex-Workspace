@@ -83,6 +83,23 @@ Tracked context should remain portable. Local memory should remain local.
 
 Local memory is still useful, but it should be deliberate, reviewable, and clearly separated from canonical repo facts.
 
+## Workspace-level memory services
+
+Some memory or retrieval capabilities may be useful at the workspace level without becoming canonical tracked project state.
+
+When that happens, use this split:
+
+- tracked service code in `tools/<service>/`
+- durable per-user memory in `shared/<service>/<user>/`
+- disposable generated artifacts in `cache/<service>/<user>/`
+
+Rules:
+
+- repo docs, manifests, and specs stay canonical
+- workspace memory services are retrieval helpers, not the source of truth
+- private or per-user memory should not be indexed into broad workspace views by accident
+- Workspace Hub should surface these services explicitly rather than pretending they are normal repos
+
 ## Selective Patterns
 
 Some external agent or workspace systems are useful more as pattern libraries than as dependencies.

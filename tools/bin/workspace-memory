@@ -1,0 +1,811 @@
+#!/usr/bin/env sh
+set -eu
+
+. "$(CDPATH= cd -- "$(dirname "$0")/../scripts" && pwd)/mempalace-env.sh"
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") <command> [args...]
+
+Workspace wrapper for the MemPalace service.
+
+Commands:
+  install        Clone or update the MemPalace repo and install its local runtime
+  init           Create the user-scoped MemPalace config home for this workspace
+  status         Print a short local status summary
+  paths          Print key MemPalace workspace paths
+  json           Emit a small JSON summary for tooling
+  export-codex   Export a Codex session into a readable per-user transcript bundle
+  mine-docs      Mine the workspace docs or a docs subdirectory into MemPalace
+  mine-repo      Mine a repo under repos/ into MemPalace
+  mine-convos    Mine a conversation-export directory into MemPalace
+  split-convos   Split concatenated transcript files into per-session files
+  mine-codex     Mine Codex archived session logs from ~/.codex
+  mine-codex-current
+                 Export and mine the active Codex session or a chosen session file
+  save-repo      Close out a repo by saving repo docs, optional workspace docs, and the current Codex thread
+  save-workspace Save workspace docs and the current Codex thread without a repo target
+  search         Run a MemPalace search and record it in service state
+  wake-up        Run the MemPalace wake-up command and record it in service state
+  mcp-server     Run the MemPalace MCP server through the local workspace runtime
+  run [args...]  Run the MemPalace CLI through the local workspace runtime
+
+Any unknown command is passed through to the MemPalace CLI.
+EOF
+}
+
+resolve_python_mode() {
+  if mempalace_venv_ready; then
+    printf 'venv\n'
+    return 0
+  fi
+
+  if command -v uv >/dev/null 2>&1 && mempalace_repo_exists; then
+    printf 'uv\n'
+    return 0
+  fi
+
+  printf 'missing\n'
+}
+
+is_path_within_root() {
+  root_path=$1
+  candidate_path=$2
+
+  case "$candidate_path" in
+    "$root_path"|"$root_path"/*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+resolve_existing_dir() {
+  target_path=$1
+
+  if [ ! -d "$target_path" ]; then
+    printf 'Directory not found: %s\n' "$target_path" >&2
+    exit 1
+  fi
+
+  (CDPATH= cd -- "$target_path" && pwd)
+}
+
+resolve_existing_file() {
+  target_path=$1
+
+  if [ ! -f "$target_path" ]; then
+    printf 'File not found: %s\n' "$target_path" >&2
+    exit 1
+  fi
+
+  resolved_dir=$(CDPATH= cd -- "$(dirname -- "$target_path")" && pwd)
+  printf '%s/%s\n' "$resolved_dir" "$(basename -- "$target_path")"
+}
+
+resolve_general_target() {
+  requested_target=$1
+
+  if [ -z "$requested_target" ]; then
+    printf 'A directory path is required.\n' >&2
+    exit 1
+  fi
+
+  case "$requested_target" in
+    ~/*)
+      candidate_path="${workspace_operator_home}/${requested_target#~/}"
+      ;;
+    *)
+      candidate_path=$requested_target
+      ;;
+  esac
+
+  resolve_existing_dir "$candidate_path"
+}
+
+resolve_workspace_docs_target() {
+  requested_target=${1:-"$workspace_root/docs"}
+
+  case "$requested_target" in
+    /*)
+      candidate_path=$requested_target
+      ;;
+    *)
+      candidate_path="$workspace_root/$requested_target"
+      ;;
+  esac
+
+  resolved_path=$(resolve_existing_dir "$candidate_path")
+
+  if ! is_path_within_root "$workspace_root/docs" "$resolved_path"; then
+    printf 'Docs target must stay inside %s\n' "$workspace_root/docs" >&2
+    exit 1
+  fi
+
+  printf '%s\n' "$resolved_path"
+}
+
+resolve_workspace_repo_target() {
+  requested_target=$1
+
+  if [ -z "$requested_target" ]; then
+    printf 'A repo path or repo name is required.\n' >&2
+    exit 1
+  fi
+
+  case "$requested_target" in
+    /*)
+      candidate_path=$requested_target
+      ;;
+    repos/*)
+      candidate_path="$workspace_root/$requested_target"
+      ;;
+    *)
+      candidate_path="$workspace_root/repos/$requested_target"
+      ;;
+  esac
+
+  resolved_path=$(resolve_existing_dir "$candidate_path")
+
+  if ! is_path_within_root "$workspace_root/repos" "$resolved_path"; then
+    printf 'Repo target must stay inside %s\n' "$workspace_root/repos" >&2
+    exit 1
+  fi
+
+  printf '%s\n' "$resolved_path"
+}
+
+invoke_mempalace_module() {
+  export_mempalace_runtime_env
+  mode=$(resolve_python_mode)
+
+  case "$mode" in
+    venv)
+      "$mempalace_python" -m "$@"
+      ;;
+    uv)
+      uv run --directory "$mempalace_repo" --python "$mempalace_uv_python" python -m "$@"
+      ;;
+    *)
+      printf 'MemPalace runtime is not installed. Run: %s\n' "$mempalace_install_command" >&2
+      exit 1
+      ;;
+  esac
+}
+
+run_mempalace_module() {
+  invoke_mempalace_module "$@"
+}
+
+run_mempalace_mcp_server() {
+  record_mempalace_event "mcp-server"
+  invoke_mempalace_module mempalace.mcp_server "$@"
+}
+
+create_default_identity() {
+  identity_path="$mempalace_config_dir/identity.txt"
+  if [ -f "$identity_path" ]; then
+    return 0
+  fi
+
+  cat >"$identity_path" <<EOF
+Describe who you are, what you work on, and what this workspace should remember.
+EOF
+}
+
+print_paths() {
+  printf 'user: %s\n' "$mempalace_user"
+  printf 'repo: %s\n' "$mempalace_repo"
+  printf 'home: %s\n' "$mempalace_home"
+  printf 'config: %s\n' "$mempalace_config_dir"
+  printf 'exports: %s\n' "$mempalace_exports_root"
+  printf 'codex-exports: %s\n' "$mempalace_codex_exports_root"
+  printf 'cache: %s\n' "$mempalace_cache_root"
+  printf 'state: %s\n' "$mempalace_state_file"
+  printf 'docs: %s\n' "$mempalace_docs"
+}
+
+print_json() {
+  repo_present="false"
+  venv_ready="false"
+
+  if mempalace_repo_exists; then
+    repo_present="true"
+  fi
+
+  if mempalace_venv_ready; then
+    venv_ready="true"
+  fi
+
+  cat <<EOF
+{
+  "user": "$mempalace_user",
+  "repo": "$mempalace_repo",
+  "repoPresent": $repo_present,
+  "venvReady": $venv_ready,
+  "home": "$mempalace_home",
+  "configDir": "$mempalace_config_dir",
+  "exportsRoot": "$mempalace_exports_root",
+  "codexExportsRoot": "$mempalace_codex_exports_root",
+  "cacheRoot": "$mempalace_cache_root",
+  "stateFile": "$mempalace_state_file",
+  "docs": "$mempalace_docs"
+}
+EOF
+}
+
+clear_existing_venv() {
+  if [ ! -e "$mempalace_repo/.venv" ]; then
+    return 0
+  fi
+
+  chmod -R u+w "$mempalace_repo/.venv" 2>/dev/null || true
+  find "$mempalace_repo/.venv" -name '.DS_Store' -delete 2>/dev/null || true
+  rm -rf "$mempalace_repo/.venv"
+}
+
+mempalace_repo_mine_excludes='pnpm-lock.yaml yarn.lock bun.lockb composer.lock Cargo.lock Gemfile.lock Podfile.lock Pipfile.lock poetry.lock uv.lock dist/** build/** coverage/** vendor/** .next/** .nuxt/** .output/** storybook-static/** target/**'
+mempalace_docs_mine_excludes='.workspace/mempalace/** entities.json mempalace.yaml mempalace.yml'
+
+run_filtered_project_mine() {
+  filter_kind=$1
+  target_path=$2
+  shift 2
+
+  set -- mempalace mine "$target_path" "$@"
+
+  if [ "$filter_kind" = repo ]; then
+    exclude_patterns=$mempalace_repo_mine_excludes
+  else
+    exclude_patterns=$mempalace_docs_mine_excludes
+  fi
+
+  for pattern in $exclude_patterns; do
+    set -- "$@" --exclude "$pattern"
+  done
+
+  invoke_mempalace_module "$@"
+}
+
+target_sidecar_dir() {
+  target_path=$1
+  printf '%s/.workspace/mempalace\n' "$target_path"
+}
+
+ensure_target_sidecar_dir() {
+  target_path=$1
+  sidecar_dir=$(target_sidecar_dir "$target_path")
+  mkdir -p "$sidecar_dir"
+}
+
+move_target_metadata_to_sidecar() {
+  target_path=$1
+  sidecar_dir=$(target_sidecar_dir "$target_path")
+
+  ensure_target_sidecar_dir "$target_path"
+
+  for metadata_file in mempalace.yaml entities.json; do
+    target_file="$target_path/$metadata_file"
+    sidecar_file="$sidecar_dir/$metadata_file"
+
+    if [ -L "$target_file" ]; then
+      continue
+    fi
+
+    if [ -f "$target_file" ] && [ ! -f "$sidecar_file" ]; then
+      mv "$target_file" "$sidecar_file"
+    fi
+  done
+}
+
+link_target_metadata() {
+  target_path=$1
+  sidecar_dir=$(target_sidecar_dir "$target_path")
+
+  move_target_metadata_to_sidecar "$target_path"
+
+  for metadata_file in mempalace.yaml entities.json; do
+    target_file="$target_path/$metadata_file"
+    sidecar_file="$sidecar_dir/$metadata_file"
+
+    if [ -L "$target_file" ]; then
+      rm -f "$target_file"
+    elif [ -e "$target_file" ]; then
+      continue
+    fi
+
+    ln -s ".workspace/mempalace/$metadata_file" "$target_file"
+  done
+}
+
+cleanup_target_metadata_links() {
+  target_path=$1
+
+  for metadata_file in mempalace.yaml entities.json; do
+    target_file="$target_path/$metadata_file"
+
+    if [ ! -L "$target_file" ]; then
+      continue
+    fi
+
+    link_target=$(readlink "$target_file" 2>/dev/null || printf '')
+    if [ "$link_target" = ".workspace/mempalace/$metadata_file" ]; then
+      rm -f "$target_file"
+    fi
+  done
+}
+
+run_with_target_metadata() {
+  target_path=$1
+  shift
+
+  link_target_metadata "$target_path"
+  set +e
+  "$@"
+  exit_code=$?
+  set -e
+  cleanup_target_metadata_links "$target_path"
+  return "$exit_code"
+}
+
+ensure_target_initialized() {
+  target_path=$1
+
+  move_target_metadata_to_sidecar "$target_path"
+
+  if [ -f "$(target_sidecar_dir "$target_path")/mempalace.yaml" ]; then
+    return 0
+  fi
+
+  printf 'Initializing MemPalace target: %s\n' "$target_path"
+  run_with_target_metadata "$target_path" invoke_mempalace_module mempalace init --yes "$target_path"
+}
+
+install_service() {
+  ensure_mempalace_dirs
+
+  if ! command -v git >/dev/null 2>&1; then
+    printf 'git is required to install MemPalace.\n' >&2
+    exit 1
+  fi
+
+  if mempalace_repo_exists; then
+    printf 'MemPalace repo already present: %s\n' "$mempalace_repo"
+  else
+    printf 'Cloning MemPalace into %s\n' "$mempalace_repo"
+    git clone "$mempalace_repo_url" "$mempalace_repo"
+  fi
+
+  if command -v uv >/dev/null 2>&1; then
+    printf 'Installing MemPalace runtime with uv sync (%s)\n' "$mempalace_uv_python"
+    uv python install "$mempalace_uv_python"
+    clear_existing_venv
+    (cd "$mempalace_repo" && uv sync --python "$mempalace_uv_python")
+  else
+    if [ -z "$mempalace_preferred_python" ]; then
+      printf 'A supported Python interpreter is required when uv is unavailable.\n' >&2
+      exit 1
+    fi
+
+    printf 'Installing MemPalace runtime with %s -m venv\n' "$mempalace_preferred_python"
+    clear_existing_venv
+    (cd "$mempalace_repo" && "$mempalace_preferred_python" -m venv .venv && .venv/bin/pip install --upgrade pip && .venv/bin/pip install -e .)
+  fi
+
+  "$0" init
+  record_mempalace_event "install"
+}
+
+init_service() {
+  ensure_mempalace_dirs
+  create_default_identity
+  export_mempalace_runtime_env
+  mode=$(resolve_python_mode)
+
+  case "$mode" in
+    venv)
+      "$mempalace_python" - <<'PY'
+from mempalace.config import MempalaceConfig
+config_path = MempalaceConfig().init()
+print(config_path)
+PY
+      ;;
+    uv)
+      uv run --directory "$mempalace_repo" --python "$mempalace_uv_python" python - <<'PY'
+from mempalace.config import MempalaceConfig
+config_path = MempalaceConfig().init()
+print(config_path)
+PY
+      ;;
+    *)
+      printf 'MemPalace runtime is not installed yet. Run: %s\n' "$mempalace_install_command" >&2
+      exit 1
+      ;;
+  esac
+
+  record_mempalace_event "init" "$mempalace_config_dir/config.json"
+}
+
+print_status() {
+  ensure_mempalace_dirs
+  missing=0
+
+  printf 'MemPalace workspace service\n'
+  printf 'User: %s\n' "$mempalace_user"
+
+  if mempalace_repo_exists; then
+    printf 'Repo: ready (%s)\n' "$mempalace_repo"
+  else
+    printf 'Repo: missing (%s)\n' "$mempalace_repo"
+    missing=1
+  fi
+
+  if mempalace_venv_ready; then
+    printf 'Runtime: ready (%s)\n' "$mempalace_python"
+  elif command -v uv >/dev/null 2>&1 && mempalace_repo_exists; then
+    printf 'Runtime: uv fallback available\n'
+  else
+    printf 'Runtime: missing\n'
+    missing=1
+  fi
+
+  if [ -f "$mempalace_config_dir/config.json" ]; then
+    printf 'Config: ready (%s)\n' "$mempalace_config_dir/config.json"
+  else
+    printf 'Config: missing (%s)\n' "$mempalace_config_dir/config.json"
+    missing=1
+  fi
+
+  if [ "$missing" -eq 0 ]; then
+    return 0
+  fi
+
+  return 1
+}
+
+mine_docs() {
+  if [ $# -gt 0 ]; then
+    target_path=$(resolve_workspace_docs_target "$1")
+    shift
+  else
+    target_path=$(resolve_workspace_docs_target)
+  fi
+
+  ensure_target_initialized "$target_path"
+  run_with_target_metadata "$target_path" run_filtered_project_mine docs "$target_path" "$@"
+  record_mempalace_event "mine-docs" "$target_path"
+}
+
+mine_repo() {
+  if [ $# -eq 0 ]; then
+    printf 'A repo path or repo name is required.\n' >&2
+    exit 1
+  fi
+
+  target_path=$(resolve_workspace_repo_target "$1")
+  shift
+
+  ensure_target_initialized "$target_path"
+  run_with_target_metadata "$target_path" run_filtered_project_mine repo "$target_path" "$@"
+  record_mempalace_event "mine-repo" "$target_path"
+}
+
+mine_convos() {
+  target_path=$(resolve_general_target "${1:-}")
+  shift
+
+  invoke_mempalace_module mempalace mine "$target_path" --mode convos "$@"
+  record_mempalace_event "mine-convos" "$target_path"
+}
+
+split_convos() {
+  target_path=$(resolve_general_target "${1:-}")
+  shift
+
+  invoke_mempalace_module mempalace split "$target_path" "$@"
+}
+
+mine_codex() {
+  if [ $# -gt 0 ] && [ "${1#-}" = "$1" ]; then
+    target_path=$(resolve_general_target "$1")
+    shift
+  else
+    target_path=$(resolve_general_target "$workspace_operator_home/.codex/archived_sessions")
+  fi
+
+  invoke_mempalace_module mempalace mine "$target_path" --mode convos "$@"
+  record_mempalace_event "mine-convos" "$target_path"
+}
+
+search_memory() {
+  if [ $# -eq 0 ]; then
+    printf 'A search query is required.\n' >&2
+    exit 1
+  fi
+
+  query=$1
+  shift
+
+  invoke_mempalace_module mempalace search "$query" "$@"
+  record_mempalace_event "search" "$query"
+}
+
+wake_up_memory() {
+  wake_target=${*:-}
+
+  invoke_mempalace_module mempalace wake-up "$@"
+  record_mempalace_event "wake-up" "$wake_target"
+}
+
+find_codex_session_by_thread() {
+  thread_id=$1
+
+  found_path=$(find "$workspace_operator_home/.codex/sessions" "$workspace_operator_home/.codex/archived_sessions" \
+    -type f -name "*$thread_id*.jsonl" 2>/dev/null | sort | tail -n 1)
+
+  if [ -z "$found_path" ]; then
+    return 1
+  fi
+
+  resolve_existing_file "$found_path"
+}
+
+find_latest_codex_session() {
+  latest_path=$(find "$workspace_operator_home/.codex/sessions" -type f -name 'rollout-*.jsonl' 2>/dev/null | sort | tail -n 1)
+
+  if [ -z "$latest_path" ]; then
+    latest_path=$(find "$workspace_operator_home/.codex/archived_sessions" -type f -name 'rollout-*.jsonl' 2>/dev/null | sort | tail -n 1)
+  fi
+
+  if [ -z "$latest_path" ]; then
+    printf 'No Codex session files were found under %s/.codex\n' "$workspace_operator_home" >&2
+    exit 1
+  fi
+
+  resolve_existing_file "$latest_path"
+}
+
+resolve_codex_session_file() {
+  requested_session=${1:-current}
+
+  case "$requested_session" in
+    ''|current)
+      if [ -n "${CODEX_THREAD_ID:-}" ]; then
+        if session_path=$(find_codex_session_by_thread "$CODEX_THREAD_ID"); then
+          printf '%s\n' "$session_path"
+          return 0
+        fi
+      fi
+      find_latest_codex_session
+      ;;
+    latest)
+      find_latest_codex_session
+      ;;
+    ~/*)
+      resolve_existing_file "${workspace_operator_home}/${requested_session#~/}"
+      ;;
+    /*|./*|../*)
+      resolve_existing_file "$requested_session"
+      ;;
+    *)
+      if [ -f "$requested_session" ]; then
+        resolve_existing_file "$requested_session"
+      elif session_path=$(find_codex_session_by_thread "$requested_session"); then
+        printf '%s\n' "$session_path"
+      else
+        printf 'Unable to resolve Codex session: %s\n' "$requested_session" >&2
+        exit 1
+      fi
+      ;;
+  esac
+}
+
+codex_export_dir_for_session() {
+  session_file=$1
+  session_name=$(basename -- "$session_file")
+  session_stem=${session_name%.jsonl}
+  printf '%s/sessions/%s\n' "$mempalace_codex_exports_root" "$session_stem"
+}
+
+export_codex_session() {
+  requested_session=${1:-current}
+  session_file=$(resolve_codex_session_file "$requested_session")
+  export_dir=$(codex_export_dir_for_session "$session_file")
+  export_script="$workspace_root/tools/scripts/export-codex-session.sh"
+
+  if [ ! -x "$export_script" ]; then
+    printf 'Missing executable export helper: %s\n' "$export_script" >&2
+    exit 1
+  fi
+
+  "$export_script" "$session_file" "$export_dir" >/dev/null
+  record_mempalace_event "export-codex" "$session_file"
+  printf '%s\n' "$export_dir"
+}
+
+mine_codex_current() {
+  if [ $# -gt 0 ] && [ "${1#-}" = "$1" ]; then
+    requested_session=$1
+    shift
+  else
+    requested_session=current
+  fi
+
+  export_dir=$(export_codex_session "$requested_session")
+  invoke_mempalace_module mempalace mine "$export_dir/raw" --mode convos "$@"
+  record_mempalace_event "mine-convos" "$export_dir/raw"
+}
+
+save_repo_memory() {
+  include_docs=1
+  include_codex=1
+  include_wake_up=1
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --no-docs)
+        include_docs=0
+        shift
+        ;;
+      --no-codex)
+        include_codex=0
+        shift
+        ;;
+      --no-wake-up)
+        include_wake_up=0
+        shift
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  if [ $# -eq 0 ]; then
+    printf 'A repo path or repo name is required.\n' >&2
+    exit 1
+  fi
+
+  repo_target=$1
+  shift
+  repo_path=$(resolve_workspace_repo_target "$repo_target")
+
+  mine_repo "$repo_target" "$@"
+
+  if [ "$include_docs" -eq 1 ]; then
+    mine_docs "$workspace_root/docs" "$@"
+  fi
+
+  if [ "$include_codex" -eq 1 ]; then
+    mine_codex_current "$@"
+  fi
+
+  if [ "$include_wake_up" -eq 1 ]; then
+    wake_up_memory
+  fi
+
+  record_mempalace_event "save-repo" "$repo_path"
+}
+
+save_workspace_memory() {
+  include_codex=1
+  include_wake_up=1
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --no-codex)
+        include_codex=0
+        shift
+        ;;
+      --no-wake-up)
+        include_wake_up=0
+        shift
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  if [ $# -gt 0 ] && [ "${1#-}" = "$1" ]; then
+    docs_target=$1
+    shift
+  else
+    docs_target=$workspace_root/docs
+  fi
+
+  docs_path=$(resolve_workspace_docs_target "$docs_target")
+  mine_docs "$docs_path" "$@"
+
+  if [ "$include_codex" -eq 1 ]; then
+    mine_codex_current "$@"
+  fi
+
+  if [ "$include_wake_up" -eq 1 ]; then
+    wake_up_memory
+  fi
+
+  record_mempalace_event "save-workspace" "$docs_path"
+}
+
+command_name=${1:-}
+
+if [ -z "$command_name" ]; then
+  usage
+  exit 0
+fi
+
+shift || true
+
+case "$command_name" in
+  --help|-h|help)
+    usage
+    ;;
+  install)
+    install_service
+    ;;
+  init)
+    init_service
+    ;;
+  status)
+    print_status
+    ;;
+  paths)
+    print_paths
+    ;;
+  json)
+    print_json
+    ;;
+  export-codex)
+    export_codex_session "${1:-current}"
+    ;;
+  mine-docs)
+    mine_docs "$@"
+    ;;
+  mine-repo)
+    mine_repo "$@"
+    ;;
+  mine-convos)
+    mine_convos "$@"
+    ;;
+  split-convos)
+    split_convos "$@"
+    ;;
+  mine-codex)
+    mine_codex "$@"
+    ;;
+  mine-codex-current)
+    mine_codex_current "$@"
+    ;;
+  save-repo)
+    save_repo_memory "$@"
+    ;;
+  save-workspace)
+    save_workspace_memory "$@"
+    ;;
+  search)
+    search_memory "$@"
+    ;;
+  wake-up)
+    wake_up_memory "$@"
+    ;;
+  mcp-server)
+    run_mempalace_mcp_server "$@"
+    ;;
+  run)
+    run_mempalace_module mempalace "$@"
+    ;;
+  *)
+    run_mempalace_module mempalace "$command_name" "$@"
+    ;;
+esac

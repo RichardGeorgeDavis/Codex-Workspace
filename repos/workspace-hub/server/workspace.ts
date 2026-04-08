@@ -26,6 +26,12 @@ import type {
 } from '../src/types/workspace.ts'
 import { readWorkspaceAgentEnvironment } from './agent-tooling.ts'
 import { readLatestFailureReports } from './failure-reports.ts'
+import {
+  getCoreServiceInstallSnapshots,
+  getCoreServiceRuntimeSnapshots,
+} from './core-service-runtime.ts'
+import { readWorkspaceCapabilities } from './workspace-capabilities.ts'
+import { readCoreServices } from './core-services.ts'
 import { readWorkspaceMetadata, type StoredRepoMetadata } from './workspace-metadata.ts'
 
 type RepoManifest = {
@@ -176,7 +182,9 @@ type VisibleDirectoryData = {
 
 type WorkspaceSummaryBuildOptions = {
   includeDiagnostics?: boolean
+  repoProjection?: 'detail' | 'list'
 }
+type RepoDiagnosticsStrategy = 'base' | 'cached' | 'eager'
 type SummaryRequestReason =
   | 'action'
   | 'event'
@@ -222,6 +230,10 @@ let discoveryCacheMisses = 0
 let diagnosticsCacheHitsFresh = 0
 let diagnosticsCacheHitsStale = 0
 let diagnosticsCacheMisses = 0
+let repoDetailsRequests = 0
+let repoDetailsLastDurationMs: number | null = null
+let repoDetailsMaxDurationMs = 0
+let repoDetailsTotalDurationMs = 0
 let summaryRequestsBase = 0
 let summaryRequestsFull = 0
 let fullHydrationRequests = 0
@@ -271,6 +283,13 @@ export function recordSummaryRequest(includeDiagnostics: boolean, reason: Summar
   incrementReason(reason)
 }
 
+function recordRepoDetailsRequest(durationMs: number) {
+  repoDetailsRequests += 1
+  repoDetailsLastDurationMs = durationMs
+  repoDetailsTotalDurationMs += durationMs
+  repoDetailsMaxDurationMs = Math.max(repoDetailsMaxDurationMs, durationMs)
+}
+
 export function getWorkspaceHubObservability() {
   const sampleEntry = workspaceDiscoveryCache.values().next().value as
     | WorkspaceDiscoveryCacheEntry
@@ -302,11 +321,21 @@ export function getWorkspaceHubObservability() {
     requestsBase: summaryRequestsBase,
     requestsFull: summaryRequestsFull,
   }
+  const repoDetails = {
+    avgDurationMs:
+      repoDetailsRequests > 0
+        ? Number((repoDetailsTotalDurationMs / repoDetailsRequests).toFixed(2))
+        : null,
+    lastDurationMs: repoDetailsLastDurationMs,
+    maxDurationMs: repoDetailsRequests > 0 ? repoDetailsMaxDurationMs : null,
+    requests: repoDetailsRequests,
+  }
 
   return {
-    observabilityVersion: 1,
+    observabilityVersion: 2,
     discovery,
     diagnostics,
+    repoDetails,
     summary,
     // Compatibility aliases (deprecated; retained for existing clients).
     activeDiagnosticsJobs: diagnostics.activeJobs,
@@ -325,7 +354,11 @@ export function getWorkspaceHubObservability() {
     discoveryCacheTtlMs: discovery.ttlMs,
     fullHydrationRequests: summary.fullHydrationRequests,
     lastSummaryBuildAt: summary.lastBuildAt,
+    repoDetailsAvgDurationMs: repoDetails.avgDurationMs,
     repoDiagnosticsCacheEntries: diagnostics.cacheEntries,
+    repoDetailsLastDurationMs: repoDetails.lastDurationMs,
+    repoDetailsMaxDurationMs: repoDetails.maxDurationMs,
+    repoDetailsRequests: repoDetails.requests,
     repoTreeSignatureSample: discovery.repoTreeSignatureSample,
     summaryRequestReasons: summary.reasons,
     summaryRequestsBase: summary.requestsBase,
@@ -349,11 +382,7 @@ function processRepoDiagnosticsQueue() {
 
     void factory()
       .then((value) => {
-        repoDiagnosticsCache.set(key, {
-          expiresAt: Date.now() + Math.max(0, diagnosticsCacheTtlMs),
-          value,
-        })
-        diagnosticsRevision += 1
+        storeRepoDiagnostics(key, value)
       })
       .catch(() => {
         // Keep stale diagnostics when background refresh fails.
@@ -372,6 +401,14 @@ function enqueueRepoDiagnostics(key: string, factory: () => Promise<RepoDiagnost
 
   repoDiagnosticsQueue.set(key, factory)
   processRepoDiagnosticsQueue()
+}
+
+function storeRepoDiagnostics(key: string, value: RepoDiagnostics) {
+  repoDiagnosticsCache.set(key, {
+    expiresAt: Date.now() + Math.max(0, diagnosticsCacheTtlMs),
+    value,
+  })
+  diagnosticsRevision += 1
 }
 
 async function augmentRepoTreeSignatureSegment(dirPath: string): Promise<string> {
@@ -711,6 +748,29 @@ function defaultPreferredMode(type: RepoType): PreviewMode {
   }
 
   return 'direct'
+}
+
+function projectRepoForList(repo: WorkspaceRepo): WorkspaceRepo {
+  return {
+    ...repo,
+    detailLevel: 'list',
+    install: {
+      ...repo.install,
+      logTail: [],
+    },
+    notes: '',
+    runtime: {
+      ...repo.runtime,
+      logTail: [],
+    },
+    savedMetadata: null,
+    suggestedManifest: {
+      name: repo.suggestedManifest.name,
+      preferredMode: repo.suggestedManifest.preferredMode,
+      slug: repo.suggestedManifest.slug,
+      type: repo.suggestedManifest.type,
+    },
+  }
 }
 
 function buildIdleRuntime(command: string | null): RepoRuntime {
@@ -1566,7 +1626,8 @@ async function buildRepoRecord(
   runtimeSnapshots: Map<string, RepoRuntime>,
   savedMetadata: StoredRepoMetadata | null,
   latestFailureReports: Map<string, RepoFailureReportSummary>,
-  includeDiagnostics: boolean,
+  diagnosticsStrategy: RepoDiagnosticsStrategy,
+  repoProjection: 'detail' | 'list',
 ): Promise<WorkspaceRepo | null> {
   const { hasManifest, manifest, manifestPath } = await readRepoManifest(fullPath)
   const packageJson = await readJsonIfPresent<PackageJson>(path.join(fullPath, 'package.json'))
@@ -1676,13 +1737,16 @@ async function buildRepoRecord(
     return { dependencies, freshness: 'fresh', git, health }
   }
   let diagnostics: RepoDiagnostics
-  if (!includeDiagnostics) {
+  if (diagnosticsStrategy === 'base') {
     diagnostics = {
       dependencies: buildUnknownDependencyState(),
       freshness: 'skipped',
       git: buildUnavailableGitState(),
       health: buildUnknownHealth(healthcheckUrl ?? resolvedPreview.previewUrl),
     }
+  } else if (diagnosticsStrategy === 'eager') {
+    diagnostics = await diagnosticsFactory()
+    storeRepoDiagnostics(diagnosticsKey, diagnostics)
   } else {
     const cachedDiagnostics = repoDiagnosticsCache.get(diagnosticsKey)
     if (cachedDiagnostics && cachedDiagnostics.expiresAt > Date.now()) {
@@ -1707,11 +1771,12 @@ async function buildRepoRecord(
     }
   }
 
-  return {
+  const repoRecord: WorkspaceRepo = {
     agentTooling,
     buildCommand: effectiveBuildCommand,
     collection: collection ?? 'direct',
     detectedBy: hasManifest ? 'manifest' : 'files',
+    detailLevel: 'detail' as const,
     diagnosticsFreshness: diagnostics.freshness,
     dependencies: diagnostics.dependencies,
     devCommand: effectiveDevCommand,
@@ -1749,6 +1814,8 @@ async function buildRepoRecord(
     type,
     runtime,
   }
+
+  return repoProjection === 'list' ? projectRepoForList(repoRecord) : repoRecord
 }
 
 async function discoverWorkspace(
@@ -1757,7 +1824,8 @@ async function discoverWorkspace(
   options: WorkspaceSummaryBuildOptions = {},
 ) {
   const includeDiagnostics = options.includeDiagnostics ?? true
-  const cacheKey = `${buildSnapshotCacheKey(installSnapshots, runtimeSnapshots)}::diagnostics=${includeDiagnostics ? 'full' : 'base'}`
+  const repoProjection = options.repoProjection ?? 'detail'
+  const cacheKey = `${buildSnapshotCacheKey(installSnapshots, runtimeSnapshots)}::diagnostics=${includeDiagnostics ? 'full' : 'base'}::projection=${repoProjection}`
   const repoTreeSignature = await buildReposTreeSignature()
   const cachedWorkspaceDiscovery = workspaceDiscoveryCache.get(cacheKey)
   if (
@@ -1791,7 +1859,8 @@ async function discoverWorkspace(
         runtimeSnapshots,
         savedMetadataState.repos[path.relative(workspaceRoot, fullPath)] ?? null,
         latestFailureReports,
-        includeDiagnostics,
+        includeDiagnostics ? 'cached' : 'base',
+        repoProjection,
       )
 
       if (directRepo) {
@@ -1822,7 +1891,8 @@ async function discoverWorkspace(
               runtimeSnapshots,
               savedMetadataState.repos[path.relative(workspaceRoot, childPath)] ?? null,
               latestFailureReports,
-              includeDiagnostics,
+              includeDiagnostics ? 'cached' : 'base',
+              repoProjection,
             ),
           }
         }),
@@ -1987,6 +2057,60 @@ export async function findWorkspaceRepo(
   return repos.find((repo) => repo.relativePath === normalizedRelativePath) ?? null
 }
 
+export async function buildWorkspaceRepoDetails(
+  relativePath: string,
+  installSnapshots: Map<string, RepoInstall>,
+  runtimeSnapshots: Map<string, RepoRuntime>,
+) {
+  const startedAt = Date.now()
+  const normalizedRelativePath = relativePath.replace(/^\/+/, '')
+  const fullPath = path.resolve(workspaceRoot, normalizedRelativePath)
+
+  if (
+    !fullPath.startsWith(`${reposRoot}${path.sep}`) &&
+    fullPath !== reposRoot
+  ) {
+    return null
+  }
+
+  const segments = normalizedRelativePath.split('/').filter(Boolean)
+  if (segments[0] !== 'repos' || segments.length < 2 || segments.length > 3) {
+    return null
+  }
+
+  const collection = segments.length === 3 ? segments[1] ?? null : null
+
+  let directoryData: VisibleDirectoryData
+  try {
+    directoryData = await readVisibleDirectoryData(fullPath)
+  } catch {
+    return null
+  }
+
+  const [savedMetadataState, latestFailureReports] = await Promise.all([
+    readWorkspaceMetadata(),
+    readLatestFailureReports(),
+  ])
+
+  const repo = await buildRepoRecord(
+    fullPath,
+    directoryData.names,
+    collection,
+    installSnapshots,
+    runtimeSnapshots,
+    savedMetadataState.repos[normalizedRelativePath] ?? null,
+    latestFailureReports,
+    'eager',
+    'detail',
+  )
+
+  if (repo) {
+    recordRepoDetailsRequest(Date.now() - startedAt)
+  }
+
+  return repo
+}
+
 export async function buildWorkspaceSummary(
   apiPort: number,
   installSnapshots: Map<string, RepoInstall>,
@@ -1994,17 +2118,26 @@ export async function buildWorkspaceSummary(
   options: WorkspaceSummaryBuildOptions = {},
 ): Promise<WorkspaceSummary> {
   const includeDiagnostics = options.includeDiagnostics ?? true
+  const repoProjection = options.repoProjection ?? 'detail'
   const { archives, repos, topLevelEntries } = await discoverWorkspace(
     installSnapshots,
     runtimeSnapshots,
-    { includeDiagnostics },
+    { includeDiagnostics, repoProjection },
   )
+  const coreServices = await readCoreServices(
+    getCoreServiceInstallSnapshots(),
+    getCoreServiceRuntimeSnapshots(),
+  )
+  const capabilities = await readWorkspaceCapabilities()
+  const abilityCapabilities = capabilities.filter((capability) => capability.classification === 'ability')
   const agentEnvironment = await readWorkspaceAgentEnvironment()
   lastWorkspaceSummaryBuildAt = new Date().toISOString()
 
   return {
     agentEnvironment,
     archives,
+    capabilities,
+    coreServices,
     dataRoot,
     generatedAt: new Date().toISOString(),
     milestones: buildMilestones(),
@@ -2019,8 +2152,12 @@ export async function buildWorkspaceSummary(
     sharedRoot,
     stats: {
       agentEnabledRepos: repos.filter((repo) => hasRepoAgentTooling(repo)).length,
+      abilities: abilityCapabilities.length,
       archiveFiles: archives.length,
       cacheBuckets: await countCacheBuckets(),
+      enabledAbilities: abilityCapabilities.filter((capability) => capability.enabled).length,
+      installedAbilities: abilityCapabilities.filter((capability) => capability.installed).length,
+      coreServices: coreServices.length,
       directPreferredRepos: repos.filter((repo) => repo.preferredMode === 'direct').length,
       discoveredRepos: repos.length,
       externalPreferredRepos: repos.filter((repo) => repo.preferredMode === 'external').length,
@@ -2034,6 +2171,9 @@ export async function buildWorkspaceSummary(
               repo.agentTooling.openAgentConfigPath ||
               repo.agentTooling.openAgentLegacyConfigPath,
           ),
+      ).length,
+      referenceCapabilities: capabilities.filter(
+        (capability) => capability.classification === 'reference-only',
       ).length,
       runnableRepos: repos.filter((repo) => repo.devCommand).length,
       runningRepos: repos.filter((repo) => repo.runtime.status === 'running').length,

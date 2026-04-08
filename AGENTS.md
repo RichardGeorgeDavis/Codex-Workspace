@@ -131,6 +131,15 @@ When there is no explicit manifest:
 - default WP projects already managed elsewhere to `external`
 - do not auto-run heavy install steps without clear reason
 
+## Upstream updates
+
+When a user asks to update the workspace's reviewed GitHub refs or managed upstream mirrors, use:
+
+- `tools/scripts/manage-workspace-capabilities.sh` for abilities and core services
+- `tools/scripts/update-github-refs.sh` for dry runs or applied updates
+
+Do not refresh those sources by hand when the wrapper already covers them.
+
 ## New repo baseline
 
 When a repo is first added under `repos/`, assume the baseline in `docs/09-new-repo-baseline.md` applies unless that repo already has clearer local instructions.

@@ -3,7 +3,7 @@ set -eu
 
 workspace_root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 repos_dir="$workspace_root/repos"
-manifest_path="$workspace_root/tools/manifests/repo-groups.example.json"
+manifest_path="$workspace_root/tools/manifests/repo-groups.json"
 requested_groups=""
 list_groups="false"
 
@@ -74,6 +74,13 @@ update_repo_dir() {
   repo_name=$(basename "$repo_dir")
   printf '\n[%s]\n' "$repo_name"
 
+  case "$repo_dir" in
+    "$repos_dir/abilities"/*)
+      printf 'Skipping managed ability repo. Use tools/scripts/manage-workspace-capabilities.sh update instead.\n'
+      return 0
+      ;;
+  esac
+
   if [ -n "$(git -C "$repo_dir" status --porcelain)" ]; then
     printf 'Skipping dirty working tree.\n'
     return 0
@@ -135,6 +142,14 @@ if [ -n "$requested_groups" ]; then
   printf '%s\n' "$group_repo_paths" | while IFS= read -r repo_rel; do
     [ -n "$repo_rel" ] || continue
     repo_dir="$repos_dir/$repo_rel"
+
+    case "$repo_rel" in
+      abilities/*)
+        printf '\n[%s]\n' "$repo_rel"
+        printf 'Skipping managed ability path. Use tools/scripts/manage-workspace-capabilities.sh update %s\n' "$repo_rel"
+        continue
+        ;;
+    esac
 
     if [ ! -d "$repo_dir/.git" ]; then
       printf '\n[%s]\n' "$repo_rel"

@@ -2,3 +2,4 @@
 # Examples:
 # git@github.com:example/workspace-hub.git workspace-hub
 # https://github.com/example/three-lab.git prototypes/three-lab
+# https://github.com/VoltAgent/awesome-design-md.git core/voltagent-awesome-design-md

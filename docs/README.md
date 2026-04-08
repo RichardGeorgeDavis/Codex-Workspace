@@ -19,8 +19,10 @@ Read these in order:
 9. `08-first-run-and-updates.md`
 10. `09-new-repo-baseline.md`
 11. `10-release-readiness.md`
-12. `HANDOVER.md`
-13. `CHANGELOG.md`
+12. `11-core-memory-and-reference-promotion.md`
+13. `12-maintainer-runbook.md`
+14. `HANDOVER.md`
+15. `CHANGELOG.md`
 
 ## What Lives Here
 
@@ -30,7 +32,9 @@ Read these in order:
 - `08-first-run-and-updates.md` defines the recommended onboarding questions, setup profiles, and update flow.
 - `09-new-repo-baseline.md` defines the default repo-intake and repo-baseline contract.
 - `10-release-readiness.md` defines the stable contract, support matrix, migration note, and stable release gate.
-- `HANDOVER.md` summarizes the current state of the workspace after the initial build.
+- `11-core-memory-and-reference-promotion.md` defines the workspace source taxonomy and how reviewed GitHub references can graduate into abilities, repo-level adoption, or core workspace services, with MemPalace as the current target.
+- `12-maintainer-runbook.md` defines the clean-clone maintainer path, optional GitHub auth, capability lifecycle commands, update flow, and rollback guidance.
+- `HANDOVER.md` summarizes the current state of the workspace, current implementation batches, and the latest acceptance evidence.
 - `CHANGELOG.md` records notable workspace-level changes.
 
 ## Related Locations
@@ -46,6 +50,9 @@ Read these in order:
 Useful maintenance scripts:
 
 - `tools/scripts/bootstrap-workspace.sh` prepares safe cache/context folders and can install `workspace-hub` dependencies without touching sibling repos.
+- `tools/bin/workspace-memory` manages the MemPalace workspace service lifecycle, local install, and user-scoped paths.
+- `tools/bin/mempalace-start` runs the MemPalace MCP server with the workspace-scoped home.
+- `tools/bin/mempalace-sync` fast-forwards the MemPalace repo when its working tree is clean.
 - `tools/scripts/bootstrap-repo.sh` previews or runs repo-native install/setup using manifest `installCommand` first, then package-manager precedence such as env override, manifest `packageManager`, `package.json`, and lockfiles.
 - `tools/scripts/doctor-workspace.sh` runs a non-destructive environment and readiness check for the workspace, Workspace Hub, mixed-stack tooling, and Codex-related setup.
 - `tools/scripts/cleanup-sync-noise.sh` removes macOS and sync-client noise files such as `Icon\r` and `._*`, including the broken-ref cases when they leak into `.git/`.
@@ -55,7 +62,9 @@ Useful maintenance scripts:
 - `tools/scripts/release-readiness.sh` runs the stable release gate: workspace doctors, `workspace-hub` test/lint/build, skill-sync dry run, and placeholder-surface checks.
 - `tools/scripts/run-with-workspace-env.sh` runs a command with the shared workspace environment, including the shared Playwright browser cache path.
 - `tools/scripts/setup-workspace-profile.sh` provides a guided, non-destructive profile check for `core`, `hub`, `mixed-stack`, `wordpress`, `agent-enhanced`, `workflow-state`, `spec-driven`, and `ui-previews`.
-- `tools/scripts/use-design-md.sh` mirrors the reviewed VoltAgent `DESIGN.md` catalog into `cache/design-md/catalog/`, lists available site ids, and can copy a selected `DESIGN.md` into a repo root.
+- `tools/scripts/manage-workspace-capabilities.sh` lists, installs, updates, enables, disables, or uninstalls tracked workspace abilities and core services, with dry-run mode by default.
+- `tools/scripts/update-github-refs.sh` remains the compatibility wrapper for update-only reviewed GitHub-ref flows and delegates to the capability lifecycle command.
+- `tools/scripts/use-design-md.sh` mirrors the managed VoltAgent `DESIGN.md` catalog ability into `cache/design-md/catalog/`, lists available site ids, and can copy a selected `DESIGN.md` into a repo root.
 - `tools/scripts/sync-reference-snapshots.sh` previews or refreshes ignored upstream reference snapshots under `tools/ref/`, with dry-run mode by default.
 - `tools/scripts/sync-codex-skills.sh` previews or syncs tracked workspace skill sources into repo `.codex/skills/` folders plus optional `.agents/skills/` compatibility mirrors, with dry-run mode by default.
 - `tools/scripts/trim-git-repos.sh` performs safe Git maintenance across `repos/` by cleaning `.git` sync noise, expiring older reflog entries, and running `git gc` with a conservative prune window.
@@ -74,6 +83,18 @@ Useful template locations:
 - `tools/templates/workflow-state/` holds guidance for optional local workflow-state layers such as `.cognetivy/`.
 - `tools/templates/agents-md/` holds guidance for optional `AGENTS.md` composition when plain single-file authoring stops scaling.
 
+## Public surfaces to review
+
+When a workspace-wide feature lands, update the user-visible surfaces in the same slice:
+
+- root `README.md`
+- `docs/README.md`
+- `docs/CHANGELOG.md`
+- relevant repo-local docs such as `repos/workspace-hub/README.md`
+- optional navigation pages under `docs/wiki/` when public navigation should expose the feature
+
+Recent examples include Workspace memory, the capability lifecycle, the source taxonomy, and Hub-visible layout or capability flows.
+
 ## Shared Metadata
 
 The `shared/` folder is reserved for workspace-facing metadata such as `shared/repo-index.json` and `shared/standards.md`.
@@ -84,6 +105,8 @@ The `shared/` folder is reserved for workspace-facing metadata such as `shared/r
 - Node: a version manager plus `npm`, `pnpm`, and `yarn` where legacy repos need it
 - Python: `python3`, `pip`, optional `uv`
 - PHP: `composer`, `wp`, optional ServBay or Local
+
+`gh` is recommended for maintainers and contributors who manage forks, pull requests, or reviewed upstream mirrors. `gh auth login` is optional setup, not a baseline requirement for a clean clone or release verification.
 
 ## Shared cache targets
 

@@ -40,6 +40,34 @@ The workspace foundation is in place and released as a stable baseline:
 - the handover pack now lives under `docs/`
 - reviewed upstream references have been promoted into tracked workspace features, docs, templates, and skills
 - `tools/ref/` is reference-only and can remain empty until explicitly repopulated
+- MemPalace is now integrated as the first core workspace service under `tools/mempalace` with user-scoped durable state under `shared/mempalace/<user>/`
+- installable abilities and core services are now tracked in `tools/manifests/workspace-capabilities.json`
+- optional abilities live under `repos/abilities/` rather than the normal repo-group update path
+
+## Current source taxonomy
+
+Use this classification model consistently across the workspace docs and tooling:
+
+- `reference-only` -> `tools/ref/`
+- `ability` -> `repos/abilities/<slug>/`
+- `repo-level adoption` -> normal `repos/...`
+- `core service` -> `tools/<name>/` + `shared/<name>/<user>/` + `cache/<name>/<user>/`
+
+The canonical lifecycle command for installable abilities and core services is:
+
+- `tools/scripts/manage-workspace-capabilities.sh`
+
+`tools/scripts/update-github-refs.sh` remains as the compatibility wrapper for update-only flows.
+
+## Implementation batches
+
+Use end-to-end batches so the next chat can complete one full slice at a time.
+
+Placement convention:
+
+1. workspace-wide batches live in `docs/HANDOVER.md`
+2. repo-specific larger work lives in tracked `openspec/changes/.../tasks.md`
+3. repos without `openspec/` should keep a short `Next Batches` section in `README.md` or `HANDOVER.md`
 
 ## Current Workspace Hub state
 
@@ -76,6 +104,23 @@ The current repo intake flow in `workspace-hub` is intentionally conservative.
 
 This keeps intake focused on first-pass repo clarity rather than hidden setup side effects.
 
+## Site reference intake note (2026-04-08)
+
+The repo-intake baseline now includes a specific process for public site clone or rip requests when a new repo is added under `repos/`.
+
+Current stance:
+
+- treat the result as one of: deployed mirror, working local reference copy, or clean rebuild
+- do not describe a public-site mirror as the original source project
+- record source URL, capture date, and acquisition method in `README.md` or `HANDOVER.md`
+- if automated capture misses files because of permissions or other blockers, provide the direct asset URLs to the user in chat
+- store any user-downloaded fallback files in a repo-local `ref/` folder with source notes
+- create a separate rebuild repo if maintainable editing is the real goal
+
+The tracked template for this flow now lives at:
+
+- `tools/templates/repo-docs/README.site-reference.template.md`
+
 ## Release verification status
 
 The stable release gate has already been exercised successfully:
@@ -91,16 +136,96 @@ The stable release gate has already been exercised successfully:
 
 ## Recommended pickup point
 
-The most practical next product step is:
+The next workspace-wide plan is now split into end-to-end batches:
 
-1. Keep the stable release gate current as new workspace features land
-2. Tighten richer diagnostics in `workspace-hub` for dependency and runtime edge cases
-3. Add release-note and maintenance polish rather than more foundational restructuring
+### Batch 1: Docs, taxonomy, and batching contract
 
-The next useful docs step is:
+Status: complete
 
-1. Expand runtime troubleshooting and operator guidance under `repos/workspace-hub/docs/`
-2. Keep `docs/10-release-readiness.md` and this handover note aligned after each release-worthy change
+- workspace docs now share one classification model: `reference-only`, `ability`, `repo-level adoption`, `core service`
+- `gh auth login` is documented as recommended optional maintainer setup
+- ServBay remains supported but de-emphasized as optional
+- repo-specific batching guidance now points to tracked `openspec/changes/.../tasks.md` or a repo-local `Next Batches` section
+
+### Batch 2: Managed source lifecycle for refs, abilities, and core services
+
+Status: complete
+
+- added `tools/manifests/workspace-capabilities.json`
+- added `tools/scripts/manage-workspace-capabilities.sh`
+- moved VoltAgent to the optional ability path under `repos/abilities/voltagent-awesome-design-md`
+- kept `update-github-refs.sh` as a compatibility wrapper
+
+### Batch 3: Workspace Hub capability surfacing and layout preference
+
+Status: complete and validated, assuming the separate MemPalace Hub work is already landed
+
+- Workspace Hub now reads capability data from the tracked registry
+- installable abilities and core services have a dedicated capability panel
+- repo layout preference now supports `split` and `discovery-first`
+- `discovery-first` keeps Repo Discovery full width and only shows repo details after selection
+- indexed search now includes installable capabilities and supports result-type filtering
+- settings now make the current layout mode and capability lifecycle path more explicit
+- selected repo details now hydrate eager diagnostics through a repo-specific endpoint instead of triggering automatic whole-workspace full-summary hydration
+- observability now tracks eager repo-details request counts and timing alongside discovery and diagnostics counters
+
+### Batch 4: Update flow, repo linkage, and maintainer polish
+
+Status: complete and validated
+
+- `update-all.sh` now stays focused on normal repos and skips `repos/abilities/`
+- maintainer guidance now lives in `docs/12-maintainer-runbook.md`
+- repos are now expected to document any optional ability dependency explicitly
+
+## Acceptance closeout (2026-04-08)
+
+This alignment slice now has a complete verification snapshot:
+
+- `tools/scripts/manage-workspace-capabilities.sh list`
+- `tools/scripts/update-github-refs.sh --list`
+- `tools/scripts/update-all.sh --list-groups`
+- `pnpm --dir "repos/workspace-hub" lint`
+- `pnpm --dir "repos/workspace-hub" typecheck`
+- `pnpm --dir "repos/workspace-hub" test`
+- `pnpm --dir "repos/workspace-hub" build`
+
+Live Hub acceptance was also exercised against the running app on 2026-04-08:
+
+- `pnpm --dir "repos/workspace-hub" dev:api`
+- `pnpm --dir "repos/workspace-hub" dev:web --host 127.0.0.1 --port 4174`
+- `curl -s http://127.0.0.1:4101/api/workspace/summary/base | jq ...`
+- `curl -s http://127.0.0.1:4101/api/capabilities | jq ...`
+- `curl -s "http://127.0.0.1:4101/api/search?q=memory" | jq ...`
+- `curl -s --get http://127.0.0.1:4101/api/repos/details --data-urlencode "relativePath=repos/workspace-hub"`
+- `curl -s http://127.0.0.1:4101/api/health | jq '.workspaceHub.repoDetails'`
+- `npx playwright screenshot --wait-for-selector 'text=Workspace memory' ...`
+- `npx playwright screenshot --wait-for-selector 'text=Workspace Capabilities' ...`
+- `npx playwright screenshot --wait-for-selector 'text=Repo Discovery' ...`
+- `npx playwright screenshot --load-storage /tmp/workspace-hub-discovery-storage.json --wait-for-selector 'text=Selection required' ...`
+
+Observed runtime result:
+
+- base summary returned live repo and capability data with list projection active (`detailLevel: list` on summary repos)
+- read-only `GET /api/capabilities` returned live installed/enabled/reference-only stats plus capability records with per-capability `updatedAt` state
+- indexed search returned both the `MemPalace` service and the `VoltAgent/awesome-design-md` capability for `q=memory`
+- repo-details hydration returned `detailLevel: detail` for `repos/workspace-hub`
+- repo-details observability counters incremented after the detail fetch
+- browser-level smoke confirmed the live presence of `Workspace memory`, `Workspace Capabilities`, `Repo Discovery`, and the `discovery-first` empty-selection state
+
+Current operator expectation:
+
+- use `manage-workspace-capabilities.sh` for installable abilities and core services
+- use `update-all.sh` only for normal repos
+- treat `gh auth login` as optional maintainer setup rather than baseline clone/setup
+
+Repo dependency rollout note:
+
+- `repos/workspace-hub` docs now state that optional workspace abilities must be documented explicitly and must not be treated as hidden repo dependencies
+- `repos/workspace-hub/README.md` now carries a repo-local `Next Batches` section for future end-to-end pickup
+- `repos/workspace-hub` indexed search now surfaces capabilities as a first-class workspace result type
+- `repos/workspace-hub` now keeps list refresh on the base summary path while hydrating the selected repo eagerly for richer diagnostics
+- `repos/workspace-hub` now exposes a dedicated read-only capability snapshot endpoint and shows installed or enabled or reference-only capability counts directly in the capability panel
+- release and maintainer steps now explicitly require reviewing public-facing files when workspace-wide features such as Workspace memory land
 
 ## Completion review
 
@@ -122,13 +247,66 @@ What appears complete or substantially complete:
 - shared skill sources and agent tooling support
 - shared Playwright browser cache support
 
-What still reads as open or partial in the docs:
+What still reads as open or incomplete in the docs:
 
-- richer repo diagnostics
+- deeper repo diagnostics and drill-down polish
 - favourites and last-opened polish
 - clearer dependency-readiness feedback
 - fuller ServBay-aware polish beyond the current optional stance
 - additional runtime troubleshooting documentation
+
+## Core memory decision (2026-04-08)
+
+MemPalace is now being treated as a core workspace service rather than as a normal repo under `repos/`.
+
+Decision:
+
+- forked runtime code should live in `tools/mempalace`
+- durable per-user memory should live in `shared/mempalace/<user>/`
+- disposable artifacts should live in `cache/mempalace/<user>/`
+- Workspace Hub should surface MemPalace as a core service with its own page and search integration
+
+This decision is now captured in:
+
+- `docs/11-core-memory-and-reference-promotion.md`
+
+The current snapshot under `tools/ref/mempalace-main/` should be treated as reviewed source material only, not as the long-term operational copy.
+
+That document now also defines the intake process for any new GitHub URL or `tools/ref/` addition so future users can classify a source as `reference-only`, `repo-level adoption`, or `core workspace service` before choosing where it lives in the workspace.
+
+Implemented in this slice:
+
+- `tools/mempalace` cloned and locally installed
+- `tools/bin/workspace-memory`, `tools/bin/mempalace-start`, and `tools/bin/mempalace-sync`
+- conversation ingest wrappers including `workspace-memory mine-convos`, `workspace-memory mine-codex`, and `workspace-memory mine-codex-current`
+- closeout wrappers including `workspace-memory save-repo`, `workspace-memory save-workspace`, and `workspace-memory export-codex`
+- bootstrap and doctor support for the service
+- initial Workspace Hub core-service model and searchable service metadata
+- repo/docs target metadata moved under `.workspace/mempalace/` instead of target roots
+- default filtered repo mining to reduce low-signal corpus content
+- a dedicated Workspace Hub MemPalace page with target context and safe command surface
+- a direct `Workspace memory` header switch in Workspace Hub so the page is reachable without opening the Core Services card first
+
+Current closeout expectation:
+
+- after meaningful repo work, use `tools/bin/workspace-memory save-repo <repo-name>`
+- after workspace-doc or planning work, use `tools/bin/workspace-memory save-workspace`
+- use `tools/bin/workspace-memory export-codex current` when a readable transcript bundle should be kept alongside the mined raw session
+
+These commands work without Workspace Hub running because they operate directly on the local MemPalace wrapper and the Codex session files under `~/.codex/sessions`.
+
+Current operator entry points:
+
+- in Workspace Hub, use the `Workspace memory` header switch
+- in shell or chat, use the safe wrappers under `tools/bin/workspace-memory`
+
+Current MemPalace next-step note:
+
+- the wake-up summary issue is now explicitly treated as a corpus-quality problem, not a runtime-plumbing problem
+- default repo mining should exclude lockfiles, generated output, vendor/build output, and other low-signal material unless an operator explicitly opts into a raw scan
+- the Hub memory page should remain the workspace-level place for service state, target context, and safe wrapper commands
+- `wake-up` is substantially cleaner now, but may still occasionally surface config-heavy files such as `tsconfig.node.json`
+- later automation for recurring saves and later exporters for more conversation sources are still future work
 
 ## Reading order from here
 
@@ -136,8 +314,9 @@ If continuing implementation, read in this order:
 
 1. `10-release-readiness.md`
 2. `CHANGELOG.md`
-3. `03-workspace-hub-build-spec.md`
-4. `../../repos/workspace-hub/README.md` if working inside the Hub repo
+3. `11-core-memory-and-reference-promotion.md`
+4. `03-workspace-hub-build-spec.md`
+5. `../../repos/workspace-hub/README.md` if working inside the Hub repo
 
 ## Project review addendum (2026-04-07)
 
@@ -235,7 +414,7 @@ Use this prompt when resuming in Codex to keep implementation aligned with this 
 
 "Implement Phase 1 and Phase 2 items from `docs/HANDOVER.md` project review addendum: (1) summary/discovery caching with clear invalidation on repo actions, (2) safe client-facing API error messaging, and (3) artifact-index gating via env flag. Keep behavior backward-compatible, add focused tests for changed server modules, and update handover verification notes with timing and test results."
 
-### Implementation update (2026-04-07, first slice completed)
+### Implementation update (2026-04-07, first slice complete)
 
 Completed in `repos/workspace-hub`:
 
@@ -462,83 +641,47 @@ Interpretation:
 - cold-first request still dominates average in small samples
 - new counters now make refresh/caching behavior inspectable for larger-window tuning
 
-## Planned next steps roadmap (phased)
+### Implementation update (2026-04-08, workspace capability lifecycle and Hub alignment)
 
-This section is intent-only planning for the next optimization and expansion cycle. It documents what should be prioritized next; it does not indicate completed work.
+Completed in the workspace root:
 
-### Phase 1 (Immediate, 1-2 weeks)
+1. Added a tracked workspace capability registry and lifecycle command.
+   - Added `tools/manifests/workspace-capabilities.json`.
+   - Added `tools/scripts/manage-workspace-capabilities.sh`.
+   - Installable abilities and core services now share one lifecycle surface for `list`, `install`, `update`, `enable`, `disable`, and `uninstall`.
 
-Priority: high
+2. Kept repo-group updates focused on normal repos.
+   - Added `tools/manifests/repo-groups.json`.
+   - Updated `tools/scripts/update-all.sh` to use that tracked manifest by default.
+   - `update-all.sh` now skips `repos/abilities/` and points operators to the capability lifecycle command for installable abilities and core services.
 
-1. Add practical SSE burst guardrails and operating thresholds.
-   - Define expected event burst bands (normal, elevated, overload) and action thresholds using existing observability counters.
-   - Add operator-facing tuning guidance for `WORKSPACE_HUB_DISCOVERY_CACHE_TTL_MS`, `WORKSPACE_HUB_DIAGNOSTICS_CACHE_TTL_MS`, and `WORKSPACE_HUB_DIAGNOSTICS_WORKER_CONCURRENCY`.
-   - Success target:
-     - stable UI responsiveness during event bursts
-     - no overlapping refresh storm behavior under normal local workloads
+3. Reclassified `VoltAgent/awesome-design-md` as an optional ability.
+   - Removed it from `tools/manifests/reference-sources.json`.
+   - Moved the managed checkout to `repos/abilities/voltagent-awesome-design-md`.
+   - Updated `tools/scripts/use-design-md.sh` so the local `DESIGN.md` catalog rebuilds from that managed repo clone.
 
-2. Add endpoint-level latency tracking policy for summary APIs.
-   - Track and report warm and cold latency snapshots for:
-     - `GET /api/workspace/summary/base`
-     - `GET /api/workspace/summary`
-   - Success target:
-     - warm base summary median remains low and predictable
-     - full summary remains bounded and explainable by diagnostics state
+4. Updated Workspace Hub for the new capability model.
+   - Added capability registry loading and action routes on the server.
+   - Added a capability panel in the Hub UI.
+   - Added persisted repo layout preference with `split` and `discovery-first`.
+   - In `discovery-first`, Repo Discovery stays full width and repo details appear only after explicit selection.
 
-3. Tighten short-run performance triage workflow.
-   - Publish a small operator triage checklist (what counters to inspect first and which knobs are safe to adjust).
-   - Success target:
-     - reduced time to explain and correct performance regressions in local runs
+Verification for this slice:
 
-Risks and rollback:
-- risk: overtuning TTLs can increase staleness or churn
-- rollback: revert env tuning to defaults and re-check observability counters before deeper changes
+- `tools/scripts/manage-workspace-capabilities.sh list`: passed
+- `tools/scripts/update-github-refs.sh --list`: passed
+- `tools/scripts/update-github-refs.sh --run voltagent-awesome-design-md`: compatibility path retained
+- `tools/scripts/update-all.sh --list-groups`: passed
+- `tools/scripts/use-design-md.sh --list`: passed
+- `pnpm --dir "repos/workspace-hub" lint`: passed
+- `pnpm --dir "repos/workspace-hub" typecheck`: passed
+- `pnpm --dir "repos/workspace-hub" test`: passed (`21 passed, 0 failed`)
+- `pnpm --dir "repos/workspace-hub" build`: passed
 
-### Phase 2 (Mid-term, 3-6 weeks)
+Pickup notes:
 
-Priority: medium
-
-1. Incremental discovery indexing.
-   - Introduce optional incremental discovery index to reduce first-hit outliers while preserving conservative detection behavior.
-   - Success target:
-     - lower cold-start variance on large workspaces
-     - no reduction in discovery correctness
-
-2. Per-repo diagnostics fetch for detail view.
-   - Add a targeted diagnostics endpoint for selected repo details so full summary does less heavy lifting.
-   - Success target:
-     - reduced diagnostics pressure from list-level refresh
-     - clearer freshness semantics per selected repo
-
-3. Summary payload projection for list-first view.
-   - Support a slimmer list projection for high-frequency refresh paths while keeping full detail payload available.
-   - Success target:
-     - lower payload transfer and parsing overhead on repeated refreshes
-
-Risks and rollback:
-- risk: API shape drift can confuse clients
-- rollback: keep full summary as fallback path and gate projection behavior behind explicit request flags
-
-### Phase 3 (Long-term, 2-3 months)
-
-Priority: strategic
-
-1. Plugin-style extension points for repo classification and diagnostics.
-   - Add optional hooks for custom repo classifiers, dependency checks, and health probes.
-   - Keep extension points opt-in and local-first.
-
-2. Local historical observability snapshots.
-   - Add optional local persistence for key counters to improve trend visibility over time.
-   - Keep off by default and avoid external telemetry dependencies.
-
-3. Expansion guardrails and compatibility constraints.
-   - Preserve core workspace rules:
-     - independent repo runtime behavior
-     - no forced shared installs
-     - optional integrations only
-   - Require explicit config gates for expansion features.
-
-Success criteria for roadmap execution:
-- planned work remains clearly separated from completed work
-- each phase has measurable outcomes before advancing
+- If a user asks to manage installable abilities or core services, use `tools/scripts/manage-workspace-capabilities.sh`.
+- If a user asks only to run the older update-only GitHub ref flow, `tools/scripts/update-github-refs.sh` remains available.
+- Snapshot-style refs still land under `tools/ref/`.
+- Managed upstream repos can live under `repos/abilities/` or normal `repos/`, but they remain independent repos.
 - performance and expansion changes stay aligned with workspace baseline rules

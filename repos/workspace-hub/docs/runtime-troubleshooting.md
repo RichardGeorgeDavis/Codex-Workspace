@@ -20,6 +20,12 @@ If the repo has no inferred install command:
 2. Add `installCommand` to `.workspace/project.json` if the repo needs one.
 3. Re-run the install from Workspace Hub.
 
+If the missing piece is not a repo dependency but an optional workspace ability:
+
+1. Do not hide that requirement in the repo manifest.
+2. Document it in the repo `README.md` or `HANDOVER.md`.
+3. Install or update it from the workspace root with `tools/scripts/manage-workspace-capabilities.sh`.
+
 ## Failed installs
 
 When an install ends in `error`:
@@ -81,3 +87,5 @@ Practical response:
 ## When to update the manifest
 
 Update `.workspace/project.json` when Workspace Hub keeps inferring the wrong command, package manager, preview URL, or preferred mode. Use saved overrides for temporary local corrections and the manifest for repo-native behaviour that should stay with the repo.
+
+Do not use the manifest to imply that an optional workspace ability is present. If a workflow depends on one, document that explicitly in repo docs and keep the install path visible to the next contributor.

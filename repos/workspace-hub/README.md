@@ -180,8 +180,43 @@ pnpm typecheck
 pnpm test
 curl -s "http://127.0.0.1:4101/api/workspace/summary/base?reason=event" > /dev/null
 curl -s "http://127.0.0.1:4101/api/workspace/summary?reason=manual-refresh" > /dev/null
+curl -s "http://127.0.0.1:4101/api/capabilities"
 curl -s "http://127.0.0.1:4101/api/workspace/observability"
 ```
+
+Manual smoke (live Hub acceptance):
+
+```bash
+pnpm dev:api
+pnpm dev:web --host 127.0.0.1 --port 4174
+curl -s http://127.0.0.1:4101/api/workspace/summary/base | jq '{repoCount: (.repos | length), capabilityCount: (.capabilities | length), firstRepo: (.repos[0] | {relativePath, detailLevel})}'
+curl -s http://127.0.0.1:4101/api/capabilities | jq '{generatedAt, stats}'
+curl -s "http://127.0.0.1:4101/api/search?q=memory" | jq '{total: (.results | length), categories: (.results | map(.category))}'
+curl -s --get http://127.0.0.1:4101/api/repos/details --data-urlencode "relativePath=repos/workspace-hub" | jq '{relativePath, detailLevel, diagnosticsFreshness}'
+curl -s http://127.0.0.1:4101/api/health | jq '.workspaceHub.repoDetails'
+npx playwright screenshot --wait-for-selector 'text=Workspace memory' http://127.0.0.1:4174 /tmp/workspace-hub-workspace-memory.png
+npx playwright screenshot --wait-for-selector 'text=Workspace Capabilities' --full-page http://127.0.0.1:4174 /tmp/workspace-hub-capabilities.png
+npx playwright screenshot --wait-for-selector 'text=Repo Discovery' --full-page http://127.0.0.1:4174 /tmp/workspace-hub-repo-discovery.png
+cat > /tmp/workspace-hub-discovery-storage.json <<'EOF'
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://127.0.0.1:4174",
+      "localStorage": [
+        {
+          "name": "workspace-hub.repo-layout",
+          "value": "\"discovery-first\""
+        }
+      ]
+    }
+  ]
+}
+EOF
+npx playwright screenshot --load-storage /tmp/workspace-hub-discovery-storage.json --wait-for-selector 'text=Selection required' --full-page http://127.0.0.1:4174 /tmp/workspace-hub-discovery-mode.png
+```
+
+That smoke pass validates the current base-summary list projection, indexed capability-aware search, selected repo-detail hydration, `Workspace memory`, the capability panel, and the `discovery-first` empty-selection rendering path.
 
 Default local endpoints:
 
@@ -190,15 +225,18 @@ Default local endpoints:
 - observability: `http://127.0.0.1:4101/api/workspace/observability`
 - events: `http://127.0.0.1:4101/api/events`
 - search: `http://127.0.0.1:4101/api/search?q=preview`
+- capabilities: `http://127.0.0.1:4101/api/capabilities`
 
 Summary endpoints:
 
 - full summary (with diagnostics): `GET /api/workspace/summary`
 - base summary (fast discovery-first): `GET /api/workspace/summary/base`
+- capabilities snapshot (read-only operator state): `GET /api/capabilities`
 
 The UI now prefers base summary for frequent refreshes and hydrates full diagnostics when needed.
-Observability now includes cache hit or miss counters, diagnostics cache behavior, and summary request reasons to support tuning.
-`/api/workspace/observability` now exposes a versioned schema (`observabilityVersion: 1`) with grouped sections (`discovery`, `diagnostics`, `summary`); current top-level counters remain as compatibility aliases for existing consumers.
+The capability panel now also reads a dedicated read-only capability snapshot so operators can inspect installed, enabled, and reference-only counts without inferring them from the broader workspace summary.
+Observability now includes cache hit or miss counters, diagnostics cache behavior, eager repo-details request timing, and summary request reasons to support tuning.
+`/api/workspace/observability` now exposes a versioned schema (`observabilityVersion: 2`) with grouped sections (`discovery`, `diagnostics`, `repoDetails`, `summary`); current top-level counters remain as compatibility aliases for existing consumers.
 
 ## Repo Intake
 
@@ -238,6 +276,19 @@ Workspace Hub is designed for workspaces that contain a mix of:
 - server-side repos that should keep their own native run model
 
 It aims to share caches, not installs, and to keep each repo independently runnable.
+
+## Optional Workspace Dependencies
+
+Workspace Hub can surface workspace abilities and core services, but it should not silently depend on optional abilities being installed.
+
+Current expectation:
+
+- core services such as MemPalace can be surfaced from the tracked workspace capability registry
+- optional abilities should be treated as installable helpers, not baseline repo requirements
+- if this repo ever requires an optional ability for a real workflow, that dependency must be documented here and in the relevant repo-local docs
+- install or update those optional helpers through `tools/scripts/manage-workspace-capabilities.sh`, not through `update-all.sh`
+
+At the moment, Workspace Hub has no required optional ability dependency.
 
 ## Safety And Trust
 
@@ -290,9 +341,9 @@ Use local override files when you want to keep your own operator notes or machin
 2. Tighten install guidance for more mixed-stack repo types.
 3. Expand lightweight workflow helpers only where they reduce repeated local setup work.
 
-## Next Improvements (planned)
+## Current Follow-ups
 
-Near-term operator priorities:
+Near-term operator follow-ups:
 
 - monitor `GET /api/workspace/observability` for:
   - discovery cache hit/miss balance
@@ -307,9 +358,15 @@ Near-term operator priorities:
   2. compare warm `summary/base` vs `summary` response behavior
   3. adjust one env knob at a time and re-measure
 
-Mid-term and longer-term planned improvements:
+Mid-term and longer-term follow-ups:
 
 - incremental discovery indexing to reduce cold-start outliers on larger workspaces
-- per-repo diagnostics fetch path for detail-heavy workflows
 - optional extension hooks for custom repo classification and health/dependency probes
 - optional local historical observability snapshots for trend visibility
+
+## Next Batches
+
+- Batch 1: Capability status drill-down.
+  Add deeper per-capability state such as post-install command health or last update output if operators need more than the current read-only snapshot and action feedback.
+- Batch 2: Repo intake polish.
+  Tighten intake output so new repos get clearer runtime notes, explicit optional ability dependency guidance when relevant, and better first-run defaults.

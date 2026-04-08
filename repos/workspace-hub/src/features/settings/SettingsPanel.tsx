@@ -1,8 +1,10 @@
 import { SectionCard } from '../../components/SectionCard.tsx'
 import type { WorkspaceSummary } from '../../types/workspace.ts'
+import type { RepoLayoutMode } from '../layout/repoLayout.ts'
 
 type SettingsPanelProps = {
   loading: boolean
+  repoLayoutMode: RepoLayoutMode
   summary: WorkspaceSummary | null
 }
 
@@ -20,7 +22,11 @@ function formatCommandValue(
   return command.path ?? 'available'
 }
 
-export function SettingsPanel({ loading, summary }: SettingsPanelProps) {
+export function SettingsPanel({
+  loading,
+  repoLayoutMode,
+  summary,
+}: SettingsPanelProps) {
   return (
     <SectionCard
       body="These settings are derived from the handover pack and the current workspace layout. They keep the Hub aligned with the broader local setup."
@@ -34,6 +40,35 @@ export function SettingsPanel({ loading, summary }: SettingsPanelProps) {
         <p className="loading-copy">Loading local runtime settings...</p>
       ) : (
         <>
+          <div className="settings-subsection">
+            <h3 className="settings-group-title">View defaults</h3>
+            <p className="section-copy">
+              Appearance owns the repo layout toggle. This section reflects the currently active discovery layout and workspace capability counts.
+            </p>
+            <ul className="settings-list">
+              <li className="settings-item">
+                <span>Current repo layout</span>
+                <code>{repoLayoutMode}</code>
+              </li>
+              <li className="settings-item">
+                <span>Installed abilities</span>
+                <code>{summary?.stats.installedAbilities ?? 0}</code>
+              </li>
+              <li className="settings-item">
+                <span>Enabled abilities</span>
+                <code>{summary?.stats.enabledAbilities ?? 0}</code>
+              </li>
+              <li className="settings-item">
+                <span>Reference-only sources</span>
+                <code>{summary?.stats.referenceCapabilities ?? 0}</code>
+              </li>
+              <li className="settings-item">
+                <span>Capability lifecycle</span>
+                <code>tools/scripts/manage-workspace-capabilities.sh</code>
+              </li>
+            </ul>
+          </div>
+
           <div className="settings-subsection">
             <h3 className="settings-group-title">Runtime defaults</h3>
             <ul className="settings-list">
@@ -72,6 +107,14 @@ export function SettingsPanel({ loading, summary }: SettingsPanelProps) {
               <li className="settings-item">
                 <span>Cache buckets</span>
                 <code>{summary?.stats.cacheBuckets}</code>
+              </li>
+              <li className="settings-item">
+                <span>Core services</span>
+                <code>{summary?.stats.coreServices}</code>
+              </li>
+              <li className="settings-item">
+                <span>Tracked abilities</span>
+                <code>{summary?.stats.abilities}</code>
               </li>
               <li className="settings-item">
                 <span>Handover docs</span>

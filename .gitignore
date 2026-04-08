@@ -16,7 +16,12 @@ dist-ssr
 repos/*
 !repos/workspace-hub/
 !repos/workspace-hub/**
+!repos/abilities/
+repos/abilities/*
+!repos/core/
+repos/core/*
 *.command
+tools/mempalace/
 tools/ref/
 tools/local/
 .cognetivy/
@@ -24,6 +29,7 @@ tools/local/
 cache/context/
 cache/design-md/
 cache/playwright-browsers/
+shared/workspace-capabilities/state.json
 
 # macOS and synced-folder noise
 .DS_Store

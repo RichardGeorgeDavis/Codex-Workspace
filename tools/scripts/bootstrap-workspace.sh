@@ -3,6 +3,7 @@ set -eu
 
 workspace_root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 workspace_hub_dir="$workspace_root/repos/workspace-hub"
+mempalace_wrapper="$workspace_root/tools/bin/workspace-memory"
 run_mode="dry-run"
 
 usage() {
@@ -14,9 +15,11 @@ Prepare Codex Workspace for first use without touching sibling repos.
 Default behavior is a dry run. Use --run to:
 - create safe cache/context folders if they are missing
 - install Workspace Hub dependencies with pnpm if node_modules is missing
+- install the MemPalace workspace service if it is not ready
 
 This script does not install system packages and does not mutate repos under repos/
-other than repos/workspace-hub.
+other than repos/workspace-hub. It may clone or update workspace-level services
+under tools/ when those services are part of the workspace baseline.
 EOF
 }
 
@@ -73,7 +76,9 @@ for target_dir in \
   "$workspace_root/cache/context/agents" \
   "$workspace_root/cache/context/agents/jobs" \
   "$workspace_root/cache/context/workspace" \
-  "$workspace_root/cache/playwright-browsers"
+  "$workspace_root/cache/playwright-browsers" \
+  "$workspace_root/shared/mempalace" \
+  "$workspace_root/cache/mempalace"
 do
   if [ -d "$target_dir" ]; then
     print_status "[ok]" "$(basename "$target_dir")" "$target_dir"
@@ -87,6 +92,23 @@ do
     print_status "[plan]" "$(basename "$target_dir")" "would create $target_dir"
   fi
 done
+
+printf '\nMemPalace service\n'
+if [ ! -x "$mempalace_wrapper" ]; then
+  print_status "[fail]" "workspace-memory" "missing executable wrapper at $mempalace_wrapper"
+  exit 1
+fi
+
+if "$mempalace_wrapper" status >/dev/null 2>&1; then
+  print_status "[ok]" "MemPalace" "workspace service wrapper is ready"
+else
+  if [ "$run_mode" = "run" ]; then
+    "$mempalace_wrapper" install
+    print_status "[ok]" "MemPalace" "installed or repaired via tools/bin/workspace-memory"
+  else
+    print_status "[plan]" "MemPalace" "would run: tools/bin/workspace-memory install"
+  fi
+fi
 
 printf '\nWorkspace Hub deps\n'
 if [ -d "$workspace_hub_dir/node_modules" ]; then
@@ -106,4 +128,5 @@ printf '\nNext steps\n'
 printf -- '- Run tools/scripts/doctor-workspace.sh\n'
 printf -- '- Export shared env when needed: eval "$(tools/scripts/print-workspace-env.sh)"\n'
 printf -- '- Start Workspace Hub with: cd repos/workspace-hub && pnpm dev\n'
+printf -- '- Start MemPalace MCP with: tools/bin/mempalace-start\n'
 printf -- '- Use tools/scripts/release-readiness.sh before cutting a stable release\n'

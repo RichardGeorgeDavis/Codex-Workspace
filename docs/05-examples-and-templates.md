@@ -34,8 +34,14 @@ Recommended destination:
 shared/repo-index.json
 ```
 
+### `tools/manifests/repo-groups.json`
+The tracked default repo-group manifest for targeted update workflows.
+
 ### `tools/manifests/repo-groups.example.json`
-A sample repo-group manifest for targeted update workflows.
+A sample repo-group manifest shape for adapting or replacing the default.
+
+### `tools/manifests/workspace-capabilities.json`
+The tracked registry for reviewed external sources that graduate into optional abilities or core workspace services.
 
 ### `tools/templates/openspec/`
 Starter material for a tracked spec-driven layer when a change is large enough to justify requirements, design notes, and task breakdowns.
@@ -45,6 +51,8 @@ Guidance for repo-local component previews using lightweight story files rather 
 
 ### `tools/templates/repo-docs/`
 Starter material for creating a minimal repo `README.md` and a placeholder cover image when a repo lands under `repos/` without enough onboarding context.
+
+This template set also includes a dedicated site-reference README template for public site clone or rip requests, where the repo should be framed as a mirror, reference copy, or rebuild rather than as the original source project.
 
 ### `tools/templates/artifacts/`
 Guidance for local task artifacts such as plans, summaries, logs, screenshots, and other outputs under `cache/context/agents/jobs/`.
@@ -83,6 +91,7 @@ The repo-docs template demonstrates:
 - the Workspace Hub cover block markers
 - a repo-local `docs/cover.png` path that can start as a placeholder and later be replaced by a captured preview
 - a concise checklist for setup, run, preview, and structure notes
+- a separate public-site reference template that records source URL, capture date, fetch method, local serve path, mirror-versus-rebuild status, and repo-local `ref/` fallback handling for blocked downloads
 
 ## Example repo index notes
 
@@ -96,6 +105,17 @@ The sample repo index demonstrates a mixed workspace containing:
 These examples show how different repo types can coexist inside the same workspace while using different preview modes.
 
 The repo-group manifest shows how named sets such as `core`, `frontend`, or `wordpress` can be updated selectively without hard-coding organization-specific arrays into scripts.
+
+The capability manifest shows how reviewed upstream sources can be classified and managed without blurring together references, optional abilities, repo-local adoption, and core workspace services.
+
+## Implementation batching
+
+Use one batching convention across the workspace:
+
+- workspace-wide larger batches live in `docs/HANDOVER.md`
+- repo-specific larger batches live in tracked `openspec/changes/.../tasks.md` or a repo-local `Next Batches` section
+
+That keeps the next end-to-end slice visible without turning small edits into mandatory spec work.
 
 ## Recommended Codex behaviour
 

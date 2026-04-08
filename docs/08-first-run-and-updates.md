@@ -18,6 +18,8 @@ What a new user gets by default is:
 
 So if we want a predictable onboarding path, we need to provide it in tracked docs and helper scripts.
 
+MemPalace is now integrated as the first core workspace memory service. The current bootstrap and doctor scripts can prepare and verify that service for the active workspace user.
+
 ## First-run questions
 
 Answer these in order:
@@ -49,6 +51,22 @@ Install or verify:
 
 This is the recommended baseline for every user.
 
+Core profile now also supports:
+
+- verifying or installing the MemPalace workspace service
+- keeping its code in `tools/` and its durable per-user state in `shared/`
+- keeping disposable service artifacts in `cache/`
+- keeping readable Codex transcript exports in `shared/mempalace/<user>/exports/`
+- keeping that memory layer separate from canonical tracked repo documentation
+- running memory ingest and search from the shell without requiring Workspace Hub to be open
+- using explicit closeout saves such as `tools/bin/workspace-memory save-repo <repo-name>` or `tools/bin/workspace-memory save-workspace`
+- using safe operator commands such as `tools/bin/workspace-memory status`, `wake-up`, `mine-codex-current`, `tools/bin/mempalace-start`, and `tools/bin/mempalace-sync`
+
+Maintainer note:
+
+- `gh` is recommended when you need to work with forks, PRs, or reviewed upstream mirrors
+- `gh auth login` is an optional maintainer or contributor step, not part of the baseline workspace setup
+
 ### Hub
 
 Use this when you want the local dashboard in `repos/workspace-hub/`.
@@ -66,6 +84,8 @@ cd repos/workspace-hub
 pnpm install
 pnpm dev
 ```
+
+Once the Hub is open, use the `Workspace memory` switch in the header to open the dedicated MemPalace page. That page is the workspace-level view for memory state, target selection, and safe wrapper commands.
 
 ### Mixed Stack
 
@@ -185,6 +205,8 @@ Keep these under local-only locations such as `tools/local/`, ignored config, or
 This is also where larger harness-style orchestration experiments belong if you want to trial them. Do not make a full harness part of the tracked workspace baseline unless it proves clear value first.
 
 If you keep reviewed upstream snapshots in `tools/ref/`, refresh them with `tools/scripts/sync-reference-snapshots.sh` instead of maintaining them by hand.
+
+When a reviewed upstream becomes part of how the whole workspace works, promote it out of `tools/ref/` and into the core-service model described in `11-core-memory-and-reference-promotion.md`.
 
 ## Recommended first run
 
@@ -385,12 +407,14 @@ tools/scripts/update-all.sh
 
 That script already skips dirty working trees, detached heads, and repos without an upstream branch.
 
-To update only a named repo group from `tools/manifests/repo-groups.example.json` or your own manifest:
+To update only a named repo group from the default `tools/manifests/repo-groups.json` or your own manifest:
 
 ```bash
 tools/scripts/update-all.sh --list-groups
 tools/scripts/update-all.sh --group core
 ```
+
+`update-all.sh` is for normal repos. It intentionally skips optional abilities under `repos/abilities/`, which now update through the capability lifecycle command instead of the normal repo-group flow.
 
 ### 5. Update local-only tools separately
 
@@ -411,17 +435,20 @@ This includes:
 
 These should not be treated as tracked workspace state.
 
-If you keep ignored upstream reference snapshots in `tools/ref/`, update them separately too:
+If you keep reviewed GitHub-backed upstreams for comparison or local catalog use, update them separately too:
 
 ```bash
-tools/scripts/sync-reference-snapshots.sh --list
-tools/scripts/sync-reference-snapshots.sh oh-my-codex
-tools/scripts/sync-reference-snapshots.sh --run oh-my-codex
-tools/scripts/sync-reference-snapshots.sh --run voltagent-awesome-design-md
-tools/scripts/use-design-md.sh --refresh
+tools/scripts/manage-workspace-capabilities.sh list
+tools/scripts/manage-workspace-capabilities.sh install
+tools/scripts/manage-workspace-capabilities.sh update
+tools/scripts/manage-workspace-capabilities.sh update --run voltagent-awesome-design-md
+tools/scripts/update-github-refs.sh --list
+tools/scripts/update-github-refs.sh --run voltagent-awesome-design-md
 ```
 
-The script uses dry-run mode by default. For the current reviewed examples, `oh-my-codex` is the safer candidate for optional local integration, `oh-my-openagent` is better treated as a reference unless its license and runtime are an intentional fit, and `voltagent-awesome-design-md` is the reviewed path for installing or refreshing the local `DESIGN.md` catalog under `tools/ref/`.
+`manage-workspace-capabilities.sh` is now the canonical lifecycle command for installable workspace abilities and core services. `update-github-refs.sh` remains as the compatibility wrapper for update-only flows.
+
+For the current reviewed examples, `oh-my-codex` is the safer candidate for optional local integration, `oh-my-openagent` is better treated as a reference unless its license and runtime are an intentional fit, and `voltagent-awesome-design-md` now lives as the optional ability `repos/abilities/voltagent-awesome-design-md`.
 
 If you want a stable workspace-local mirror of just the `DESIGN.md` files, rebuild `cache/design-md/catalog/` with `tools/scripts/use-design-md.sh --refresh`. You can also copy a specific site file into a repo root with `tools/scripts/use-design-md.sh vercel /path/to/repo`.
 

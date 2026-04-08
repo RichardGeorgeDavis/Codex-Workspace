@@ -1,4 +1,8 @@
 import type {
+  WorkspaceCapabilitiesSnapshot,
+  WorkspaceCapabilityActionId,
+  WorkspaceCoreServiceTargetContext,
+  WorkspaceRepo,
   RepoAgentPresetId,
   RepoAgentPresetResult,
   SummaryRequestReason,
@@ -47,6 +51,30 @@ export async function fetchWorkspaceSummaryBase(
   return (await response.json()) as WorkspaceSummary
 }
 
+export async function fetchWorkspaceRepoDetails(
+  relativePath: string,
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams({ relativePath })
+  const response = await fetch(`/api/repos/details?${params.toString()}`, { signal })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return (await response.json()) as WorkspaceRepo
+}
+
+export async function fetchWorkspaceCapabilitiesSnapshot(signal?: AbortSignal) {
+  const response = await fetch('/api/capabilities', { signal })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return (await response.json()) as WorkspaceCapabilitiesSnapshot
+}
+
 export async function openRepoTarget(
   relativePath: string,
   target:
@@ -82,6 +110,119 @@ export async function openWorkspacePath(targetPath: string) {
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
+  }
+}
+
+export async function openCoreServiceTarget(
+  serviceId: string,
+  target: 'cache' | 'docs' | 'exports' | 'readme' | 'repo' | 'storage' | 'terminal',
+) {
+  const response = await fetch('/api/services/open', {
+    body: JSON.stringify({ serviceId, target }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+}
+
+export async function openWorkspaceCapabilityTarget(
+  capabilityId: string,
+  target: 'docs' | 'readme' | 'repo',
+) {
+  const response = await fetch('/api/capabilities/open', {
+    body: JSON.stringify({ capabilityId, target }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+}
+
+export async function runWorkspaceCapabilityAction(
+  capabilityId: string,
+  action: WorkspaceCapabilityActionId,
+) {
+  const response = await fetch('/api/capabilities/action', {
+    body: JSON.stringify({ action, capabilityId }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return (await response.json()) as {
+    ok: boolean
+    output: string
+  }
+}
+
+export async function fetchCoreServiceTargetContext(
+  serviceId: string,
+  payload: {
+    currentRepoRelativePath?: string | null
+    repoRelativePath?: string | null
+    targetKind: 'current-repo' | 'repo' | 'workspace-docs'
+  },
+) {
+  const response = await fetch('/api/services/context', {
+    body: JSON.stringify({ serviceId, ...payload }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return (await response.json()) as WorkspaceCoreServiceTargetContext
+}
+
+export async function runCoreServiceCommand(
+  serviceId: string,
+  payload: {
+    commandId:
+      | 'export-codex-current'
+      | 'mine-codex-current'
+      | 'runtime-start'
+      | 'save-repo'
+      | 'save-workspace'
+      | 'status'
+      | 'sync'
+      | 'wake-up'
+    repoRelativePath?: string | null
+  },
+) {
+  const response = await fetch('/api/services/command', {
+    body: JSON.stringify({ serviceId, ...payload }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+
+  return (await response.json()) as {
+    command: string
+    ok: boolean
+    output: string
   }
 }
 
@@ -128,6 +269,20 @@ export function subscribeWorkspaceEvents(
 export async function runRepoInstall(relativePath: string) {
   const response = await fetch('/api/repos/install', {
     body: JSON.stringify({ relativePath }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+}
+
+export async function runCoreServiceInstall(serviceId: string) {
+  const response = await fetch('/api/services/install', {
+    body: JSON.stringify({ serviceId }),
     headers: {
       'Content-Type': 'application/json',
     },
@@ -246,6 +401,37 @@ export async function runRepoRuntimeAction(
 ) {
   const response = await fetch('/api/repos/runtime', {
     body: JSON.stringify({ action, relativePath }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+}
+
+export async function runCoreServiceRuntimeAction(
+  serviceId: string,
+  action: 'restart' | 'start' | 'stop',
+) {
+  const response = await fetch('/api/services/runtime', {
+    body: JSON.stringify({ action, serviceId }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response))
+  }
+}
+
+export async function syncCoreService(serviceId: string) {
+  const response = await fetch('/api/services/sync', {
+    body: JSON.stringify({ serviceId }),
     headers: {
       'Content-Type': 'application/json',
     },

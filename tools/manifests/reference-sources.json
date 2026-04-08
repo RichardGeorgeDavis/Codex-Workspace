@@ -39,16 +39,6 @@
       "license": "SUL-1.0",
       "recommendedUse": "reference-only",
       "notes": "Keep this as a reviewed reference unless its license and OpenCode-specific runtime are an intentional fit for your local setup."
-    },
-    {
-      "id": "voltagent-awesome-design-md",
-      "name": "VoltAgent/awesome-design-md",
-      "repoUrl": "https://github.com/VoltAgent/awesome-design-md",
-      "archiveUrl": "https://github.com/VoltAgent/awesome-design-md/archive/refs/heads/main.tar.gz",
-      "targetDir": "voltagent-awesome-design-md-main",
-      "license": "MIT",
-      "recommendedUse": "design-reference-catalog",
-      "notes": "Keep this as a reviewed upstream DESIGN.md catalog under tools/ref/. Install or refresh it with the reference snapshot sync script instead of treating it as a workspace dependency."
     }
   ]
 }
