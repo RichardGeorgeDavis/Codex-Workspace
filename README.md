@@ -2,17 +2,91 @@
 
 <img src="favicon.png" alt="Codex Workspace favicon" width="128" />
 
-Codex Workspace is a local-first workspace structure for managing many standalone repositories on one machine without forcing them into a monorepo.
+Codex Workspace is a local-first way to organize and run many standalone repositories on one machine without forcing them into a monorepo or one shared dependency tree.
 
-It combines:
+## What Exists Today
+
+The most concrete product in this repo today is [Workspace Hub](repos/workspace-hub/README.md), a vendored local control plane for mixed-stack workspaces. It scans sibling repos, classifies them conservatively, shows runtime and metadata state, and provides start, stop, open, and preview actions without forcing every repo into one toolchain.
+
+The workspace repo around it provides:
 
 - a predictable folder layout for mixed stacks
 - shared caches and helper tooling
-- lightweight workspace metadata
-- a growing core-services layer for workspace-wide capabilities such as long-term memory
+- lightweight workspace metadata and manifests
 - a tracked capability lifecycle for reviewed upstream references, optional abilities, and core services
 - a filesystem-first context model for docs, manifests, and agent guidance
-- a vendored [Workspace Hub](repos/workspace-hub/README.md) app for discovery, runtime control, and previews
+
+<!-- workspace-hub:cover:start -->
+![Codex Workspace cover](.github/assets/cover-readme-20260321.png)
+<!-- workspace-hub:cover:end -->
+
+## Who It's For
+
+- People managing many independent local repos across frontend, WordPress, PHP, static, and utility stacks.
+- Contributors who want a practical workspace structure plus a concrete app surface in `repos/workspace-hub/`.
+- Teams who want local runtime behavior to stay explicit instead of hiding everything behind one central toolchain.
+
+## Who It's Not For
+
+- Teams looking for one shared dependency graph across unrelated repos.
+- Setups that expect ServBay, Docker, or a proxy layer to be mandatory for every project.
+- Projects that already want a full monorepo with centralized installs and one runtime model.
+
+## Why This Instead Of A Monorepo
+
+- Repos stay independently runnable on their own terms.
+- Caches can be shared without sharing installs.
+- Local runtime behavior stays explicit and inspectable.
+- WordPress, Vite, static, PHP, and utility repos can coexist without pretending they all want the same workflow.
+
+## Quick Start
+
+If you want to try the concrete product first, run Workspace Hub:
+
+```bash
+cd repos/workspace-hub
+pnpm install
+pnpm dev
+```
+
+Once the Hub is open, use the `Workspace memory` switch in the header to open the dedicated MemPalace page directly. That page now covers service state, target selection, in-app memory search, and safe wrapper actions.
+The dashboard also exposes installable abilities and core services through the Workspace Capabilities panel, and supports a persisted `split` versus `discovery-first` repo layout.
+
+If you want the fuller workspace path after that:
+
+- Start with [docs/08-first-run-and-updates.md](docs/08-first-run-and-updates.md).
+- Use [docs/README.md](docs/README.md) for the detailed docs index.
+- Use [docs/09-new-repo-baseline.md](docs/09-new-repo-baseline.md) when adding or onboarding a repo.
+
+## How To Contribute
+
+- Start with [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md).
+- Browse current [`help wanted`](https://github.com/RichardGeorgeDavis/Codex-Workspace/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22help%20wanted%22) and [`good first issue`](https://github.com/RichardGeorgeDavis/Codex-Workspace/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22) tickets.
+- If the queue is thin, use [docs/13-contributor-roadmap.md](docs/13-contributor-roadmap.md) for the current contribution map and ready-to-open starter issue briefs.
+- Use [GitHub Discussions Q&A](https://github.com/RichardGeorgeDavis/Codex-Workspace/discussions/categories/q-a) for setup or usage questions.
+
+## Looking For Help
+
+- Docs clarity and repo-entry improvements.
+- Repo classification and manifest examples.
+- Workspace Hub UX and empty-state polish.
+- Runtime diagnostics and contributor-friendly troubleshooting.
+- Templates and scripts that reduce workspace setup friction.
+
+## Contribution Areas
+
+- Docs clarity
+- Repo classification and manifests
+- Workspace Hub UX
+- Runtime diagnostics
+- Templates and scripts
+
+## Now / Next / Later
+
+- Now: Docs clarity, Workspace Hub UX, repo classification, manifest examples, and script ergonomics are stable enough for outside contribution.
+- Next: Capability-surface polish, observability visibility, screenshot and preview reliability, and tighter contributor verification paths.
+- Later: Broader capability promotion and deeper workspace-memory flows after the current public surfaces settle.
+- Out of scope: Shared dependency installs across unrelated repos, making ServBay mandatory, or forcing every repo through one runtime model.
 
 ## Why It Exists
 
@@ -24,19 +98,7 @@ This repo exists to keep local development practical when your machine contains 
 - WordPress, Vite, static, PHP, and utility repos can coexist cleanly
 - ServBay remains optional rather than becoming a hard dependency
 
-## Challenges
-
-Mixed local workspaces tend to accumulate useful context in too many places at once:
-
-- repo docs and READMEs
-- runtime manifests and config files
-- screenshots and previews
-- local notes and operator overrides
-- repo-specific skills and machine-specific agent setup
-
-When that context is fragmented, tools and agents either miss important signals or pull in too much noise too early.
-
-## Our Approach
+## How It Works
 
 Codex Workspace addresses that with a practical filesystem-first model:
 
@@ -56,24 +118,6 @@ Codex Workspace addresses that with a practical filesystem-first model:
 - Keep WordPress handling pragmatic.
 - Use lightweight manifests where explicit runtime behaviour helps.
 
-## Core Concepts
-
-### Filesystem-shaped context
-
-Repo context should live in normal files and folders that are easy to inspect, not in hidden tool state.
-
-### Layered context loading
-
-Use short summaries first, then read deeper repo details only when needed.
-
-### Observable retrieval
-
-Repo classification and generated summaries should be explainable from the files that informed them.
-
-### Cautious memory
-
-Keep durable repo knowledge tracked. Keep operator memory, secrets, and machine-specific notes local until they prove broadly useful.
-
 ## Workspace Layout
 
 ```text
@@ -90,38 +134,6 @@ Codex Workspace/
 `docs/` is the canonical documentation surface.
 `shared/` is for workspace metadata such as [`shared/repo-index.json`](shared/repo-index.json) and [`shared/standards.md`](shared/standards.md), not duplicated doc mirrors.
 
-## Quick Start
-
-First run:
-- [docs/08-first-run-and-updates.md](docs/08-first-run-and-updates.md)
-- [docs/10-release-readiness.md](docs/10-release-readiness.md)
-- [docs/12-maintainer-runbook.md](docs/12-maintainer-runbook.md)
-- `tools/scripts/bootstrap-workspace.sh`
-- `tools/scripts/doctor-workspace.sh`
-- `tools/scripts/manage-workspace-capabilities.sh list`
-- `tools/bin/workspace-memory status`
-- `tools/bin/workspace-memory mine-codex --limit 5`
-- `tools/bin/workspace-memory save-workspace --limit 1`
-- `tools/scripts/setup-workspace-profile.sh`
-- `tools/scripts/init-agent-job-bundle.sh`
-
-Review the docs index:
-- [docs/README.md](docs/README.md)
-
-If you are adding or onboarding a repo in this workspace:
-- [docs/09-new-repo-baseline.md](docs/09-new-repo-baseline.md)
-
-Run the local dashboard:
-
-```bash
-cd repos/workspace-hub
-pnpm install
-pnpm dev
-```
-
-Once the Hub is open, use the `Workspace memory` switch in the header to open the dedicated MemPalace page directly.
-The dashboard also exposes installable abilities and core services through the Workspace Capabilities panel, and supports a persisted `split` versus `discovery-first` repo layout.
-
 Use the starter files when you need explicit repo metadata:
 - [project-manifest.template.json](project-manifest.template.json)
 - [repo-index.sample.json](repo-index.sample.json)
@@ -134,7 +146,16 @@ Recommended maintainer extras:
 ## Documentation
 
 Start here:
+
 - [docs/README.md](docs/README.md)
+- [docs/08-first-run-and-updates.md](docs/08-first-run-and-updates.md)
+- [docs/09-new-repo-baseline.md](docs/09-new-repo-baseline.md)
+- [docs/13-contributor-roadmap.md](docs/13-contributor-roadmap.md)
+- [docs/12-maintainer-runbook.md](docs/12-maintainer-runbook.md)
+- [repos/workspace-hub/README.md](repos/workspace-hub/README.md)
+
+Deeper docs:
+
 - [docs/00-overview.md](docs/00-overview.md)
 - [docs/01-codex-workspace-handover.md](docs/01-codex-workspace-handover.md)
 - [docs/02-local-runtime-handover.md](docs/02-local-runtime-handover.md)
@@ -143,17 +164,13 @@ Start here:
 - [docs/05-examples-and-templates.md](docs/05-examples-and-templates.md)
 - [docs/06-cross-agent-skills-and-mcp.md](docs/06-cross-agent-skills-and-mcp.md)
 - [docs/07-context-cache-and-retrieval.md](docs/07-context-cache-and-retrieval.md)
-- [docs/08-first-run-and-updates.md](docs/08-first-run-and-updates.md)
-- [docs/09-new-repo-baseline.md](docs/09-new-repo-baseline.md)
 - [docs/10-release-readiness.md](docs/10-release-readiness.md)
 - [docs/11-core-memory-and-reference-promotion.md](docs/11-core-memory-and-reference-promotion.md)
-- [docs/12-maintainer-runbook.md](docs/12-maintainer-runbook.md)
 
 Supporting references:
 - [docs/HANDOVER.md](docs/HANDOVER.md)
 - [docs/CHANGELOG.md](docs/CHANGELOG.md)
 - [AGENTS.md](AGENTS.md)
-- [repos/workspace-hub/README.md](repos/workspace-hub/README.md)
 
 When a workspace-wide feature lands, update the public surfaces in the same slice:
 
@@ -162,19 +179,6 @@ When a workspace-wide feature lands, update the public surfaces in the same slic
 - `docs/CHANGELOG.md`
 - relevant repo-local docs such as `repos/workspace-hub/README.md`
 - optional navigation pages under `docs/wiki/` when public navigation should expose the feature
-
-## Workspace Hub
-
-Workspace Hub is the most concrete product in this repo today. It scans sibling repos, classifies them conservatively, shows runtime and metadata state, and provides start, stop, open, and preview actions without forcing all repos into one toolchain.
-
-<!-- workspace-hub:cover:start -->
-![Codex Workspace cover](.github/assets/cover-readme-20260321.png)
-<!-- workspace-hub:cover:end -->
-
-See:
-- [repos/workspace-hub/README.md](repos/workspace-hub/README.md)
-- [repos/workspace-hub/docs/manifest.md](repos/workspace-hub/docs/manifest.md)
-- [repos/workspace-hub/docs/runtime-troubleshooting.md](repos/workspace-hub/docs/runtime-troubleshooting.md)
 
 ## Context For Agents
 

@@ -21,8 +21,9 @@ Read these in order:
 11. `10-release-readiness.md`
 12. `11-core-memory-and-reference-promotion.md`
 13. `12-maintainer-runbook.md`
-14. `HANDOVER.md`
-15. `CHANGELOG.md`
+14. `13-contributor-roadmap.md`
+15. `HANDOVER.md`
+16. `CHANGELOG.md`
 
 ## What Lives Here
 
@@ -34,6 +35,7 @@ Read these in order:
 - `10-release-readiness.md` defines the stable contract, support matrix, migration note, and stable release gate.
 - `11-core-memory-and-reference-promotion.md` defines the workspace source taxonomy and how reviewed GitHub references can graduate into abilities, repo-level adoption, or core workspace services, with MemPalace as the current target.
 - `12-maintainer-runbook.md` defines the clean-clone maintainer path, optional GitHub auth, capability lifecycle commands, update flow, and rollback guidance.
+- `13-contributor-roadmap.md` defines the public contribution map, label taxonomy, and the current help-wanted starter issue queue.
 - `HANDOVER.md` summarizes the current state of the workspace, current implementation batches, and the latest acceptance evidence.
 - `CHANGELOG.md` records notable workspace-level changes.
 
@@ -93,7 +95,9 @@ When a workspace-wide feature lands, update the user-visible surfaces in the sam
 - relevant repo-local docs such as `repos/workspace-hub/README.md`
 - optional navigation pages under `docs/wiki/` when public navigation should expose the feature
 
-Recent examples include Workspace memory, the capability lifecycle, the source taxonomy, and Hub-visible layout or capability flows.
+Recent examples include Workspace memory, in-app MemPalace retrieval search, the capability lifecycle, the source taxonomy, and Hub-visible layout or capability flows.
+
+Contributor-facing surfaces now also include the root README funnel, `.github/CONTRIBUTING.md`, the issue-template chooser, and `13-contributor-roadmap.md`.
 
 ## Shared Metadata
 

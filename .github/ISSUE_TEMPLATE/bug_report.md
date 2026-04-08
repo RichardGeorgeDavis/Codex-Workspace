@@ -24,6 +24,10 @@ Describe the problem clearly.
 2. 
 3. 
 
+## Reproduction quality
+
+Describe what makes this reproducible: exact command, file path, route, repo layout, or runtime precondition.
+
 ## Expected result
 
 What should have happened?
@@ -31,6 +35,10 @@ What should have happened?
 ## Actual result
 
 What happened instead?
+
+## Acceptance signal
+
+What would clearly show this is fixed? Keep it concrete: a route works, a command returns expected output, a panel renders, a doc path is correct, or a test covers the case.
 
 ## Environment
 
@@ -41,4 +49,4 @@ What happened instead?
 
 ## Additional context
 
-Include screenshots, logs, or related file paths if they help.
+Include screenshots, logs, related file paths, or links to prior discussion if they help.

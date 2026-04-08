@@ -2,6 +2,12 @@
 
 ## 2026-04-08
 
+- Reframed the root README around a faster public entry path: concrete product first, contributor path near the top, a visible help-wanted lane, and a short `Now / Next / Later` roadmap.
+- Reworked `.github/CONTRIBUTING.md`, support guidance, and the issue-template chooser so contributors can move from README to roadmap to issue to PR with less maintainer context.
+- Added `docs/13-contributor-roadmap.md` with a public contribution map, label taxonomy, and a curated queue of ready-to-open starter issue briefs for `help wanted` and `good first issue` triage.
+- Expanded the bug, docs, and feature issue templates with clearer reproduction and acceptance guidance, and added a dedicated maintainer-facing `Help wanted task` issue template for scoped contributor-ready work.
+- Added a first-class MemPalace retrieval flow inside the Workspace Hub memory page, so operators can run workspace-memory searches directly from the UI instead of relying only on shell wrappers or raw service state.
+- Updated the root README, docs index, first-run guidance, Workspace Hub README, and handover note so the Workspace memory surface is now described as state plus target context plus in-app search plus safe wrapper actions.
 - Bumped the workspace baseline release to `v1.1.0` and updated `repos/workspace-hub` to `1.1.0` to match the new capability lifecycle, Workspace memory, and Hub UX surface area.
 - Added an explicit new-repo intake process for public site clone or rip requests, clarifying the expected distinction between deployed mirrors, working local reference copies, and clean rebuilds.
 - Added a dedicated repo-docs template for public-site reference repos so `repos/` intake can record source URL, capture date, fetch method, local serve path, and limitations consistently.

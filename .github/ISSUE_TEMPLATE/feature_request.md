@@ -22,6 +22,10 @@ Describe the preferred solution.
 
 List any other approaches you considered.
 
+## Constraints or non-goals
+
+Call out anything this request should avoid, such as runtime changes, broad refactors, or monorepo-style dependency coupling.
+
 ## Scope
 
 - Workspace docs
@@ -30,6 +34,10 @@ List any other approaches you considered.
 - Repo metadata or manifests
 - Other
 
+## Acceptance signal
+
+What would make this feel done? Describe the observable outcome in the UI, docs, command output, or workflow.
+
 ## Additional context
 
-Add examples, screenshots, or reference repos if useful.
+Add examples, screenshots, reference repos, or links to related issues if useful.
