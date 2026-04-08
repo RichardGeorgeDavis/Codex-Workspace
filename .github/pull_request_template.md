@@ -1,3 +1,7 @@
+## Related issue
+
+Link the issue, discussion, or brief problem statement this PR addresses.
+
 ## Summary
 
 Explain the change in 2-5 bullets.
@@ -12,7 +16,7 @@ Explain the change in 2-5 bullets.
 
 ## Verification
 
-List the checks you ran or explain why no runtime verification was needed.
+List the checks you ran or explain why no runtime verification was needed. Keep this as narrow and concrete as the change itself.
 
 ## Docs
 

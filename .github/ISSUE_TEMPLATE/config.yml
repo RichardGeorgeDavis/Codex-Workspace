@@ -1,5 +1,11 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Browse help wanted issues
+    url: https://github.com/RichardGeorgeDavis/Codex-Workspace/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22help%20wanted%22
+    about: Start here for current contribution-ready work. If the queue is light, use the contributor roadmap for starter issue briefs.
+  - name: Contributor roadmap
+    url: https://github.com/RichardGeorgeDavis/Codex-Workspace/blob/main/docs/13-contributor-roadmap.md
+    about: See what is stable now, what is evolving next, and which contribution areas are currently in scope.
   - name: Ask a question in Discussions
     url: https://github.com/RichardGeorgeDavis/Codex-Workspace/discussions/categories/q-a
     about: Use Discussions Q&A for setup help, usage questions, and workflow discussion.
