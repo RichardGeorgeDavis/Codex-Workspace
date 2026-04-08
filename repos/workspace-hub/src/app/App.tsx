@@ -1,8 +1,17 @@
-import { startTransition, useDeferredValue, useEffect, useRef, useState } from 'react'
+import { startTransition, useDeferredValue, useEffect, useEffectEvent, useRef, useState } from 'react'
 
 import { RepoDetails } from '../features/repos/RepoDetails.tsx'
 import { SectionCard } from '../components/SectionCard.tsx'
+import { WorkspaceCapabilitiesPanel } from '../features/capabilities/WorkspaceCapabilitiesPanel.tsx'
+import {
+  loadStoredRepoLayoutMode,
+  persistRepoLayoutMode,
+  resolveSelectedRepoPath,
+} from '../features/layout/repoLayout.ts'
 import { RepoSnapshot } from '../features/repos/RepoSnapshot.tsx'
+import { CoreServicesPanel } from '../features/services/CoreServicesPanel.tsx'
+import { CoreServiceDetails } from '../features/services/CoreServiceDetails.tsx'
+import { MempalaceWorkspacePage } from '../features/services/MempalaceWorkspacePage.tsx'
 import { SettingsPanel } from '../features/settings/SettingsPanel.tsx'
 import { StatusStrip } from '../features/status/StatusStrip.tsx'
 import { ThemeControls } from '../features/theme/ThemeControls.tsx'
@@ -15,25 +24,35 @@ import {
 } from '../features/theme/theme.ts'
 import {
   applyRepoAgentPreset,
+  fetchWorkspaceCapabilitiesSnapshot,
+  fetchCoreServiceTargetContext,
+  fetchWorkspaceRepoDetails,
   fetchWorkspaceSummary,
   fetchWorkspaceSummaryBase,
   generateRepoCover,
+  openCoreServiceTarget,
   openRepoTarget,
+  openWorkspaceCapabilityTarget,
   openWorkspacePath,
   recordRepoActivity,
   resetRepoMetadata,
+  runCoreServiceInstall,
+  runCoreServiceCommand,
+  runCoreServiceRuntimeAction,
   runRepoInstall,
   runRepoIntake,
   runRepoRuntimeAction,
+  runWorkspaceCapabilityAction,
   saveRepoMetadata,
   searchWorkspace,
   stopAllRuntimes,
   subscribeWorkspaceEvents,
+  syncCoreService,
   writeRepoManifest,
 } from '../lib/api.ts'
 import {
+  mergeWorkspaceRepoDetails,
   mergeWorkspaceSummaryDiagnostics,
-  needsDiagnosticsHydration,
 } from '../lib/mergeWorkspaceSummary.ts'
 import type {
   RepoAgentPresetId,
@@ -41,6 +60,10 @@ import type {
   SummaryRequestReason,
   WorkspaceEvent,
   WorkspaceArchive,
+  WorkspaceCapabilitiesSnapshot,
+  WorkspaceCoreServiceCommandId,
+  WorkspaceCoreServiceTargetContext,
+  WorkspaceCoreServiceTargetKind,
   WorkspaceRepo,
   WorkspaceSearchResult,
   WorkspaceSummary,
@@ -51,13 +74,13 @@ import './app.css'
 type RepoFilterValue =
   | RepoType
   | 'all'
-  | 'archived'
   | 'external'
-  | 'non-archived'
   | 'runnable'
 type AppProps = {
   initialThemePreference: ThemePreference
 }
+
+type WorkspaceView = 'dashboard' | 'mempalace'
 
 function formatGeneratedAt(value: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -114,10 +137,6 @@ function filterRepos(
   selectedFilter: RepoFilterValue,
 ) {
   return repos.filter((repo) => {
-    if (selectedFilter === 'archived') {
-      return false
-    }
-
     if (selectedFilter === 'external') {
       if (repo.preferredMode !== 'external') {
         return false
@@ -126,7 +145,7 @@ function filterRepos(
       if (!repo.devCommand) {
         return false
       }
-    } else if (selectedFilter !== 'all' && selectedFilter !== 'non-archived' && repo.type !== selectedFilter) {
+    } else if (selectedFilter !== 'all' && repo.type !== selectedFilter) {
       return false
     }
 
@@ -163,12 +182,7 @@ function filterRepos(
 function filterArchives(
   archives: WorkspaceArchive[],
   normalizedSearch: string,
-  selectedFilter: RepoFilterValue,
 ) {
-  if (selectedFilter !== 'all' && selectedFilter !== 'archived') {
-    return []
-  }
-
   return archives.filter((archive) => {
     if (!normalizedSearch) {
       return true
@@ -181,8 +195,8 @@ function filterArchives(
 }
 
 export function App({ initialThemePreference }: AppProps) {
-  const fullHydrationCooldownMs = 4000
   const [summary, setSummary] = useState<WorkspaceSummary | null>(null)
+  const [capabilitySnapshot, setCapabilitySnapshot] = useState<WorkspaceCapabilitiesSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -195,21 +209,31 @@ export function App({ initialThemePreference }: AppProps) {
     'connecting',
   )
   const [searchTerm, setSearchTerm] = useState('')
+  const [repoLayoutMode, setRepoLayoutMode] = useState(() => loadStoredRepoLayoutMode())
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
   const [selectedFilter, setSelectedFilter] = useState<RepoFilterValue>('all')
+  const [showArchived, setShowArchived] = useState(true)
+  const [workspaceView, setWorkspaceView] = useState<WorkspaceView>('dashboard')
+  const [mempalaceTargetKind, setMempalaceTargetKind] =
+    useState<WorkspaceCoreServiceTargetKind>('workspace-docs')
+  const [mempalaceTargetRepoRelativePath, setMempalaceTargetRepoRelativePath] = useState<string | null>(null)
+  const [mempalaceTargetContext, setMempalaceTargetContext] =
+    useState<WorkspaceCoreServiceTargetContext | null>(null)
+  const [mempalaceCommandOutput, setMempalaceCommandOutput] = useState<string | null>(null)
   const [themePreference, setThemePreference] = useState(initialThemePreference)
   const deferredSearchTerm = useDeferredValue(searchTerm)
   const lastRecordedSelectionRef = useRef<string | null>(null)
   const liveRefreshTimeoutRef = useRef<number | null>(null)
+  const repoDetailsInFlightRef = useRef<string | null>(null)
+  const repoDetailsHydrationCountRef = useRef(0)
   const summaryRef = useRef<WorkspaceSummary | null>(null)
-  const fullHydrationRef = useRef(false)
-  const lastFullHydrationAtRef = useRef(0)
   const softRefreshInFlightRef = useRef<Promise<void> | null>(null)
   const softRefreshQueuedRef = useRef(false)
-  const fullHydrationRequestCountRef = useRef(0)
-  const fullHydrationSuppressedCooldownRef = useRef(0)
-  const fullHydrationSuppressedInFlightRef = useRef(0)
   const softRefreshCoalescedCountRef = useRef(0)
+  const triggerSoftRefresh = useEffectEvent((reason: SummaryRequestReason = 'event') => {
+    void refreshSummarySoft(undefined, reason)
+  })
 
   useEffect(() => {
     summaryRef.current = summary
@@ -220,22 +244,17 @@ export function App({ initialThemePreference }: AppProps) {
     setError(null)
 
     try {
-      const base = await fetchWorkspaceSummaryBase(signal, 'initial')
+      const [base, nextCapabilitySnapshot] = await Promise.all([
+        fetchWorkspaceSummaryBase(signal, 'initial'),
+        fetchWorkspaceCapabilitiesSnapshot(signal).catch(() => null),
+      ])
       if (signal?.aborted) {
         return
       }
 
       startTransition(() => {
         setSummary(base)
-      })
-
-      const full = await fetchWorkspaceSummary(signal, 'initial')
-      if (signal?.aborted) {
-        return
-      }
-
-      startTransition(() => {
-        setSummary(full)
+        setCapabilitySnapshot(nextCapabilitySnapshot)
       })
     } catch (caughtError) {
       if (signal?.aborted) {
@@ -261,7 +280,10 @@ export function App({ initialThemePreference }: AppProps) {
     setError(null)
 
     try {
-      const base = await fetchWorkspaceSummaryBase(signal, reason)
+      const [base, nextCapabilitySnapshot] = await Promise.all([
+        fetchWorkspaceSummaryBase(signal, reason),
+        fetchWorkspaceCapabilitiesSnapshot(signal).catch(() => null),
+      ])
       if (signal?.aborted) {
         return
       }
@@ -271,40 +293,10 @@ export function App({ initialThemePreference }: AppProps) {
 
       startTransition(() => {
         setSummary(merged)
-      })
-
-      const shouldHydrate = needsDiagnosticsHydration(merged, previous)
-      if (!shouldHydrate) {
-        return
-      }
-
-      if (fullHydrationRef.current) {
-        fullHydrationSuppressedInFlightRef.current += 1
-        return
-      }
-
-      const now = Date.now()
-      if (now - lastFullHydrationAtRef.current < fullHydrationCooldownMs) {
-        fullHydrationSuppressedCooldownRef.current += 1
-        return
-      }
-
-      fullHydrationRef.current = true
-      lastFullHydrationAtRef.current = now
-      fullHydrationRequestCountRef.current += 1
-
-      try {
-        const full = await fetchWorkspaceSummary(signal, 'hydration')
-        if (signal?.aborted) {
-          return
+        if (nextCapabilitySnapshot) {
+          setCapabilitySnapshot(nextCapabilitySnapshot)
         }
-
-        startTransition(() => {
-          setSummary(full)
-        })
-      } finally {
-        fullHydrationRef.current = false
-      }
+      })
     } catch (caughtError) {
       if (signal?.aborted) {
         return
@@ -347,13 +339,19 @@ export function App({ initialThemePreference }: AppProps) {
     setError(null)
 
     try {
-      const full = await fetchWorkspaceSummary(signal, 'manual-refresh')
+      const [full, nextCapabilitySnapshot] = await Promise.all([
+        fetchWorkspaceSummary(signal, 'manual-refresh'),
+        fetchWorkspaceCapabilitiesSnapshot(signal).catch(() => null),
+      ])
       if (signal?.aborted) {
         return
       }
 
       startTransition(() => {
         setSummary(full)
+        if (nextCapabilitySnapshot) {
+          setCapabilitySnapshot(nextCapabilitySnapshot)
+        }
       })
     } catch (caughtError) {
       if (signal?.aborted) {
@@ -418,6 +416,27 @@ export function App({ initialThemePreference }: AppProps) {
     }
   }
 
+  async function handleOpenCoreServiceAction(
+    serviceId: string,
+    target: 'cache' | 'docs' | 'exports' | 'readme' | 'repo' | 'storage' | 'terminal',
+  ) {
+    const pendingKey = `service:${serviceId}:${target}`
+    setActionPendingKey(pendingKey)
+    setActionError(null)
+
+    try {
+      await openCoreServiceTarget(serviceId, target)
+    } catch (caughtError) {
+      setActionError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to open the requested service target.',
+      )
+    } finally {
+      setActionPendingKey(null)
+    }
+  }
+
   async function handleRuntimeAction(
     relativePath: string,
     action: 'restart' | 'start' | 'stop',
@@ -453,6 +472,139 @@ export function App({ initialThemePreference }: AppProps) {
         caughtError instanceof Error
           ? caughtError.message
           : 'Unable to install repo dependencies.',
+      )
+    } finally {
+      setActionPendingKey(null)
+    }
+  }
+
+  async function handleCoreServiceInstallAction(serviceId: string) {
+    const pendingKey = `service:${serviceId}:install`
+    setActionPendingKey(pendingKey)
+    setActionError(null)
+
+    try {
+      await runCoreServiceInstall(serviceId)
+      await refreshSummarySoft(undefined, 'action')
+    } catch (caughtError) {
+      setActionError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to install the service runtime.',
+      )
+    } finally {
+      setActionPendingKey(null)
+    }
+  }
+
+  async function handleCoreServiceRuntimeAction(
+    serviceId: string,
+    action: 'restart' | 'start' | 'stop',
+  ) {
+    const pendingKey = `service:${serviceId}:${action}`
+    setActionPendingKey(pendingKey)
+    setActionError(null)
+
+    try {
+      await runCoreServiceRuntimeAction(serviceId, action)
+      await refreshSummarySoft(undefined, 'action')
+    } catch (caughtError) {
+      setActionError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to run the service action.',
+      )
+    } finally {
+      setActionPendingKey(null)
+    }
+  }
+
+  async function handleCoreServiceSyncAction(serviceId: string) {
+    const pendingKey = `service:${serviceId}:sync`
+    setActionPendingKey(pendingKey)
+    setActionError(null)
+
+    try {
+      await syncCoreService(serviceId)
+      await refreshSummarySoft(undefined, 'action')
+    } catch (caughtError) {
+      setActionError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to sync the service repo.',
+      )
+    } finally {
+      setActionPendingKey(null)
+    }
+  }
+
+  async function handleWorkspaceCapabilityAction(
+    capabilityId: string,
+    action: 'disable' | 'enable' | 'install' | 'uninstall' | 'update',
+  ) {
+    const pendingKey = `capability:${capabilityId}:${action}`
+    setActionPendingKey(pendingKey)
+    setActionError(null)
+
+    try {
+      await runWorkspaceCapabilityAction(capabilityId, action)
+      await refreshSummarySoft(undefined, 'action')
+    } catch (caughtError) {
+      setActionError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to run the workspace capability action.',
+      )
+    } finally {
+      setActionPendingKey(null)
+    }
+  }
+
+  async function handleOpenWorkspaceCapabilityAction(
+    capabilityId: string,
+    target: 'docs' | 'readme' | 'repo',
+  ) {
+    const pendingKey = `capability:${capabilityId}:open:${target}`
+    setActionPendingKey(pendingKey)
+    setActionError(null)
+
+    try {
+      await openWorkspaceCapabilityTarget(capabilityId, target)
+    } catch (caughtError) {
+      setActionError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to open the requested capability target.',
+      )
+    } finally {
+      setActionPendingKey(null)
+    }
+  }
+
+  async function handleCoreServiceCommandAction(commandId: WorkspaceCoreServiceCommandId) {
+    const service = selectedService
+    if (!service) {
+      return
+    }
+
+    const pendingKey = `service:${service.id}:${commandId}`
+    setActionPendingKey(pendingKey)
+    setActionError(null)
+
+    try {
+      const result = await runCoreServiceCommand(service.id, {
+        commandId,
+        repoRelativePath: mempalaceTargetContext?.repoRelativePath ?? null,
+      })
+      setMempalaceCommandOutput(
+        result.output.trim().length > 0 ? `$ ${result.command}\n${result.output}` : `$ ${result.command}`,
+      )
+      await refreshSummarySoft(undefined, 'action')
+    } catch (caughtError) {
+      setActionError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to run the workspace memory command.',
       )
     } finally {
       setActionPendingKey(null)
@@ -644,6 +796,10 @@ export function App({ initialThemePreference }: AppProps) {
   }, [themePreference])
 
   useEffect(() => {
+    persistRepoLayoutMode(repoLayoutMode)
+  }, [repoLayoutMode])
+
+  useEffect(() => {
     const query = deferredSearchTerm.trim()
 
     if (query.length < 2) {
@@ -695,7 +851,7 @@ export function App({ initialThemePreference }: AppProps) {
         const delay = event.type.endsWith('log') ? 500 : 120
         liveRefreshTimeoutRef.current = window.setTimeout(() => {
           liveRefreshTimeoutRef.current = null
-          void refreshSummarySoft(undefined, 'event')
+          triggerSoftRefresh('event')
         }, delay)
       },
       setLiveStatus,
@@ -719,36 +875,100 @@ export function App({ initialThemePreference }: AppProps) {
     ? filterRepos(summary.repos, normalizedSearch, selectedFilter)
     : []
   const filteredArchives = summary
-    ? filterArchives(summary.archives, normalizedSearch, selectedFilter)
+    ? filterArchives(summary.archives, normalizedSearch)
     : []
+  const capabilities = capabilitySnapshot?.capabilities ?? summary?.capabilities ?? []
+  const coreServices = summary?.coreServices ?? []
 
   useEffect(() => {
     const nextFilteredRepos = summary
       ? filterRepos(summary.repos, normalizedSearch, selectedFilter)
       : []
+    const nextSelectedPath = resolveSelectedRepoPath(
+      repoLayoutMode,
+      nextFilteredRepos.map((repo) => repo.path),
+      selectedPath,
+      pickDefaultRepo(nextFilteredRepos)?.path ?? nextFilteredRepos[0]?.path ?? null,
+    )
 
-    if (!nextFilteredRepos.length) {
-      setSelectedPath(null)
-      return
-    }
-
-    if (
-      !selectedPath ||
-      !nextFilteredRepos.some((repo) => repo.path === selectedPath)
-    ) {
-      setSelectedPath(pickDefaultRepo(nextFilteredRepos)?.path ?? nextFilteredRepos[0].path)
+    if (nextSelectedPath !== selectedPath) {
+      setSelectedPath(nextSelectedPath)
     }
   }, [
     normalizedSearch,
+    repoLayoutMode,
     selectedPath,
     selectedFilter,
     summary,
   ])
 
-  const selectedRepo =
-    filteredRepos.find((repo) => repo.path === selectedPath) ??
-    pickDefaultRepo(filteredRepos) ??
-    null
+  useEffect(() => {
+    const nextCoreServices = summary?.coreServices ?? []
+
+    if (!nextCoreServices.length) {
+      setSelectedServiceId(null)
+      return
+    }
+
+    if (
+      !selectedServiceId ||
+      !nextCoreServices.some((service) => service.id === selectedServiceId)
+    ) {
+      setSelectedServiceId(nextCoreServices[0]?.id ?? null)
+    }
+  }, [selectedServiceId, summary])
+
+  const selectedRepo = selectedPath
+    ? filteredRepos.find((repo) => repo.path === selectedPath) ?? null
+    : null
+  const selectedService =
+    coreServices.find((service) => service.id === selectedServiceId) ?? coreServices[0] ?? null
+  const mempalaceService = coreServices.find((service) => service.id === 'mempalace') ?? null
+
+  useEffect(() => {
+    if (!summary?.repos.length) {
+      setMempalaceTargetRepoRelativePath(null)
+      return
+    }
+
+    if (
+      !mempalaceTargetRepoRelativePath ||
+      !summary.repos.some((repo) => repo.relativePath === mempalaceTargetRepoRelativePath)
+    ) {
+      setMempalaceTargetRepoRelativePath(
+        selectedRepo?.relativePath ?? summary.repos[0]?.relativePath ?? null,
+      )
+    }
+  }, [mempalaceTargetRepoRelativePath, selectedRepo, summary?.repos])
+
+  useEffect(() => {
+    if (workspaceView !== 'mempalace' || selectedService?.id !== 'mempalace') {
+      return
+    }
+
+    void fetchCoreServiceTargetContext(selectedService.id, {
+      currentRepoRelativePath: selectedRepo?.relativePath ?? null,
+      repoRelativePath: mempalaceTargetRepoRelativePath,
+      targetKind: mempalaceTargetKind,
+    })
+      .then((context) => {
+        setMempalaceTargetContext(context)
+      })
+      .catch((caughtError) => {
+        setActionError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : 'Unable to load MemPalace target context.',
+        )
+      })
+  }, [
+    mempalaceTargetKind,
+    mempalaceTargetRepoRelativePath,
+    selectedRepo?.relativePath,
+    selectedService?.id,
+    summary?.generatedAt,
+    workspaceView,
+  ])
 
   useEffect(() => {
     if (!selectedRepo) {
@@ -763,7 +983,7 @@ export function App({ initialThemePreference }: AppProps) {
 
     void recordRepoActivity(selectedRepo.relativePath, 'select')
       .then(async () => {
-        await refreshSummarySoft(undefined, 'action')
+        triggerSoftRefresh('action')
       })
       .catch((caughtError) => {
         setActionError(
@@ -774,8 +994,61 @@ export function App({ initialThemePreference }: AppProps) {
       })
   }, [selectedRepo])
 
+  useEffect(() => {
+    if (workspaceView !== 'dashboard' || !selectedRepo) {
+      return
+    }
+
+    if (
+      selectedRepo.detailLevel === 'detail' &&
+      selectedRepo.diagnosticsFreshness === 'fresh'
+    ) {
+      return
+    }
+
+    if (repoDetailsInFlightRef.current === selectedRepo.relativePath) {
+      return
+    }
+
+    const controller = new AbortController()
+    const targetRelativePath = selectedRepo.relativePath
+    repoDetailsInFlightRef.current = targetRelativePath
+    repoDetailsHydrationCountRef.current += 1
+
+    void fetchWorkspaceRepoDetails(targetRelativePath, controller.signal)
+      .then((detailedRepo) => {
+        startTransition(() => {
+          setSummary((currentSummary) =>
+            currentSummary
+              ? mergeWorkspaceRepoDetails(currentSummary, detailedRepo)
+              : currentSummary,
+          )
+        })
+      })
+      .catch((caughtError) => {
+        if (controller.signal.aborted) {
+          return
+        }
+
+        setActionError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : 'Unable to hydrate repo diagnostics.',
+        )
+      })
+      .finally(() => {
+        if (repoDetailsInFlightRef.current === targetRelativePath) {
+          repoDetailsInFlightRef.current = null
+        }
+      })
+
+    return () => {
+      controller.abort()
+    }
+  }, [selectedRepo, workspaceView])
+
   const generatedAt = summary ? formatGeneratedAt(summary.generatedAt) : 'Waiting for API'
-  const refreshDebugLabel = `Refresh stats: coalesced ${softRefreshCoalescedCountRef.current}, hydration requests ${fullHydrationRequestCountRef.current}, suppressed cooldown ${fullHydrationSuppressedCooldownRef.current}, suppressed in-flight ${fullHydrationSuppressedInFlightRef.current}`
+  const refreshDebugLabel = `Refresh stats: coalesced ${softRefreshCoalescedCountRef.current}, selected detail hydrations ${repoDetailsHydrationCountRef.current}`
 
   function handleThemePresetChange(preset: ThemePreset) {
     setThemePreference((currentPreference) => ({
@@ -800,6 +1073,53 @@ export function App({ initialThemePreference }: AppProps) {
 
     setSelectedFilter('all')
     setSelectedPath(nextRepo.path)
+    setWorkspaceView('dashboard')
+  }
+
+  function handleSelectIndexedService(serviceId: string) {
+    setSelectedServiceId(serviceId)
+    if (serviceId === 'mempalace') {
+      setWorkspaceView('mempalace')
+    }
+  }
+
+  function handleSelectIndexedCapability(capabilityId: string) {
+    const capability =
+      capabilities.find((entry) => entry.id === capabilityId)
+      ?? summary?.capabilities.find((entry) => entry.id === capabilityId)
+
+    if (!capability) {
+      return
+    }
+
+    setWorkspaceView('dashboard')
+
+    if (capability.installed) {
+      void handleOpenWorkspaceCapabilityAction(capabilityId, 'repo')
+      return
+    }
+
+    if (capability.docsPath) {
+      void handleOpenWorkspaceCapabilityAction(capabilityId, 'docs')
+      return
+    }
+
+    if (capability.readmePath) {
+      void handleOpenWorkspaceCapabilityAction(capabilityId, 'readme')
+    }
+  }
+
+  function handleOpenDashboardView() {
+    setWorkspaceView('dashboard')
+  }
+
+  function handleOpenMempalaceWorkspace() {
+    if (!mempalaceService) {
+      return
+    }
+
+    setSelectedServiceId(mempalaceService.id)
+    setWorkspaceView('mempalace')
   }
 
   return (
@@ -814,6 +1134,24 @@ export function App({ initialThemePreference }: AppProps) {
                 A local dashboard for discovering repositories, tracking runtime
                 state, and keeping direct previews as the default path.
               </p>
+            </div>
+
+            <div className="workspace-nav" aria-label="Workspace sections">
+              <button
+                className={`workspace-nav-button ${workspaceView === 'dashboard' ? 'active' : ''}`}
+                onClick={handleOpenDashboardView}
+                type="button"
+              >
+                Dashboard
+              </button>
+              <button
+                className={`workspace-nav-button ${workspaceView === 'mempalace' ? 'active' : ''}`}
+                disabled={!mempalaceService}
+                onClick={handleOpenMempalaceWorkspace}
+                type="button"
+              >
+                Workspace memory
+              </button>
             </div>
 
             <div className="hero-actions">
@@ -854,7 +1192,9 @@ export function App({ initialThemePreference }: AppProps) {
             mode={themePreference.mode}
             onModeChange={handleThemeModeChange}
             onPresetChange={handleThemePresetChange}
+            onRepoLayoutModeChange={setRepoLayoutMode}
             preset={themePreference.preset}
+            repoLayoutMode={repoLayoutMode}
           />
         </div>
       </header>
@@ -877,94 +1217,196 @@ export function App({ initialThemePreference }: AppProps) {
         </section>
       ) : null}
 
-      <main className="dashboard-grid">
-        <section className="dashboard-main">
-          <div className="dashboard-primary">
-            <RepoSnapshot
-              availableTypes={availableTypes}
-              filteredArchives={filteredArchives}
-              filteredRepos={filteredRepos}
-              indexedSearchError={indexedSearchError}
-              indexedSearchLoading={indexedSearchLoading}
-              indexedSearchResults={indexedSearchResults}
-              loading={loading}
-              onOpenIndexedPath={handleOpenWorkspacePath}
-              onSearchChange={setSearchTerm}
-              onSelectIndexedRepo={handleSelectIndexedRepo}
-              onSelectRepo={setSelectedPath}
-              onFilterChange={setSelectedFilter}
-              searchTerm={searchTerm}
-              selectedPath={selectedPath}
-              selectedFilter={selectedFilter}
-            />
-          </div>
+      {workspaceView === 'mempalace' && selectedService?.id === 'mempalace' ? (
+        <MempalaceWorkspacePage
+          actionError={actionError}
+          actionPendingKey={actionPendingKey}
+          commandOutput={mempalaceCommandOutput}
+          context={mempalaceTargetContext}
+          loading={loading}
+          onInstallAction={handleCoreServiceInstallAction}
+          onOpenAction={handleOpenCoreServiceAction}
+          onReturnToDashboard={() => {
+            handleOpenDashboardView()
+          }}
+          onRunCommand={handleCoreServiceCommandAction}
+          onTargetKindChange={setMempalaceTargetKind}
+          onTargetRepoChange={setMempalaceTargetRepoRelativePath}
+          repos={summary?.repos ?? []}
+          selectedRepoRelativePath={mempalaceTargetRepoRelativePath}
+          selectedTargetKind={mempalaceTargetKind}
+          service={selectedService}
+        />
+      ) : (
+        <main className="dashboard-grid">
+          <section
+            className={`dashboard-main ${
+              repoLayoutMode === 'discovery-first'
+                ? 'dashboard-main-discovery'
+                : 'dashboard-main-split'
+            }`}
+          >
+            <div className="dashboard-primary dashboard-primary-discovery">
+              <RepoSnapshot
+                availableTypes={availableTypes}
+                filteredArchives={filteredArchives}
+                filteredRepos={filteredRepos}
+                indexedSearchError={indexedSearchError}
+                indexedSearchLoading={indexedSearchLoading}
+                indexedSearchResults={indexedSearchResults}
+                loading={loading}
+                onOpenIndexedPath={handleOpenWorkspacePath}
+                onSearchChange={setSearchTerm}
+                onSelectIndexedCapability={handleSelectIndexedCapability}
+                onSelectIndexedRepo={handleSelectIndexedRepo}
+                onSelectIndexedService={handleSelectIndexedService}
+                onSelectRepo={(nextPath) => {
+                  setSelectedPath(nextPath)
+                  handleOpenDashboardView()
+                }}
+                onFilterChange={setSelectedFilter}
+                onToggleArchived={() => {
+                  setShowArchived((currentValue) => !currentValue)
+                }}
+                repoLayoutMode={repoLayoutMode}
+                searchTerm={searchTerm}
+                selectedRepoInlineDetails={
+                  repoLayoutMode === 'discovery-first' && selectedRepo ? (
+                    <RepoDetails
+                      actionError={actionError}
+                      actionPendingKey={actionPendingKey}
+                      embedded
+                      onApplyAgentPreset={handleApplyAgentPreset}
+                      onCoverAction={handleCoverAction}
+                      onInstallAction={handleInstallAction}
+                      onIntakeAction={handleIntakeAction}
+                      onCopyError={setActionError}
+                      loading={loading}
+                      onOpenAction={handleOpenAction}
+                      onResetMetadata={handleResetMetadata}
+                      onRuntimeAction={handleRuntimeAction}
+                      onSaveMetadata={handleSaveMetadata}
+                      onWriteManifest={handleWriteManifest}
+                      repo={selectedRepo}
+                    />
+                  ) : null
+                }
+                selectedPath={selectedPath}
+                selectedFilter={selectedFilter}
+                showArchived={showArchived}
+              />
 
-          <div className="dashboard-sidebar">
-            <RepoDetails
-              actionError={actionError}
-              actionPendingKey={actionPendingKey}
-              onApplyAgentPreset={handleApplyAgentPreset}
-              onCoverAction={handleCoverAction}
-              onIntakeAction={handleIntakeAction}
-              onInstallAction={handleInstallAction}
-              onCopyError={setActionError}
-              loading={loading}
-              onOpenAction={handleOpenAction}
-              onResetMetadata={handleResetMetadata}
-              onRuntimeAction={handleRuntimeAction}
-              onSaveMetadata={handleSaveMetadata}
-              onWriteManifest={handleWriteManifest}
-              repo={selectedRepo}
-            />
-            <SettingsPanel loading={loading} summary={summary} />
+            </div>
 
-            <SectionCard
-              body="The current build stays deliberately practical: discovery, runtime controls, saved overrides, manifest authoring, diagnostics, install recovery, and quicker pinned workflows are in place."
-              className="reveal delayed"
-              collapsible
-              defaultOpen={false}
-              eyebrow="Build Track"
-              title="Next milestones"
-            >
-              <ul className="milestone-list">
-                {summary?.milestones.map((milestone) => (
-                  <li key={milestone.title} className={`milestone ${milestone.status}`}>
-                    <div>
-                      <span className="milestone-status">{milestone.status}</span>
-                      <h3>{milestone.title}</h3>
-                    </div>
-                    <p>{milestone.description}</p>
-                  </li>
-                )) ?? (
-                  <li className="milestone">
-                    <div>
-                      <span className="milestone-status">loading</span>
-                      <h3>Loading milestones</h3>
-                    </div>
-                    <p>The API will populate the next stages once it responds.</p>
-                  </li>
-                )}
-              </ul>
-            </SectionCard>
+            <div className="dashboard-sidebar">
+              {repoLayoutMode === 'split' ? (
+                <RepoDetails
+                  actionError={actionError}
+                  actionPendingKey={actionPendingKey}
+                  onApplyAgentPreset={handleApplyAgentPreset}
+                  onCoverAction={handleCoverAction}
+                  onIntakeAction={handleIntakeAction}
+                  onInstallAction={handleInstallAction}
+                  onCopyError={setActionError}
+                  loading={loading}
+                  onOpenAction={handleOpenAction}
+                  onResetMetadata={handleResetMetadata}
+                  onRuntimeAction={handleRuntimeAction}
+                  onSaveMetadata={handleSaveMetadata}
+                  onWriteManifest={handleWriteManifest}
+                  repo={selectedRepo}
+                />
+              ) : null}
+              <CoreServicesPanel
+                actionPendingKey={actionPendingKey}
+                loading={loading}
+                onInstallAction={handleCoreServiceInstallAction}
+                onOpenAction={handleOpenCoreServiceAction}
+                onOpenServiceWorkspace={(serviceId) => {
+                  setSelectedServiceId(serviceId)
+                  if (serviceId === 'mempalace') {
+                    handleOpenMempalaceWorkspace()
+                  }
+                }}
+                onRuntimeAction={handleCoreServiceRuntimeAction}
+                onSelectService={setSelectedServiceId}
+                onSyncAction={handleCoreServiceSyncAction}
+                selectedServiceId={selectedServiceId}
+                services={coreServices}
+              />
+              <WorkspaceCapabilitiesPanel
+                actionPendingKey={actionPendingKey}
+                capabilities={capabilities}
+                snapshot={capabilitySnapshot}
+                loading={loading}
+                onAction={handleWorkspaceCapabilityAction}
+                onOpenAction={handleOpenWorkspaceCapabilityAction}
+              />
+              {selectedService && selectedService.id !== 'mempalace' ? (
+                <CoreServiceDetails
+                  actionError={actionError}
+                  actionPendingKey={actionPendingKey}
+                  onInstallAction={handleCoreServiceInstallAction}
+                  onOpenAction={handleOpenCoreServiceAction}
+                  onRuntimeAction={handleCoreServiceRuntimeAction}
+                  onSyncAction={handleCoreServiceSyncAction}
+                  service={selectedService}
+                />
+              ) : null}
+              <SettingsPanel
+                loading={loading}
+                repoLayoutMode={repoLayoutMode}
+                summary={summary}
+              />
 
-            <SectionCard
-              body="These defaults mirror the handover pack so future actions do not drift into a one-size-fits-all runtime."
-              className="reveal delayed-more"
-              collapsible
-              defaultOpen={false}
-              eyebrow="Operating Rules"
-              title="Current assumptions"
-            >
-              <ul className="rule-list">
-                <li>Repos remain independently runnable and keep their own installs.</li>
-                <li>Frontend-style projects default to direct local previews.</li>
-                <li>WordPress repos usually stay external unless a repo says otherwise.</li>
-                <li>ServBay remains optional convenience, not a hard dependency.</li>
-              </ul>
-            </SectionCard>
-          </div>
-        </section>
-      </main>
+              <SectionCard
+                body="The current build stays deliberately practical: discovery, runtime controls, saved overrides, manifest authoring, diagnostics, install recovery, and quicker pinned workflows are in place."
+                className="reveal delayed"
+                collapsible
+                defaultOpen={false}
+                eyebrow="Build Track"
+                title="Next milestones"
+              >
+                <ul className="milestone-list">
+                  {summary?.milestones.map((milestone) => (
+                    <li key={milestone.title} className={`milestone ${milestone.status}`}>
+                      <div>
+                        <span className="milestone-status">{milestone.status}</span>
+                        <h3>{milestone.title}</h3>
+                      </div>
+                      <p>{milestone.description}</p>
+                    </li>
+                  )) ?? (
+                    <li className="milestone">
+                      <div>
+                        <span className="milestone-status">loading</span>
+                        <h3>Loading milestones</h3>
+                      </div>
+                      <p>The API will populate the next stages once it responds.</p>
+                    </li>
+                  )}
+                </ul>
+              </SectionCard>
+
+              <SectionCard
+                body="These defaults mirror the handover pack so future actions do not drift into a one-size-fits-all runtime."
+                className="reveal delayed-more"
+                collapsible
+                defaultOpen={false}
+                eyebrow="Operating Rules"
+                title="Current assumptions"
+              >
+                <ul className="rule-list">
+                  <li>Repos remain independently runnable and keep their own installs.</li>
+                  <li>Frontend-style projects default to direct local previews.</li>
+                  <li>WordPress repos usually stay external unless a repo says otherwise.</li>
+                  <li>ServBay remains optional convenience, not a hard dependency.</li>
+                </ul>
+              </SectionCard>
+            </div>
+          </section>
+        </main>
+      )}
     </div>
   )
 }

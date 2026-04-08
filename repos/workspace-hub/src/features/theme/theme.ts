@@ -24,7 +24,7 @@ const themeModeLookup = new Set<ThemeMode>(['dark', 'light'])
 
 export const defaultThemePreference: ThemePreference = {
   mode: 'light',
-  preset: 'preset-1',
+  preset: 'preset-2',
 }
 
 export const themeStorageKey = 'workspace-hub.theme'

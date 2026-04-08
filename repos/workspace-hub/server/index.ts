@@ -1,6 +1,8 @@
 import express, { type NextFunction, type Request, type Response } from 'express'
+import { access } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import type { WorkspaceCoreServiceCommandId } from '../src/types/workspace.ts'
 
 import { applyRepoAgentPreset, isRepoAgentPresetId } from './agent-tooling.ts'
 import { handleWorkspaceEvents, publishWorkspaceEvent } from './live-events.ts'
@@ -8,6 +10,24 @@ import { waitForReachablePreview } from './preview-readiness.ts'
 import { generateRepoCover } from './repo-cover.ts'
 import { runRepoIntake } from './repo-intake.ts'
 import { writeRepoManifest } from './repo-manifest.ts'
+import { findCoreService } from './core-services.ts'
+import {
+  buildWorkspaceCapabilitiesSnapshot,
+  findWorkspaceCapability,
+  runWorkspaceCapabilityAction,
+} from './workspace-capabilities.ts'
+import {
+  canInstallCoreService,
+  canRunCoreService,
+  getCoreServiceInstallSnapshots,
+  getCoreServiceRuntimeSnapshots,
+  restartCoreService,
+  runCoreServiceCommand,
+  runCoreServiceInstall,
+  runCoreServiceSync,
+  startCoreService,
+  stopCoreService,
+} from './core-service-runtime.ts'
 import {
   canInstallRepo,
   getInstallSnapshots,
@@ -28,6 +48,7 @@ import {
   saveRepoMetadata,
 } from './workspace-metadata.ts'
 import {
+  buildWorkspaceRepoDetails,
   buildWorkspaceSummary,
   findWorkspaceRepo,
   getWorkspaceHubObservability,
@@ -153,6 +174,125 @@ function invalidateWorkspaceCaches() {
   invalidateWorkspaceSummaryCache()
 }
 
+async function fileExists(targetPath: string) {
+  try {
+    await access(targetPath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function parseServiceTargetKind(value: unknown): 'current-repo' | 'repo' | 'workspace-docs' {
+  if (value === 'current-repo' || value === 'repo' || value === 'workspace-docs') {
+    return value
+  }
+
+  return 'workspace-docs'
+}
+
+function readOptionalRelativePath(body: unknown, fieldName: string) {
+  if (typeof body !== 'object' || body === null) {
+    return null
+  }
+
+  const value = (body as Record<string, unknown>)[fieldName]
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null
+}
+
+function targetMatchesPath(servicePath: string | null, targetPath: string | null) {
+  if (!servicePath || !targetPath) {
+    return false
+  }
+
+  const normalizedServicePath = path.resolve(servicePath)
+  const normalizedTargetPath = path.resolve(targetPath)
+
+  return (
+    normalizedServicePath === normalizedTargetPath ||
+    normalizedServicePath.startsWith(`${normalizedTargetPath}${path.sep}`)
+  )
+}
+
+function buildMempalaceContextCommands(
+  serviceId: string,
+  targetKind: 'current-repo' | 'repo' | 'workspace-docs',
+  repoRelativePath: string | null,
+  targetAvailable: boolean,
+) {
+  const saveRepoEnabled = targetAvailable && (targetKind === 'current-repo' || targetKind === 'repo')
+  const saveRepoCommand = repoRelativePath
+    ? `tools/bin/workspace-memory save-repo ${repoRelativePath}`
+    : 'tools/bin/workspace-memory save-repo <repo-name>'
+
+  return [
+    {
+      description: 'Check local service readiness and key workspace paths.',
+      enabled: true,
+      id: 'status',
+      label: 'Status',
+      reasonDisabled: null,
+      shellCommand: 'tools/bin/workspace-memory status',
+    },
+    {
+      description: 'Save workspace docs and the current Codex thread into MemPalace.',
+      enabled: true,
+      id: 'save-workspace',
+      label: 'Save workspace',
+      reasonDisabled: null,
+      shellCommand: 'tools/bin/workspace-memory save-workspace',
+    },
+    {
+      description: 'Save the selected repo target plus the current Codex thread.',
+      enabled: saveRepoEnabled,
+      id: 'save-repo',
+      label: 'Save repo',
+      reasonDisabled: saveRepoEnabled ? null : 'Choose a repo target to enable repo closeout.',
+      shellCommand: saveRepoCommand,
+    },
+    {
+      description: 'Export the active Codex thread into a readable transcript bundle.',
+      enabled: true,
+      id: 'export-codex-current',
+      label: 'Export current Codex thread',
+      reasonDisabled: null,
+      shellCommand: 'tools/bin/workspace-memory export-codex current',
+    },
+    {
+      description: 'Mine the active Codex thread directly from the local session log.',
+      enabled: true,
+      id: 'mine-codex-current',
+      label: 'Mine current Codex thread',
+      reasonDisabled: null,
+      shellCommand: 'tools/bin/workspace-memory mine-codex-current',
+    },
+    {
+      description: 'Refresh the MemPalace wake-up summary from the current corpus.',
+      enabled: true,
+      id: 'wake-up',
+      label: 'Wake-up',
+      reasonDisabled: null,
+      shellCommand: 'tools/bin/workspace-memory wake-up',
+    },
+    {
+      description: 'Start the MemPalace MCP server for the workspace user.',
+      enabled: serviceId === 'mempalace',
+      id: 'runtime-start',
+      label: 'Start MCP server',
+      reasonDisabled: null,
+      shellCommand: 'tools/bin/mempalace-start',
+    },
+    {
+      description: 'Fast-forward the MemPalace fork from upstream when the tree is clean.',
+      enabled: serviceId === 'mempalace',
+      id: 'sync',
+      label: 'Sync fork',
+      reasonDisabled: null,
+      shellCommand: 'tools/bin/mempalace-sync',
+    },
+  ]
+}
+
 app.get('/api/health', (_request: Request, response: Response) => {
   response.json({
     generatedAt: new Date().toISOString(),
@@ -204,9 +344,50 @@ app.get(
           apiPort,
           getInstallSnapshots(),
           getRuntimeSnapshots(),
-          { includeDiagnostics: false },
+          { includeDiagnostics: false, repoProjection: 'list' },
         ),
       )
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.get(
+  '/api/repos/details',
+  async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const relativePath =
+        typeof request.query.relativePath === 'string' ? request.query.relativePath.trim() : ''
+
+      if (!relativePath) {
+        response.status(400).json({ message: 'A repo relative path is required.' })
+        return
+      }
+
+      const repo = await buildWorkspaceRepoDetails(
+        relativePath,
+        getInstallSnapshots(),
+        getRuntimeSnapshots(),
+      )
+
+      if (!repo) {
+        response.status(404).json({ message: 'Repo not found.' })
+        return
+      }
+
+      response.json(repo)
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.get(
+  '/api/capabilities',
+  async (_request: Request, response: Response, next: NextFunction) => {
+    try {
+      response.json(await buildWorkspaceCapabilitiesSnapshot())
     } catch (error) {
       next(error)
     }
@@ -232,7 +413,430 @@ app.get(
         getRuntimeSnapshots(),
       )
 
-      response.json(await searchWorkspace(query, summary.repos))
+      response.json(
+        await searchWorkspace(
+          query,
+          summary.repos,
+          summary.coreServices,
+          summary.capabilities,
+        ),
+      )
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.post(
+  '/api/capabilities/action',
+  async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const capabilityId =
+        typeof request.body?.capabilityId === 'string' ? request.body.capabilityId.trim() : ''
+      const action =
+        typeof request.body?.action === 'string' ? request.body.action.trim() : ''
+
+      if (!capabilityId) {
+        response.status(400).json({ message: 'A capability id is required.' })
+        return
+      }
+
+      if (
+        action !== 'disable' &&
+        action !== 'enable' &&
+        action !== 'install' &&
+        action !== 'uninstall' &&
+        action !== 'update'
+      ) {
+        response.status(400).json({ message: 'A valid capability action is required.' })
+        return
+      }
+
+      const capability = await findWorkspaceCapability(capabilityId)
+
+      if (!capability) {
+        response.status(404).json({ message: 'Capability not found.' })
+        return
+      }
+
+      const output = await runWorkspaceCapabilityAction(action, capabilityId)
+      publishWorkspaceEvent({
+        message: `${capability.name} ${action} completed`,
+        relativePath: capability.installTarget,
+        status: action === 'disable' ? 'disabled' : 'ready',
+        type: 'capability',
+      })
+      invalidateWorkspaceCaches()
+      response.json({ ok: true, output })
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.post(
+  '/api/capabilities/open',
+  async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const capabilityId =
+        typeof request.body?.capabilityId === 'string' ? request.body.capabilityId.trim() : ''
+      const target =
+        typeof request.body?.target === 'string' ? request.body.target.trim() : ''
+
+      if (!capabilityId) {
+        response.status(400).json({ message: 'A capability id is required.' })
+        return
+      }
+
+      const capability = await findWorkspaceCapability(capabilityId)
+
+      if (!capability) {
+        response.status(404).json({ message: 'Capability not found.' })
+        return
+      }
+
+      if (target === 'repo') {
+        if (!capability.installPath || !capability.installed) {
+          response.status(400).json({ message: 'This capability is not installed locally.' })
+          return
+        }
+        await openTarget(capability.installPath)
+      } else if (target === 'docs') {
+        if (!capability.docsPath) {
+          response.status(400).json({ message: 'This capability does not have linked docs.' })
+          return
+        }
+        await openTarget(capability.docsPath)
+      } else if (target === 'readme') {
+        if (!capability.readmePath) {
+          response.status(400).json({ message: 'This capability does not have a linked README.' })
+          return
+        }
+        await openTarget(capability.readmePath)
+      } else {
+        response.status(400).json({ message: 'Unsupported capability target.' })
+        return
+      }
+
+      response.json({ ok: true })
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.post(
+  '/api/services/context',
+  async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const serviceId =
+        typeof request.body?.serviceId === 'string' ? request.body.serviceId.trim() : ''
+      const targetKind = parseServiceTargetKind(request.body?.targetKind)
+      const requestedRepoRelativePath = readOptionalRelativePath(request.body, 'repoRelativePath')
+      const currentRepoRelativePath = readOptionalRelativePath(request.body, 'currentRepoRelativePath')
+
+      if (!serviceId) {
+        response.status(400).json({ message: 'A service id is required.' })
+        return
+      }
+
+      const service = await findCoreService(
+        serviceId,
+        getCoreServiceInstallSnapshots(),
+        getCoreServiceRuntimeSnapshots(),
+      )
+
+      if (!service) {
+        response.status(404).json({ message: 'Service not found.' })
+        return
+      }
+
+      const resolvedRepoRelativePath =
+        targetKind === 'repo'
+          ? requestedRepoRelativePath
+          : targetKind === 'current-repo'
+            ? currentRepoRelativePath
+            : null
+
+      const resolvedRepo = resolvedRepoRelativePath
+        ? await findWorkspaceRepo(
+            resolvedRepoRelativePath,
+            getInstallSnapshots(),
+            getRuntimeSnapshots(),
+          )
+        : null
+
+      const targetPath =
+        targetKind === 'workspace-docs'
+          ? path.join(workspaceRoot, 'docs')
+          : resolvedRepo?.path ?? null
+
+      const targetLabel =
+        targetKind === 'workspace-docs'
+          ? 'Workspace docs'
+          : targetKind === 'current-repo'
+            ? resolvedRepo?.name ?? 'Current repo'
+            : resolvedRepo?.name ?? requestedRepoRelativePath ?? 'Selected repo'
+
+      const metadataPath = targetPath
+        ? path.join(targetPath, '.workspace', 'mempalace', 'mempalace.yaml')
+        : null
+      const metadataExists = metadataPath ? await fileExists(metadataPath) : false
+      const lastRelevantIngestTarget =
+        (targetMatchesPath(service.lastSaveTarget, targetPath) && service.lastSaveTarget) ||
+        (targetMatchesPath(service.lastIngestTarget, targetPath) && service.lastIngestTarget) ||
+        null
+      const recommendedActionId =
+        targetKind === 'workspace-docs'
+          ? 'save-workspace'
+          : resolvedRepo
+            ? 'save-repo'
+            : null
+
+      response.json({
+        commands: buildMempalaceContextCommands(
+          service.id,
+          targetKind,
+          resolvedRepo?.relativePath ?? resolvedRepoRelativePath,
+          targetKind === 'workspace-docs' || Boolean(resolvedRepo),
+        ),
+        lastRelevantIngestTarget,
+        metadataExists,
+        metadataPath,
+        recommendedActionId,
+        recommendedActionLabel:
+          recommendedActionId === 'save-repo'
+            ? 'Save repo memory now'
+            : recommendedActionId === 'save-workspace'
+              ? 'Save workspace memory now'
+              : null,
+        repoRelativePath: resolvedRepo?.relativePath ?? resolvedRepoRelativePath,
+        serviceId: service.id,
+        targetAvailable: targetKind === 'workspace-docs' || Boolean(resolvedRepo),
+        targetKind,
+        targetLabel,
+        targetPath,
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.post(
+  '/api/services/command',
+  async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const serviceId =
+        typeof request.body?.serviceId === 'string' ? request.body.serviceId.trim() : ''
+      const commandId =
+        typeof request.body?.commandId === 'string' ? request.body.commandId.trim() : ''
+      const repoRelativePath = readOptionalRelativePath(request.body, 'repoRelativePath')
+
+      if (!serviceId) {
+        response.status(400).json({ message: 'A service id is required.' })
+        return
+      }
+
+      if (!commandId) {
+        response.status(400).json({ message: 'A command id is required.' })
+        return
+      }
+
+      const service = await findCoreService(
+        serviceId,
+        getCoreServiceInstallSnapshots(),
+        getCoreServiceRuntimeSnapshots(),
+      )
+
+      if (!service) {
+        response.status(404).json({ message: 'Service not found.' })
+        return
+      }
+
+      const result = await runCoreServiceCommand(service, commandId as WorkspaceCoreServiceCommandId, {
+        repoRelativePath,
+      })
+      invalidateWorkspaceCaches()
+      response.json({ ok: true, ...result })
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.post(
+  '/api/services/open',
+  async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const serviceId =
+        typeof request.body?.serviceId === 'string' ? request.body.serviceId.trim() : ''
+      const target =
+        typeof request.body?.target === 'string' ? request.body.target.trim() : ''
+
+      if (!serviceId) {
+        response.status(400).json({ message: 'A service id is required.' })
+        return
+      }
+
+      const service = await findCoreService(
+        serviceId,
+        getCoreServiceInstallSnapshots(),
+        getCoreServiceRuntimeSnapshots(),
+      )
+
+      if (!service) {
+        response.status(404).json({ message: 'Service not found.' })
+        return
+      }
+
+      if (target === 'repo') {
+        await openTarget(service.repoPath)
+      } else if (target === 'docs') {
+        if (!service.docsPath) {
+          response.status(400).json({ message: 'This service does not have a linked docs path.' })
+          return
+        }
+        await openTarget(service.docsPath)
+      } else if (target === 'readme') {
+        if (!service.readmePath) {
+          response.status(400).json({ message: 'This service does not have a linked README.' })
+          return
+        }
+        await openTarget(service.readmePath)
+      } else if (target === 'storage') {
+        await openTarget(service.sharedRoot)
+      } else if (target === 'cache') {
+        await openTarget(service.cacheRoot)
+      } else if (target === 'exports') {
+        await openTarget(service.exportsRoot)
+      } else if (target === 'terminal') {
+        await openInTerminal(service.repoPath)
+      } else {
+        response.status(400).json({ message: 'Unknown service open target.' })
+        return
+      }
+
+      invalidateWorkspaceCaches()
+      response.json({ ok: true })
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.post(
+  '/api/services/runtime',
+  async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const serviceId =
+        typeof request.body?.serviceId === 'string' ? request.body.serviceId.trim() : ''
+      const action =
+        typeof request.body?.action === 'string' ? request.body.action.trim() : ''
+
+      if (!serviceId) {
+        response.status(400).json({ message: 'A service id is required.' })
+        return
+      }
+
+      const service = await findCoreService(
+        serviceId,
+        getCoreServiceInstallSnapshots(),
+        getCoreServiceRuntimeSnapshots(),
+      )
+
+      if (!service) {
+        response.status(404).json({ message: 'Service not found.' })
+        return
+      }
+
+      if (!canRunCoreService(service)) {
+        response.status(400).json({ message: 'This service does not have a runtime command.' })
+        return
+      }
+
+      if (action === 'start') {
+        await startCoreService(service)
+      } else if (action === 'stop') {
+        await stopCoreService(service)
+      } else if (action === 'restart') {
+        await restartCoreService(service)
+      } else {
+        response.status(400).json({ message: 'Unknown service action.' })
+        return
+      }
+
+      invalidateWorkspaceCaches()
+      response.json({ ok: true })
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.post(
+  '/api/services/install',
+  async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const serviceId =
+        typeof request.body?.serviceId === 'string' ? request.body.serviceId.trim() : ''
+
+      if (!serviceId) {
+        response.status(400).json({ message: 'A service id is required.' })
+        return
+      }
+
+      const service = await findCoreService(
+        serviceId,
+        getCoreServiceInstallSnapshots(),
+        getCoreServiceRuntimeSnapshots(),
+      )
+
+      if (!service) {
+        response.status(404).json({ message: 'Service not found.' })
+        return
+      }
+
+      if (!canInstallCoreService(service)) {
+        response.status(400).json({ message: 'This service does not have an install command.' })
+        return
+      }
+
+      await runCoreServiceInstall(service)
+      invalidateWorkspaceCaches()
+      response.json({ ok: true })
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+app.post(
+  '/api/services/sync',
+  async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const serviceId =
+        typeof request.body?.serviceId === 'string' ? request.body.serviceId.trim() : ''
+
+      if (!serviceId) {
+        response.status(400).json({ message: 'A service id is required.' })
+        return
+      }
+
+      const service = await findCoreService(
+        serviceId,
+        getCoreServiceInstallSnapshots(),
+        getCoreServiceRuntimeSnapshots(),
+      )
+
+      if (!service) {
+        response.status(404).json({ message: 'Service not found.' })
+        return
+      }
+
+      await runCoreServiceSync(service)
+      invalidateWorkspaceCaches()
+      response.json({ ok: true })
     } catch (error) {
       next(error)
     }

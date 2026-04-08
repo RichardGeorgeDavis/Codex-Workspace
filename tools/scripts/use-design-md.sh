@@ -2,11 +2,12 @@
 set -eu
 
 workspace_root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
-snapshot_id="voltagent-awesome-design-md"
-snapshot_dir="$workspace_root/tools/ref/voltagent-awesome-design-md-main/design-md"
+source_repo_id="voltagent-awesome-design-md"
+source_repo_dir="$workspace_root/repos/abilities/voltagent-awesome-design-md"
+source_design_dir="$source_repo_dir/design-md"
 cache_root="$workspace_root/cache/design-md"
 catalog_dir="$cache_root/catalog"
-sync_script="$workspace_root/tools/scripts/sync-reference-snapshots.sh"
+update_script="$workspace_root/tools/scripts/update-github-refs.sh"
 
 refresh_catalog="false"
 sync_upstream="false"
@@ -19,7 +20,7 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") [--list] [--refresh] [--sync-upstream] [--force] [site-id] [target-dir]
 
-Browse, mirror, and copy reviewed DESIGN.md files from the VoltAgent catalog.
+Browse, mirror, and copy reviewed DESIGN.md files from the managed VoltAgent catalog repo.
 
 Examples:
   $0 --list
@@ -30,8 +31,8 @@ Examples:
 
 Behavior:
   --list           list available site ids from the local catalog mirror
-  --refresh        rebuild cache/design-md/catalog from the installed tools/ref snapshot
-  --sync-upstream  refresh the installed tools/ref snapshot from upstream first
+  --refresh        rebuild cache/design-md/catalog from the managed repos/abilities clone
+  --sync-upstream  update the managed repos/abilities clone first
   --force          overwrite an existing target DESIGN.md when copying
 
 If site-id is provided, the script copies that DESIGN.md into target-dir/DESIGN.md.
@@ -39,23 +40,23 @@ The default target directory is the current working directory.
 EOF
 }
 
-ensure_snapshot() {
-  if [ -d "$snapshot_dir" ]; then
+ensure_source_repo() {
+  if [ -d "$source_design_dir" ]; then
     return 0
   fi
 
-  printf 'Missing DESIGN.md snapshot: %s\n' "$snapshot_dir" >&2
-  printf 'Run %s --run %s or rerun this script with --sync-upstream.\n' "$sync_script" "$snapshot_id" >&2
+  printf 'Missing DESIGN.md source repo: %s\n' "$source_repo_dir" >&2
+  printf 'Run %s --run %s or rerun this script with --sync-upstream.\n' "$update_script" "$source_repo_id" >&2
   exit 1
 }
 
 rebuild_catalog() {
-  ensure_snapshot
+  ensure_source_repo
 
   rm -rf "$catalog_dir"
   mkdir -p "$catalog_dir"
 
-  find "$snapshot_dir" -mindepth 1 -maxdepth 1 -type d | LC_ALL=C sort | while IFS= read -r site_dir; do
+  find "$source_design_dir" -mindepth 1 -maxdepth 1 -type d | LC_ALL=C sort | while IFS= read -r site_dir; do
     [ -n "$site_dir" ] || continue
     site_name=$(basename "$site_dir")
     if [ -f "$site_dir/DESIGN.md" ]; then
@@ -67,7 +68,7 @@ rebuild_catalog() {
   generated_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
   {
     printf 'source_repo=https://github.com/VoltAgent/awesome-design-md\n'
-    printf 'source_snapshot=%s\n' "$snapshot_dir"
+    printf 'source_repo_path=%s\n' "$source_repo_dir"
     printf 'generated_at_utc=%s\n' "$generated_at"
   } >"$cache_root/manifest.txt"
 
@@ -158,7 +159,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ "$sync_upstream" = "true" ]; then
-  "$sync_script" --run "$snapshot_id"
+  UPDATE_GITHUB_REFS_SKIP_DESIGN_REFRESH=1 "$update_script" --run "$source_repo_id"
   refresh_catalog="true"
 fi
 

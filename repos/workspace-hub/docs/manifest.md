@@ -60,6 +60,8 @@ Workspace Hub currently supports these optional fields:
 - `tags`
 - `notes`
 
+If a repo relies on an optional workspace ability or core service for part of its workflow, document that explicitly in `README.md` or `HANDOVER.md` instead of assuming the workspace has that capability installed. Keep the manifest focused on runtime behavior, not hidden workspace dependencies.
+
 ## Write behaviour
 
 - Empty string fields are removed instead of being written as empty values.
@@ -127,3 +129,4 @@ Unknown preserved keys are appended after the known keys.
 - Use `servbayPath` or `servbaySubdomain` only when that routing is stable and tested.
 - Keep manifests explicit and readable; do not turn them into a dump of every inferred value unless the repo benefits from that clarity.
 - Keep local-only values in `project.local.json` when they should not ship with the repo.
+- If the repo needs a workspace ability for operator workflows, mention the install command in repo docs instead of trying to encode that dependency implicitly in the manifest.

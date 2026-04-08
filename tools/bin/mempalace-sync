@@ -1,0 +1,45 @@
+#!/usr/bin/env sh
+set -eu
+
+. "$(CDPATH= cd -- "$(dirname "$0")/../scripts" && pwd)/mempalace-env.sh"
+
+if ! mempalace_repo_exists; then
+  printf 'MemPalace repo is missing. Run: %s\n' "$mempalace_install_command" >&2
+  exit 1
+fi
+
+if ! command -v git >/dev/null 2>&1; then
+  printf 'git is required to sync MemPalace.\n' >&2
+  exit 1
+fi
+
+if [ -n "$(git -C "$mempalace_repo" status --porcelain)" ]; then
+  printf 'Refusing to sync a dirty MemPalace working tree: %s\n' "$mempalace_repo" >&2
+  exit 1
+fi
+
+current_branch=$(git -C "$mempalace_repo" symbolic-ref --quiet --short HEAD 2>/dev/null || printf 'main')
+
+if git -C "$mempalace_repo" remote get-url upstream >/dev/null 2>&1; then
+  printf 'Fetching upstream...\n'
+  git -C "$mempalace_repo" fetch upstream --prune
+  printf 'Fast-forwarding %s from upstream/main...\n' "$current_branch"
+  git -C "$mempalace_repo" checkout "$current_branch"
+  git -C "$mempalace_repo" merge --ff-only upstream/main
+elif git -C "$mempalace_repo" remote get-url origin >/dev/null 2>&1; then
+  printf 'Fetching origin...\n'
+  git -C "$mempalace_repo" fetch origin --prune
+  printf 'Fast-forwarding %s from origin/%s...\n' "$current_branch" "$current_branch"
+  git -C "$mempalace_repo" checkout "$current_branch"
+  git -C "$mempalace_repo" merge --ff-only "origin/$current_branch"
+else
+  printf 'No git remote is configured for %s\n' "$mempalace_repo" >&2
+  exit 1
+fi
+
+if git -C "$mempalace_repo" remote get-url origin >/dev/null 2>&1; then
+  printf 'Pushing %s to origin...\n' "$current_branch"
+  git -C "$mempalace_repo" push origin "$current_branch"
+fi
+
+record_mempalace_event "sync"

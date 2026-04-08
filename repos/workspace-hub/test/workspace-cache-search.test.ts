@@ -131,7 +131,75 @@ test('artifact search indexing is opt-in via env gate', async () => {
   assert.ok(enabledResult.results.some((entry) => entry.category === 'artifact'))
 })
 
+test('indexed search can surface installable workspace capabilities', async () => {
+  const docsPath = path.join(tempWorkspaceRoot, 'docs', 'ability-note.md')
+  const capabilityToken = 'capability-search-token-456'
+  await writeTextFile(docsPath, `${capabilityToken}\n`)
+
+  const searchModule = await importWorkspaceSearchModule(tempWorkspaceRoot, 'false')
+  const result = await searchModule.searchWorkspace(
+    capabilityToken,
+    [],
+    [],
+    [
+      {
+        category: 'workspace',
+        classification: 'ability',
+        description: 'Searchable optional ability',
+        docsPath,
+        enabled: true,
+        enabledByDefault: false,
+        exposeInHub: true,
+        id: 'searchable-ability',
+        installMethod: 'git',
+        installPath: path.join(tempWorkspaceRoot, 'repos', 'abilities', 'searchable-ability'),
+        installTarget: 'repos/abilities/searchable-ability',
+        installed: false,
+        name: 'Searchable Ability',
+        notes: '',
+        readmePath: null,
+        repoUsageNotes: 'Use this ability when reviewing external catalog content.',
+        sourceUrl: 'https://example.com/searchable-ability.git',
+        uninstallPolicy: '',
+        updateStrategy: 'git-fast-forward',
+      },
+    ],
+  )
+
+  assert.ok(result.results.some((entry) => entry.category === 'capability'))
+  const capabilityResult = result.results.find((entry) => entry.category === 'capability')
+  assert.equal(capabilityResult?.capabilityId, 'searchable-ability')
+})
+
 test('base summary mode skips heavy diagnostics while preserving repo discovery', async () => {
+  const workspaceModule = await importWorkspaceModule(tempWorkspaceRoot, '60000')
+  workspaceModule.invalidateWorkspaceSummaryCache()
+
+  const baseSummary = await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+    { includeDiagnostics: false, repoProjection: 'list' },
+  )
+
+  assert.ok(baseSummary.repos.length >= 1)
+
+  const repo = baseSummary.repos[0]
+  assert.equal(repo.detailLevel, 'list')
+  assert.equal(repo.health.state, 'unknown')
+  assert.equal(repo.git.state, 'unavailable')
+  assert.equal(repo.dependencies.state, 'unknown')
+  assert.match(repo.git.summary, /skipped for base summary/i)
+  assert.match(repo.dependencies.reason, /skipped for base summary/i)
+  assert.equal(repo.diagnosticsFreshness, 'skipped')
+  assert.deepEqual(repo.install.logTail, [])
+  assert.deepEqual(repo.runtime.logTail, [])
+  assert.equal(repo.savedMetadata, null)
+})
+
+test('repo details can eagerly hydrate diagnostics without rebuilding full workspace summary', async () => {
+  await createNodeRepo(tempWorkspaceRoot, 'repo-detail-hydration')
+  await initGitRepo(tempWorkspaceRoot, 'repo-detail-hydration')
   const workspaceModule = await importWorkspaceModule(tempWorkspaceRoot, '60000')
   workspaceModule.invalidateWorkspaceSummaryCache()
 
@@ -141,16 +209,26 @@ test('base summary mode skips heavy diagnostics while preserving repo discovery'
     new Map(),
     { includeDiagnostics: false },
   )
+  const baseRepo = baseSummary.repos.find((entry) =>
+    entry.relativePath.endsWith('repo-detail-hydration'),
+  )
+  assert.ok(baseRepo)
+  assert.equal(baseRepo.diagnosticsFreshness, 'skipped')
 
-  assert.ok(baseSummary.repos.length >= 1)
+  const detailedRepo = await workspaceModule.buildWorkspaceRepoDetails(
+    baseRepo.relativePath,
+    new Map(),
+    new Map(),
+  )
+  assert.ok(detailedRepo)
+  assert.equal(detailedRepo.detailLevel, 'detail')
+  assert.equal(detailedRepo.diagnosticsFreshness, 'fresh')
+  assert.equal(detailedRepo.git.hasGit, true)
 
-  const repo = baseSummary.repos[0]
-  assert.equal(repo.health.state, 'unknown')
-  assert.equal(repo.git.state, 'unavailable')
-  assert.equal(repo.dependencies.state, 'unknown')
-  assert.match(repo.git.summary, /skipped for base summary/i)
-  assert.match(repo.dependencies.reason, /skipped for base summary/i)
-  assert.equal(repo.diagnosticsFreshness, 'skipped')
+  const observability = workspaceModule.getWorkspaceHubObservability()
+  assert.equal(observability.observabilityVersion, 2)
+  assert.equal(observability.repoDetails.requests >= 1, true)
+  assert.equal(typeof observability.repoDetails.lastDurationMs, 'number')
 })
 
 test('diagnostics mode warms git diagnostics asynchronously via worker', async () => {
@@ -267,12 +345,14 @@ test('workspace observability reports discovery and diagnostics cache counters',
   )
 
   const observability = workspaceModule.getWorkspaceHubObservability()
-  assert.equal(observability.observabilityVersion, 1)
+  assert.equal(observability.observabilityVersion, 2)
   assert.ok(observability.discovery)
   assert.ok(observability.diagnostics)
+  assert.ok(observability.repoDetails)
   assert.ok(observability.summary)
   assert.equal(typeof observability.discovery.hits, 'number')
   assert.equal(typeof observability.diagnostics.misses, 'number')
+  assert.equal(typeof observability.repoDetails.requests, 'number')
   assert.equal(typeof observability.summary.requestsFull, 'number')
   assert.ok(observability.discoveryCacheMisses >= 1)
   assert.ok(observability.discoveryCacheHits >= 1)

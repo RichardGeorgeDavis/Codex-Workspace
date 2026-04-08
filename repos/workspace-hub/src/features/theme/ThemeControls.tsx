@@ -3,19 +3,24 @@ import {
   type ThemePreset,
   themePresets,
 } from './theme.ts'
+import type { RepoLayoutMode } from '../layout/repoLayout.ts'
 
 type ThemeControlsProps = {
   mode: ThemeMode
   onModeChange: (mode: ThemeMode) => void
   onPresetChange: (preset: ThemePreset) => void
+  onRepoLayoutModeChange: (mode: RepoLayoutMode) => void
   preset: ThemePreset
+  repoLayoutMode: RepoLayoutMode
 }
 
 export function ThemeControls({
   mode,
   onModeChange,
   onPresetChange,
+  onRepoLayoutModeChange,
   preset,
+  repoLayoutMode,
 }: ThemeControlsProps) {
   return (
     <aside className="theme-console" aria-label="Appearance controls">
@@ -64,6 +69,36 @@ export function ThemeControls({
         >
           Dark
         </button>
+      </div>
+
+      <div className="theme-console-layout">
+        <div>
+          <h3>Repo layout</h3>
+          <p className="theme-console-copy">
+            `split` keeps details in the sidebar. `discovery-first` keeps Repo Discovery full width until you select a repo.
+          </p>
+        </div>
+
+        <div className="theme-mode-group" role="group" aria-label="Repo layout mode">
+          <button
+            className={`theme-mode-button ${repoLayoutMode === 'split' ? 'active' : ''}`}
+            onClick={() => {
+              onRepoLayoutModeChange('split')
+            }}
+            type="button"
+          >
+            Split
+          </button>
+          <button
+            className={`theme-mode-button ${repoLayoutMode === 'discovery-first' ? 'active' : ''}`}
+            onClick={() => {
+              onRepoLayoutModeChange('discovery-first')
+            }}
+            type="button"
+          >
+            Discovery first
+          </button>
+        </div>
       </div>
     </aside>
   )

@@ -194,13 +194,70 @@ export type WorkspaceArchive = {
   relativePath: string
 }
 
+export type WorkspaceCapabilityClassification =
+  | 'ability'
+  | 'core-service'
+  | 'reference-only'
+  | 'repo-level-adoption'
+
+export type WorkspaceCapabilityInstallMethod = 'git' | 'snapshot'
+
+export type WorkspaceCapabilityActionId =
+  | 'disable'
+  | 'enable'
+  | 'install'
+  | 'uninstall'
+  | 'update'
+
+export type WorkspaceCapability = {
+  category: string
+  classification: WorkspaceCapabilityClassification
+  description: string
+  docsPath: string | null
+  enabled: boolean
+  enabledByDefault: boolean
+  exposeInHub: boolean
+  id: string
+  installMethod: WorkspaceCapabilityInstallMethod
+  installPath: string | null
+  installTarget: string
+  installed: boolean
+  name: string
+  notes: string
+  readmePath: string | null
+  repoUsageNotes: string
+  sourceUrl: string
+  uninstallPolicy: string
+  updatedAt: string | null
+  updateStrategy: string
+}
+
+export type WorkspaceCapabilitiesSnapshot = {
+  capabilities: WorkspaceCapability[]
+  generatedAt: string
+  stats: {
+    abilities: number
+    coreServices: number
+    disabled: number
+    enabled: number
+    exposedInHub: number
+    installed: number
+    installable: number
+    notInstalled: number
+    referenceOnly: number
+    total: number
+  }
+}
+
 export type WorkspaceSearchResult = {
-  category: 'artifact' | 'failure-report' | 'repo'
+  category: 'artifact' | 'capability' | 'failure-report' | 'repo' | 'service'
+  capabilityId: string | null
   filePath: string | null
   id: string
   matchSource: string
   repoRelativePath: string | null
   score: number
+  serviceId: string | null
   snippet: string
   subtitle: string
   title: string
@@ -220,6 +277,7 @@ export type WorkspaceEvent = {
   type:
     | 'activity'
     | 'agent'
+    | 'capability'
     | 'connected'
     | 'cover'
     | 'failure-report'
@@ -229,6 +287,91 @@ export type WorkspaceEvent = {
     | 'metadata'
     | 'runtime'
     | 'runtime-log'
+    | 'service'
+}
+
+export type WorkspaceCoreService = {
+  branch: string | null
+  cacheRoot: string
+  category: 'memory'
+  configPath: string
+  description: string
+  docsPath: string | null
+  exportsRoot: string
+  homePath: string
+  id: string
+  identityPath: string
+  install: RepoInstall
+  installCommand: string
+  lastCommandAt: string | null
+  lastCommandKind: string | null
+  lastCommandTarget: string | null
+  lastCodexExportAt: string | null
+  lastCodexExportTarget: string | null
+  lastIngestAt: string | null
+  lastIngestTarget: string | null
+  lastInstallAt: string | null
+  lastRuntimeStartAt: string | null
+  lastSaveAt: string | null
+  lastSaveTarget: string | null
+  lastSearchAt: string | null
+  lastSearchQuery: string | null
+  lastSyncAt: string | null
+  lastWakeUpAt: string | null
+  name: string
+  notes: string
+  originUrl: string | null
+  readmePath: string | null
+  repoPath: string
+  repoPresent: boolean
+  repoRelativePath: string
+  runtime: RepoRuntime
+  runtimeCommand: string
+  sharedRoot: string
+  statePath: string
+  syncCommand: string
+  upstreamUrl: string | null
+  updatedAt: string | null
+  user: string
+  venvPath: string
+  venvReady: boolean
+  version: string | null
+}
+
+export type WorkspaceCoreServiceTargetKind = 'current-repo' | 'repo' | 'workspace-docs'
+
+export type WorkspaceCoreServiceCommandId =
+  | 'export-codex-current'
+  | 'mine-codex-current'
+  | 'runtime-start'
+  | 'save-repo'
+  | 'save-workspace'
+  | 'status'
+  | 'sync'
+  | 'wake-up'
+
+export type WorkspaceCoreServiceCommand = {
+  description: string
+  enabled: boolean
+  id: WorkspaceCoreServiceCommandId
+  label: string
+  reasonDisabled: string | null
+  shellCommand: string
+}
+
+export type WorkspaceCoreServiceTargetContext = {
+  commands: WorkspaceCoreServiceCommand[]
+  lastRelevantIngestTarget: string | null
+  metadataExists: boolean
+  metadataPath: string | null
+  recommendedActionId: 'save-repo' | 'save-workspace' | null
+  recommendedActionLabel: string | null
+  repoRelativePath: string | null
+  serviceId: string
+  targetAvailable: boolean
+  targetKind: WorkspaceCoreServiceTargetKind
+  targetLabel: string
+  targetPath: string | null
 }
 
 export type WorkspaceRepo = {
@@ -236,6 +379,7 @@ export type WorkspaceRepo = {
   buildCommand: string | null
   collection: string
   detectedBy: 'files' | 'manifest'
+  detailLevel: 'detail' | 'list'
   diagnosticsFreshness: 'fresh' | 'skipped' | 'stale' | 'warming'
   dependencies: RepoDependencyState
   devCommand: string | null
@@ -277,6 +421,8 @@ export type WorkspaceRepo = {
 export type WorkspaceSummary = {
   agentEnvironment: WorkspaceAgentEnvironment
   archives: WorkspaceArchive[]
+  capabilities: WorkspaceCapability[]
+  coreServices: WorkspaceCoreService[]
   dataRoot: string
   generatedAt: string
   milestones: WorkspaceMilestone[]
@@ -291,8 +437,12 @@ export type WorkspaceSummary = {
   sharedRoot: string
   stats: {
     agentEnabledRepos: number
+    abilities: number
     archiveFiles: number
     cacheBuckets: number
+    enabledAbilities: number
+    installedAbilities: number
+    coreServices: number
     directPreferredRepos: number
     discoveredRepos: number
     externalPreferredRepos: number
@@ -300,6 +450,7 @@ export type WorkspaceSummary = {
     manifestBackedRepos: number
     omxDetectedRepos: number
     opencodeConfiguredRepos: number
+    referenceCapabilities: number
     runnableRepos: number
     runningRepos: number
     topLevelEntries: number
