@@ -213,10 +213,10 @@ cat > /tmp/workspace-hub-discovery-storage.json <<'EOF'
   ]
 }
 EOF
-npx playwright screenshot --load-storage /tmp/workspace-hub-discovery-storage.json --wait-for-selector 'text=Selection required' --full-page http://127.0.0.1:4174 /tmp/workspace-hub-discovery-mode.png
+npx playwright screenshot --load-storage /tmp/workspace-hub-discovery-storage.json --wait-for-selector 'text=Select a repo to open details.' --full-page http://127.0.0.1:4174 /tmp/workspace-hub-discovery-mode.png
 ```
 
-That smoke pass validates the current base-summary list projection, indexed capability-aware search, selected repo-detail hydration, `Workspace memory`, the capability panel, and the `discovery-first` empty-selection rendering path.
+That smoke pass validates the current base-summary list projection, indexed capability-aware search, selected repo-detail hydration, `Workspace memory`, the capability panel, the discovery-first inline empty-state prompt, and the inline selected-repo details rendering path.
 
 Default local endpoints:
 
@@ -363,6 +363,12 @@ Mid-term and longer-term follow-ups:
 - incremental discovery indexing to reduce cold-start outliers on larger workspaces
 - optional extension hooks for custom repo classification and health/dependency probes
 - optional local historical observability snapshots for trend visibility
+
+Current layout note:
+
+- `Appearance` owns the `split` / `discovery-first` toggle
+- in `discovery-first`, Repo Discovery stays full width until a repo is selected
+- once selected, the repo expands inline with its full detail surface instead of showing a second detached selection block lower on the page
 
 ## Next Batches
 
