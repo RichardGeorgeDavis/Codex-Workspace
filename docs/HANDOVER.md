@@ -16,6 +16,12 @@ Current release baseline:
 - `repos/workspace-hub` version: `1.1.0`
 - stable release gate passed on `2026-04-03`
 
+Current published release record:
+
+- release commit: `d8a3920`
+- previous implementation alignment commit: `cdf88b3`
+- release URL: `https://github.com/RichardGeorgeDavis/Codex-Workspace/releases/tag/v1.1.0`
+
 ## Canonical doc location
 
 The canonical handover Markdown now lives in:
@@ -177,9 +183,15 @@ Status: complete and validated
 - maintainer guidance now lives in `docs/12-maintainer-runbook.md`
 - repos are now expected to document any optional ability dependency explicitly
 
+Current likely pickup:
+
+- `repos/workspace-hub` capability drill-down if operators need deeper per-capability install/update health than the current snapshot
+- `repos/workspace-hub` repo-intake polish if new repos need clearer first-run notes, optional ability guidance, or tighter starter docs
+- keep future batches end-to-end and update this file when a batch becomes the new practical pickup point
+
 ## Acceptance closeout (2026-04-08)
 
-This alignment slice now has a complete verification snapshot:
+This released `v1.1.0` baseline now has a complete verification snapshot:
 
 - `tools/scripts/manage-workspace-capabilities.sh list`
 - `tools/scripts/update-github-refs.sh --list`
@@ -211,6 +223,7 @@ Observed runtime result:
 - repo-details hydration returned `detailLevel: detail` for `repos/workspace-hub`
 - repo-details observability counters incremented after the detail fetch
 - browser-level smoke confirmed the live presence of `Workspace memory`, `Workspace Capabilities`, `Repo Discovery`, the discovery-first inline empty-state prompt, and the inline selected-repo details flow
+- the Workspace memory page now also exposes an in-app MemPalace search form, with latest-query visibility and inline command output, so retrieval is usable from the Hub instead of being shell-only
 
 Current operator expectation:
 
@@ -225,6 +238,7 @@ Repo dependency rollout note:
 - `repos/workspace-hub` indexed search now surfaces capabilities as a first-class workspace result type
 - `repos/workspace-hub` now keeps list refresh on the base summary path while hydrating the selected repo eagerly for richer diagnostics
 - `repos/workspace-hub` now exposes a dedicated read-only capability snapshot endpoint and shows installed or enabled or reference-only capability counts directly in the capability panel
+- `repos/workspace-hub` Workspace memory now includes an in-app retrieval search flow backed by `tools/bin/workspace-memory search`
 - release and maintainer steps now explicitly require reviewing public-facing files when workspace-wide features such as Workspace memory land
 
 ## Completion review
@@ -235,7 +249,7 @@ What appears complete or substantially complete:
 
 - workspace foundation
 - shared tooling and caches
-- stable Workspace Hub 1.0 baseline
+- stable Workspace Hub 1.1 baseline
 - repo discovery
 - repo detection
 - manifest support
@@ -685,3 +699,36 @@ Pickup notes:
 - Snapshot-style refs still land under `tools/ref/`.
 - Managed upstream repos can live under `repos/abilities/` or normal `repos/`, but they remain independent repos.
 - performance and expansion changes stay aligned with workspace baseline rules
+
+### Implementation update (2026-04-08, contributor onboarding and public queue packaging)
+
+Completed in the workspace root after the `v1.1.0` release baseline:
+
+1. Reframed the public repo entry path.
+   - Updated `README.md` to lead with the concrete `Workspace Hub` product, a minimal quick-start path, contribution entry points, a visible `Looking For Help` section, and a short `Now / Next / Later` roadmap.
+   - Reduced the number of first-read links in the public entry surface and moved deeper conceptual material lower in the page.
+
+2. Tightened contributor-facing GitHub surfaces.
+   - Reworked `.github/CONTRIBUTING.md` around `Ways To Help`, small versus larger changes, and a lightweight PR path.
+   - Updated `.github/SUPPORT.md`, `.github/pull_request_template.md`, and the issue-template chooser to make the README -> roadmap -> issue -> PR path more explicit.
+   - Added `.github/ISSUE_TEMPLATE/help_wanted_task.md` for scoped contributor-ready work.
+
+3. Added a contributor roadmap and starter issue queue.
+   - Added `docs/13-contributor-roadmap.md` with label taxonomy, current contribution lanes, and a curated set of ready-to-open starter tasks.
+   - Updated `docs/README.md` and `docs/CHANGELOG.md` so the new contributor surfaces are part of the canonical docs set.
+
+4. Published the first external-facing GitHub queue from that roadmap.
+   - Opened Discussion `#10` for outside review of contributor onboarding and `Workspace Hub` clarity.
+   - Opened Issues `#5` through `#9` for empty-state polish, classification visibility, doctor guidance, manifest examples, and capability-panel copy.
+   - Opened Issue `#11` to tighten `docs/08-first-run-and-updates.md` so the deeper onboarding flow matches the new Hub-first README path.
+   - Added GitHub labels `workspace-hub`, `scripts`, `needs-repro`, and `design`.
+
+Published implementation commit:
+
+- `ff3b38f` `Improve contributor onboarding surfaces`
+
+Pickup notes:
+
+- The broad roadmap item `Clarify the "try Workspace Hub first" path` is now largely complete at the README level.
+- The narrower follow-up still open is GitHub Issue `#11`, which keeps the deeper first-run doc aligned with the new public README funnel.
+- Future public issues should stay scoped and contribution-ready rather than mirroring every longer-term internal roadmap note.
