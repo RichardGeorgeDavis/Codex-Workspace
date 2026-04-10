@@ -2,11 +2,19 @@
 
 <img src="favicon.png" alt="Codex Workspace favicon" width="128" />
 
-Codex Workspace is a local-first way to organize and run many standalone repositories on one machine without forcing them into a monorepo or one shared dependency tree.
+Codex Workspace is a local-first system for working across many standalone repositories as one coherent environment. It gives you shared discovery, runtime control, memory, docs, and agent tooling without forcing those repos into a monorepo or one shared dependency tree.
+
+In practice, that means:
+
+- many repos can feel like one working system without becoming one codebase
+- local context can survive repo switches, handover updates, and long gaps between sessions
+- shared memory, docs, and tooling can sit above the repos without flattening their runtime models
 
 ## What Exists Today
 
-The most concrete product in this repo today is [Workspace Hub](repos/workspace-hub/README.md), a vendored local control plane for mixed-stack workspaces. It scans sibling repos, classifies them conservatively, shows runtime and metadata state, and provides start, stop, open, and preview actions without forcing every repo into one toolchain.
+The most concrete product in this repo today is [Workspace Hub](repos/workspace-hub/README.md), a local control plane for mixed-stack workspaces. It scans sibling repos, classifies them conservatively, shows runtime and metadata state, and provides start, stop, open, and preview actions without forcing every repo into one toolchain.
+
+Around that, the workspace turns the usual pile of local scripts, scattered notes, and one-off agent setup into a more deliberate system.
 
 The workspace repo around it provides:
 
@@ -15,6 +23,7 @@ The workspace repo around it provides:
 - lightweight workspace metadata and manifests
 - a tracked capability lifecycle for reviewed upstream references, optional abilities, and core services
 - a filesystem-first context model for docs, manifests, and agent guidance
+- a practical way to resume work across multiple repos without reconstructing context from scratch
 
 <!-- workspace-hub:cover:start -->
 ![Codex Workspace cover](.github/assets/cover-readme-20260321.png)
@@ -38,6 +47,9 @@ The workspace repo around it provides:
 - Caches can be shared without sharing installs.
 - Local runtime behavior stays explicit and inspectable.
 - WordPress, Vite, static, PHP, and utility repos can coexist without pretending they all want the same workflow.
+- Shared memory, docs, and tooling can span the whole workspace without pretending the codebases are one project.
+
+The goal is not to make many repos look like one dependency graph. The goal is to make them feel like one working environment.
 
 ## Quick Start
 
