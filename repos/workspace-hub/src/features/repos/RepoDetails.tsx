@@ -37,6 +37,7 @@ type RepoDetailsProps = {
       | 'terminal'
       | 'troubleshooting',
   ) => Promise<void>
+  onOpenWorkspacePath: (targetPath: string) => Promise<void>
   onResetMetadata: (relativePath: string) => Promise<void>
   onRuntimeAction: (
     relativePath: string,
@@ -286,6 +287,17 @@ function formatRecentValue(value: string | null) {
   }).format(new Date(value))
 }
 
+function formatSideLoadStatus(status: NonNullable<WorkspaceRepo['sideLoad']>['status']) {
+  switch (status) {
+    case 'fresh':
+      return 'fresh'
+    case 'stale':
+      return 'stale'
+    default:
+      return 'missing'
+  }
+}
+
 type AccordionSectionProps = {
   badge?: ReactNode
   children: ReactNode
@@ -373,6 +385,7 @@ export function RepoDetails({
   onInstallAction,
   loading,
   onOpenAction,
+  onOpenWorkspacePath,
   onResetMetadata,
   onRuntimeAction,
   onSaveMetadata,
@@ -401,6 +414,7 @@ export function RepoDetails({
           onIntakeAction={onIntakeAction}
           onInstallAction={onInstallAction}
           onOpenAction={onOpenAction}
+          onOpenWorkspacePath={onOpenWorkspacePath}
           onResetMetadata={onResetMetadata}
           onRuntimeAction={onRuntimeAction}
           onSaveMetadata={onSaveMetadata}
@@ -431,6 +445,7 @@ export function RepoDetails({
           onIntakeAction={onIntakeAction}
           onInstallAction={onInstallAction}
           onOpenAction={onOpenAction}
+          onOpenWorkspacePath={onOpenWorkspacePath}
           onResetMetadata={onResetMetadata}
           onRuntimeAction={onRuntimeAction}
           onSaveMetadata={onSaveMetadata}
@@ -457,6 +472,7 @@ function RepoDetailsContent({
   onIntakeAction,
   onInstallAction,
   onOpenAction,
+  onOpenWorkspacePath,
   onResetMetadata,
   onRuntimeAction,
   onSaveMetadata,
@@ -479,6 +495,8 @@ function RepoDetailsContent({
     repo.dependencies.state === 'unknown' ||
     repo.install.status === 'error' ||
     repo.runtime.status === 'error'
+  const sideLoad = repo.sideLoad
+  const sideLoadStatus = sideLoad ? formatSideLoadStatus(sideLoad.status) : null
 
   async function handleCopy(value: string | null, label: string) {
     if (!value) {
@@ -765,6 +783,103 @@ function RepoDetailsContent({
           </div>
         </dl>
       </div>
+
+      {sideLoad ? (
+        <AccordionSection
+          badge={
+            <span className={`status-pill ${sideLoad.status}`}>
+              {sideLoadStatus}
+            </span>
+          }
+          title="Context cache"
+        >
+          <p className="section-copy">
+            Repo side-load files are generated under <code>cache/context/</code> and treated as optional read-only summaries rather than repo truth.
+          </p>
+
+          <dl className="details-list">
+            <div className="details-row">
+              <dt>Status</dt>
+              <dd>
+                <span className={`status-pill ${sideLoad.status}`}>
+                  {sideLoadStatus}
+                </span>
+              </dd>
+            </div>
+            <div className="details-row">
+              <dt>Generated</dt>
+              <dd>{formatRecentValue(sideLoad.generatedAt)}</dd>
+            </div>
+            <div className="details-row">
+              <dt>Source count</dt>
+              <dd>{sideLoad.inputCount}</dd>
+            </div>
+            <div className="details-row">
+              <dt>Abstract</dt>
+              <dd>
+                {sideLoad.outputs.find((output) => output.role === 'abstract')?.relativePath
+                  ?? 'Not generated'}
+              </dd>
+            </div>
+            <div className="details-row">
+              <dt>Overview</dt>
+              <dd>
+                {sideLoad.outputs.find((output) => output.role === 'overview')?.relativePath
+                  ?? 'Not generated'}
+              </dd>
+            </div>
+            <div className="details-row">
+              <dt>Sources</dt>
+              <dd>
+                {sideLoad.outputs.find((output) => output.role === 'sources')?.relativePath
+                  ?? 'Not generated'}
+              </dd>
+            </div>
+          </dl>
+
+          <div className="action-row">
+            <button
+              className="action-button"
+              disabled={!sideLoad.outputs.find((output) => output.role === 'abstract')}
+              onClick={() => {
+                const output = sideLoad.outputs.find((entry) => entry.role === 'abstract')
+                if (output) {
+                  void onOpenWorkspacePath(output.path)
+                }
+              }}
+              type="button"
+            >
+              Open abstract
+            </button>
+            <button
+              className="action-button"
+              disabled={!sideLoad.outputs.find((output) => output.role === 'overview')}
+              onClick={() => {
+                const output = sideLoad.outputs.find((entry) => entry.role === 'overview')
+                if (output) {
+                  void onOpenWorkspacePath(output.path)
+                }
+              }}
+              type="button"
+            >
+              Open overview
+            </button>
+            <button
+              className="action-button"
+              disabled={!sideLoad.outputs.find((output) => output.role === 'sources')}
+              onClick={() => {
+                const output = sideLoad.outputs.find((entry) => entry.role === 'sources')
+                if (output) {
+                  void onOpenWorkspacePath(output.path)
+                }
+              }}
+              type="button"
+            >
+              Open sources
+            </button>
+          </div>
+        </AccordionSection>
+      ) : null}
 
       <AccordionSection
         badge={

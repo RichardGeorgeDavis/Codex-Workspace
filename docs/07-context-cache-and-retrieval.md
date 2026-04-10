@@ -239,6 +239,8 @@ For future long-running agent jobs, a similar compact summary file under `cache/
 
 Use `tools/scripts/init-agent-job-bundle.sh` to create this local cache bundle when the work is large enough to justify it.
 
+Concrete side-load generation rules, source sets, and freshness semantics now live in [20-ai-context-side-load.md](20-ai-context-side-load.md).
+
 ### `plan.md` and `summary.md`
 
 These are job-level working files rather than canonical repo docs.
@@ -270,18 +272,40 @@ Suggested fields:
 ```json
 {
   "version": 1,
-  "generatedAt": "2026-03-21T10:30:00Z",
-  "repoRoot": "/absolute/path/to/repo",
+  "scope": "repo",
+  "target": "workspace-hub",
+  "generatedAt": "2026-04-10T10:30:00Z",
+  "generator": {
+    "path": "tools/scripts/generate-context-cache.sh"
+  },
   "inputs": [
     {
       "path": "README.md",
-      "kind": "readme",
-      "mtime": "2026-03-20T13:00:00Z"
+      "role": "repo-readme",
+      "bytes": 2048,
+      "mtimeMs": 1775816400000.0,
+      "sha256": "..."
     },
     {
       "path": ".workspace/project.json",
-      "kind": "manifest",
-      "mtime": "2026-03-20T13:05:00Z"
+      "role": "repo-manifest",
+      "bytes": 512,
+      "mtimeMs": 1775816700000.0,
+      "sha256": "..."
+    }
+  ],
+  "outputs": [
+    {
+      "path": "cache/context/repos/workspace-hub/abstract.md",
+      "role": "abstract"
+    },
+    {
+      "path": "cache/context/repos/workspace-hub/overview.md",
+      "role": "overview"
+    },
+    {
+      "path": "cache/context/repos/workspace-hub/sources.json",
+      "role": "sources"
     }
   ]
 }
@@ -355,9 +379,11 @@ For Workspace Hub, the relevant near-term use is modest:
 
 - detect whether context cache files exist
 - show whether summaries are fresh or stale
-- link to the source files behind a summary
+- link to generated summary files and tracked provenance
 - use cached `L0` and `L1` summaries to reduce repeated full-repo reads
 - explain which files and signals drove repo classification when available
+
+Agent-job bundles under `cache/context/agents/jobs/` stay separate from repo and workspace side-load summaries. They are local task artifacts, not the repo-level side-load cache.
 
 Good future enhancements:
 

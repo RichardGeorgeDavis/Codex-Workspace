@@ -2,7 +2,13 @@
 
 ## 2026-04-10
 
+- Bumped the workspace baseline release to `v1.2.1` and updated `repos/workspace-hub` to `1.2.1` to capture the AI side-load cache flow, handover-closeout automation, and the serialized `workspace-memory` write path.
+- Updated the workspace workflow so an explicit handover-update request now implies the matching `workspace-memory` closeout: repo-scoped handovers should trigger `save-repo`, workspace-scoped handovers should trigger `save-workspace`, and mixed closeout should run serially.
+- Hardened `tools/bin/workspace-memory` write-heavy commands with a re-entrant workspace lock under `cache/mempalace/<user>/locks/`, so overlapping `save-repo`, `save-workspace`, `mine-*`, and `wake-up` runs serialize instead of contending on the same local MemPalace SQLite and Chroma state.
 - Bumped the workspace baseline release to `v1.2.0` and updated `repos/workspace-hub` to `1.2.0` to capture the finished MemPalace search flow, onboarding alignment, Memory Graph Phase 1, and the managed MCP v1 rollout.
+- Added `docs/20-ai-context-side-load.md` plus `tools/scripts/generate-context-cache.sh` so Codex Workspace now has a dry-run-first generator for workspace and `workspace-hub` side-load summaries under ignored `cache/context/` paths.
+- Updated `docs/07-context-cache-and-retrieval.md`, the root README, the docs index, and the Workspace Hub README so the concrete side-load contract, generator entrypoint, and canonical-versus-generated split are discoverable from the public surfaces.
+- Extended `tools/scripts/bootstrap-workspace.sh` to prepare `cache/context/repos/`, and updated Workspace Hub repo details so selected repos can show side-load freshness plus open actions for generated `abstract.md`, `overview.md`, and `sources.json` files without loading side-load metadata on the base-summary path.
 - Hardened the managed Playwright and Chrome DevTools wrappers against bad host environments where `HOME=/`, by falling back to workspace-owned runtime and npm-cache paths under `cache/` and forcing Playwright into isolated mode with a stable output directory.
 - Added the MCP v1 operating-model pack as `docs/15-mcp-profiles-and-trust-levels.md` through `docs/19-mcp-authoring-rules.md`, preserving the existing `10` through `14` docs and turning the older generic MCP note into a concrete support boundary.
 - Added tracked MCP profile and server examples under `tools/templates/mcp/`, plus repo-safe `workspace-hub` examples under `repos/workspace-hub/.workspace/mcp/`.

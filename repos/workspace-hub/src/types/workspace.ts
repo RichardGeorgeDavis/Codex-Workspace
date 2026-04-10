@@ -139,6 +139,21 @@ export type RepoRecentContext = {
   lastSelectedAt: string | null
 }
 
+export type RepoSideLoadStatus = 'fresh' | 'missing' | 'stale'
+
+export type RepoSideLoadArtifact = {
+  path: string
+  relativePath: string
+  role: 'abstract' | 'overview' | 'sources'
+}
+
+export type RepoSideLoad = {
+  generatedAt: string | null
+  inputCount: number
+  outputs: RepoSideLoadArtifact[]
+  status: RepoSideLoadStatus
+}
+
 export type RepoFailureReportSummary = {
   command: string | null
   exitCode: number | null
@@ -430,6 +445,7 @@ export type WorkspaceRepo = {
   servbaySubdomain: string | null
   slug: string
   suggestedManifest: WorkspaceManifestRecord
+  sideLoad?: RepoSideLoad | null
   tags: string[]
   type: RepoType
   runtime: RepoRuntime

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { after, before, test } from 'node:test'
@@ -33,6 +33,61 @@ async function createNodeRepo(root: string, relativePath: string) {
 async function initGitRepo(root: string, relativePath: string) {
   const repoPath = path.join(root, 'repos', relativePath)
   await execFileAsync('git', ['init'], { cwd: repoPath })
+}
+
+async function writeRepoSideLoadFixture(
+  root: string,
+  repoName: string,
+  inputRelativePath: string,
+) {
+  const inputPath = path.join(root, inputRelativePath)
+  const inputStat = await stat(inputPath)
+  const sourcesPath = path.join(root, 'cache', 'context', 'repos', repoName, 'sources.json')
+  const abstractPath = path.join(root, 'cache', 'context', 'repos', repoName, 'abstract.md')
+  const overviewPath = path.join(root, 'cache', 'context', 'repos', repoName, 'overview.md')
+  const sourcesRelativePath = path.relative(root, sourcesPath).replaceAll(path.sep, '/')
+
+  await writeTextFile(abstractPath, '# abstract\n')
+  await writeTextFile(overviewPath, '# overview\n')
+  await writeTextFile(
+    sourcesPath,
+    JSON.stringify(
+      {
+        version: 1,
+        scope: 'repo',
+        target: repoName,
+        generatedAt: '2026-04-10T10:30:00Z',
+        generator: {
+          path: 'tools/scripts/generate-context-cache.sh',
+        },
+        inputs: [
+          {
+            bytes: inputStat.size,
+            mtimeMs: inputStat.mtimeMs,
+            path: inputRelativePath.replaceAll(path.sep, '/'),
+            role: 'repo-readme',
+            sha256: 'fixture-hash',
+          },
+        ],
+        outputs: [
+          {
+            path: path.relative(root, abstractPath).replaceAll(path.sep, '/'),
+            role: 'abstract',
+          },
+          {
+            path: path.relative(root, overviewPath).replaceAll(path.sep, '/'),
+            role: 'overview',
+          },
+          {
+            path: sourcesRelativePath,
+            role: 'sources',
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  )
 }
 
 async function importWorkspaceModule(root: string, cacheTtlMs: string) {
@@ -229,6 +284,91 @@ test('repo details can eagerly hydrate diagnostics without rebuilding full works
   assert.equal(observability.observabilityVersion, 2)
   assert.equal(observability.repoDetails.requests >= 1, true)
   assert.equal(typeof observability.repoDetails.lastDurationMs, 'number')
+})
+
+test('repo details hydrate side-load freshness without adding side-load data to base summary', async () => {
+  await createNodeRepo(tempWorkspaceRoot, 'repo-side-load')
+  await writeTextFile(
+    path.join(tempWorkspaceRoot, 'repos', 'repo-side-load', 'README.md'),
+    '# Repo Side Load\n',
+  )
+  await writeRepoSideLoadFixture(
+    tempWorkspaceRoot,
+    'repo-side-load',
+    path.join('repos', 'repo-side-load', 'README.md'),
+  )
+
+  const workspaceModule = await importWorkspaceModule(tempWorkspaceRoot, '60000')
+  workspaceModule.invalidateWorkspaceSummaryCache()
+
+  const baseSummary = await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+    { includeDiagnostics: false, repoProjection: 'list' },
+  )
+  const baseRepo = baseSummary.repos.find((entry) => entry.relativePath.endsWith('repo-side-load'))
+  assert.ok(baseRepo)
+  assert.equal(baseRepo.sideLoad, undefined)
+
+  const detailedRepo = await workspaceModule.buildWorkspaceRepoDetails(
+    baseRepo.relativePath,
+    new Map(),
+    new Map(),
+  )
+  assert.ok(detailedRepo)
+  assert.ok(detailedRepo.sideLoad)
+  assert.equal(detailedRepo.sideLoad?.status, 'fresh')
+  assert.equal(detailedRepo.sideLoad?.inputCount, 1)
+  assert.deepEqual(
+    detailedRepo.sideLoad?.outputs.map((entry) => entry.role),
+    ['abstract', 'overview', 'sources'],
+  )
+})
+
+test('repo side-load freshness becomes stale when an input changes or a generated output disappears', async () => {
+  await createNodeRepo(tempWorkspaceRoot, 'repo-side-load-stale')
+  const readmeRelativePath = path.join('repos', 'repo-side-load-stale', 'README.md')
+  await writeTextFile(path.join(tempWorkspaceRoot, readmeRelativePath), '# Repo Side Load Stale\n')
+  await writeRepoSideLoadFixture(tempWorkspaceRoot, 'repo-side-load-stale', readmeRelativePath)
+
+  const workspaceModule = await importWorkspaceModule(tempWorkspaceRoot, '60000')
+
+  const firstDetails = await workspaceModule.buildWorkspaceRepoDetails(
+    path.join('repos', 'repo-side-load-stale').replaceAll(path.sep, '/'),
+    new Map(),
+    new Map(),
+  )
+  assert.ok(firstDetails?.sideLoad)
+  assert.equal(firstDetails?.sideLoad?.status, 'fresh')
+
+  await writeTextFile(path.join(tempWorkspaceRoot, readmeRelativePath), '# Repo Side Load Stale changed\n')
+
+  const staleAfterInputChange = await workspaceModule.buildWorkspaceRepoDetails(
+    path.join('repos', 'repo-side-load-stale').replaceAll(path.sep, '/'),
+    new Map(),
+    new Map(),
+  )
+  assert.ok(staleAfterInputChange?.sideLoad)
+  assert.equal(staleAfterInputChange?.sideLoad?.status, 'stale')
+
+  const overviewPath = path.join(
+    tempWorkspaceRoot,
+    'cache',
+    'context',
+    'repos',
+    'repo-side-load-stale',
+    'overview.md',
+  )
+  await rm(overviewPath, { force: true })
+
+  const staleAfterOutputMissing = await workspaceModule.buildWorkspaceRepoDetails(
+    path.join('repos', 'repo-side-load-stale').replaceAll(path.sep, '/'),
+    new Map(),
+    new Map(),
+  )
+  assert.ok(staleAfterOutputMissing?.sideLoad)
+  assert.equal(staleAfterOutputMissing?.sideLoad?.status, 'stale')
 })
 
 test('diagnostics mode warms git diagnostics asynchronously via worker', async () => {

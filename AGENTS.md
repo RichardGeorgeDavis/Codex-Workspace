@@ -140,6 +140,20 @@ When a user asks to update the workspace's reviewed GitHub refs or managed upstr
 
 Do not refresh those sources by hand when the wrapper already covers them.
 
+## Handover closeout
+
+When a user asks for a handover update, treat that as a memory-closeout request too.
+
+Default behavior:
+
+- if the handover update is repo-specific, run `tools/bin/workspace-memory save-repo <repo-name>` after the docs update
+- if the handover update is workspace-level, docs-level, or release-level, run `tools/bin/workspace-memory save-workspace` after the docs update
+- if both repo and workspace handover surfaces changed in one slice, run the closeout commands serially rather than in parallel
+- run a quick `git status` sanity check before closing the chat so the handover does not imply a cleaner worktree than actually exists
+- if public docs changed, confirm the public surfaces stay aligned: `README.md`, `docs/README.md`, `docs/CHANGELOG.md`, and the relevant repo-local README when one exists
+
+Do not leave MemPalace closeout as a manual reminder when the user explicitly asked for a handover update.
+
 ## New repo baseline
 
 When a repo is first added under `repos/`, assume the baseline in `docs/09-new-repo-baseline.md` applies unless that repo already has clearer local instructions.

@@ -41,6 +41,22 @@ Then, once the app is open:
 
 If that trial path is enough, stop there and keep the rest of this doc as optional setup and maintenance guidance.
 
+## Fresh chat handover
+
+If you are starting a fresh repo-aware chat and want a cheaper wake-up path, use this sequence:
+
+1. read `docs/HANDOVER.md` and the directly relevant tracked README or doc first
+2. optionally refresh side-load summaries:
+   `tools/scripts/generate-context-cache.sh --workspace --run`
+3. for `workspace-hub` work, also run:
+   `tools/scripts/generate-context-cache.sh --repo workspace-hub --run`
+4. treat generated files under `cache/context/` as compact `L0` and `L1` summaries only
+5. trust tracked docs, manifests, and repo files over generated summaries whenever they differ
+
+Suggested instruction for a fresh chat:
+
+> Read `docs/HANDOVER.md` first. Use generated side-load files under `cache/context/` only as a compact summary layer, and treat tracked docs and repo files as canonical.
+
 ## Optional first-run questions
 
 Answer these in order:

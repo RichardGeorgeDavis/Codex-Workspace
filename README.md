@@ -56,6 +56,7 @@ If you want the fuller workspace path after that:
 
 - Start with [docs/08-first-run-and-updates.md](docs/08-first-run-and-updates.md).
 - Use [docs/README.md](docs/README.md) for the detailed docs index.
+- Use [docs/20-ai-context-side-load.md](docs/20-ai-context-side-load.md) for the generated AI side-load contract and the `generate-context-cache.sh` workflow.
 - Use [docs/09-new-repo-baseline.md](docs/09-new-repo-baseline.md) when adding or onboarding a repo.
 
 ## How To Contribute
@@ -173,6 +174,7 @@ Deeper docs:
 - [docs/11-core-memory-and-reference-promotion.md](docs/11-core-memory-and-reference-promotion.md)
 - [docs/18-mcp-server-catalog.md](docs/18-mcp-server-catalog.md)
 - [docs/19-mcp-authoring-rules.md](docs/19-mcp-authoring-rules.md)
+- [docs/20-ai-context-side-load.md](docs/20-ai-context-side-load.md)
 
 Supporting references:
 - [docs/HANDOVER.md](docs/HANDOVER.md)
@@ -199,6 +201,8 @@ The practical model is:
 - optional local workflow-state folders such as `.cognetivy/` kept separate from canonical tracked docs
 - local-only memory and MCP config kept separate from tracked repo content
 - a small official MCP v1 profile set for Codex, installed through workspace-owned scripts instead of ad hoc one-off setup
+
+Side-load summaries are now generated with `tools/scripts/generate-context-cache.sh` into ignored `cache/context/workspace/` and `cache/context/repos/` paths. They are optional `L0` and `L1` cache files, not canonical workspace documentation.
 
 The current MCP v1 support set is intentionally small: OpenAI Docs, Context7, Playwright, Chrome DevTools, and GitHub.
 

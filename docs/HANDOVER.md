@@ -10,17 +10,33 @@ Use it after reading the core handover pack when you need to understand:
 - where the canonical docs now live
 - what remains to be done next
 
+## Recommended chat handover flow
+
+When starting a fresh chat for repo-aware work, use this order:
+
+1. read this file and the directly relevant tracked README or doc first
+2. if you want a cheaper broad-context wake-up, run:
+   `tools/scripts/generate-context-cache.sh --workspace --run`
+3. for `workspace-hub` work, also run:
+   `tools/scripts/generate-context-cache.sh --repo workspace-hub --run`
+4. treat generated files under `cache/context/` as optional `L0` and `L1` summaries only
+5. trust tracked docs, manifests, and repo files over generated summaries whenever they differ
+
+Suggested instruction for a fresh chat:
+
+> Read `docs/HANDOVER.md` first, then use the generated side-load files under `cache/context/` only as a compact summary layer. If the cache is stale or missing, fall back to the tracked docs.
+
 Current release baseline:
 
-- workspace release tag: `v1.2.0`
-- `repos/workspace-hub` version: `1.2.0`
+- workspace release tag: `v1.2.1`
+- `repos/workspace-hub` version: `1.2.1`
 - stable release gate passed on `2026-04-10`
 
 Current published release record:
 
-- release ref: `v1.2.0`
-- previous stable release tag: `v1.1.0`
-- release URL: `https://github.com/RichardGeorgeDavis/Codex-Workspace/releases/tag/v1.2.0`
+- release ref: `v1.2.1`
+- previous stable release tag: `v1.2.0`
+- release URL: `https://github.com/RichardGeorgeDavis/Codex-Workspace/releases/tag/v1.2.1`
 
 ## Canonical doc location
 
@@ -193,7 +209,7 @@ Current likely pickup:
 
 ## Acceptance closeout (2026-04-10)
 
-This released `v1.2.0` baseline now has a complete verification snapshot:
+This released `v1.2.1` baseline now has a complete verification snapshot:
 
 - `tools/scripts/install-mcp-profile.sh default-full`
 - `tools/scripts/check-mcp-health.sh --profile default-full`
@@ -310,6 +326,7 @@ Implemented in this slice:
 - `tools/bin/workspace-memory`, `tools/bin/mempalace-start`, and `tools/bin/mempalace-sync`
 - conversation ingest wrappers including `workspace-memory mine-convos`, `workspace-memory mine-codex`, and `workspace-memory mine-codex-current`
 - closeout wrappers including `workspace-memory save-repo`, `workspace-memory save-workspace`, and `workspace-memory export-codex`
+- write-heavy `workspace-memory` paths now serialize through a workspace-owned lock under `cache/mempalace/<user>/locks/` so overlapping closeout runs do not fight over the same local MemPalace store
 - bootstrap and doctor support for the service
 - initial Workspace Hub core-service model and searchable service metadata
 - repo/docs target metadata moved under `.workspace/mempalace/` instead of target roots
@@ -322,6 +339,9 @@ Current closeout expectation:
 - after meaningful repo work, use `tools/bin/workspace-memory save-repo <repo-name>`
 - after workspace-doc or planning work, use `tools/bin/workspace-memory save-workspace`
 - use `tools/bin/workspace-memory export-codex current` when a readable transcript bundle should be kept alongside the mined raw session
+- if you need both repo and workspace closeout in one session, run them serially; the wrapper now enforces one write-heavy MemPalace run at a time instead of letting SQLite/Chroma contention leak through
+- when the user explicitly asks for a handover update, treat that as an automatic MemPalace closeout trigger instead of a separate optional reminder
+- before closing the chat, run a quick `git status` sanity check and confirm any changed public doc surfaces still agree, especially `README.md`, `docs/README.md`, `docs/CHANGELOG.md`, and any relevant repo-local README, instead of assuming the handover text alone is enough
 
 These commands work without Workspace Hub running because they operate directly on the local MemPalace wrapper and the Codex session files under `~/.codex/sessions`.
 

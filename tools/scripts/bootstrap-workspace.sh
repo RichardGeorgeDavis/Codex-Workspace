@@ -75,6 +75,7 @@ for target_dir in \
   "$workspace_root/cache/context" \
   "$workspace_root/cache/context/agents" \
   "$workspace_root/cache/context/agents/jobs" \
+  "$workspace_root/cache/context/repos" \
   "$workspace_root/cache/context/workspace" \
   "$workspace_root/cache/playwright-browsers" \
   "$workspace_root/shared/mempalace" \

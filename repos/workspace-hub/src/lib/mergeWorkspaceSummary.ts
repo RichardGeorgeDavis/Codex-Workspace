@@ -17,6 +17,7 @@ function mergeProjectedRepo(
       logTail: previous.runtime.logTail,
     },
     savedMetadata: previous.savedMetadata,
+    sideLoad: incoming.sideLoad ?? previous.sideLoad,
     suggestedManifest: previous.suggestedManifest,
   }
 }
@@ -56,6 +57,14 @@ export function mergeWorkspaceSummaryDiagnostics(
       const prior = prevByPath.get(repo.path)
 
       if (repo.diagnosticsFreshness !== 'skipped') {
+        if (repo.sideLoad === undefined && prior?.sideLoad !== undefined) {
+          changed = true
+          return {
+            ...repo,
+            sideLoad: prior.sideLoad,
+          }
+        }
+
         if (repo.detailLevel === 'list' && prior?.detailLevel === 'detail') {
           changed = true
           return mergeProjectedRepo(repo, prior)
