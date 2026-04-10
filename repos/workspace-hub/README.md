@@ -42,6 +42,7 @@ Workspace Hub is a local control plane for people who manage many standalone rep
 - exports the shared workspace Playwright browser cache to repo install and runtime commands by default, so Playwright-based smoke runs can reuse one Chromium download
 - streams live runtime, install, cover, and activity updates from the local API
 - indexes repo metadata, manifests, recent logs, failure reports, and local agent-job artifacts for server-side search
+- reads generated repo side-load summaries on repo-detail hydration so operators can inspect context-cache freshness and open the generated summary files without paying for that metadata on every base summary refresh
 - exposes a dedicated Workspace memory surface for MemPalace service state, target selection, in-app retrieval search, target-scoped graph builds, and safe wrapper actions
 - builds target-scoped MemPalace graph artifacts from normalized sidecars and nearby markdown instead of introducing a second ingestion engine
 - stores lightweight per-repo metadata and recent activity locally
@@ -171,6 +172,13 @@ pnpm build
 pnpm preview
 ```
 
+To generate the workspace-side AI summaries that the repo-details panel can inspect, run from the workspace root:
+
+```bash
+tools/scripts/generate-context-cache.sh --workspace --run
+tools/scripts/generate-context-cache.sh --repo workspace-hub --run
+```
+
 The automated test suite uses temp workspaces and fixture repos so it does not
 rewrite your current `repos/` content while verifying agent detection and
 preset scaffolding.
@@ -240,6 +248,7 @@ Summary endpoints:
 
 The UI now prefers base summary for frequent refreshes and hydrates full diagnostics when needed.
 The capability panel now also reads a dedicated read-only capability snapshot so operators can inspect installed, enabled, and reference-only counts without inferring them from the broader workspace summary.
+Repo details now also read optional side-load metadata for the selected repo only, so the `Context cache` block can show `missing`, `fresh`, or `stale` generated summary state without slowing the discovery-first list path.
 Observability now includes cache hit or miss counters, diagnostics cache behavior, eager repo-details request timing, and summary request reasons to support tuning.
 `/api/workspace/observability` now exposes a versioned schema (`observabilityVersion: 2`) with grouped sections (`discovery`, `diagnostics`, `repoDetails`, `summary`); current top-level counters remain as compatibility aliases for existing consumers.
 

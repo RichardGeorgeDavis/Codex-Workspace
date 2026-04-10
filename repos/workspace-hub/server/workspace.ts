@@ -12,6 +12,8 @@ import type {
   RepoInstall,
   RepoFailureReportSummary,
   RepoRecentContext,
+  RepoSideLoad,
+  RepoSideLoadArtifact,
   PreviewMode,
   RepoPreset,
   RepoHealth,
@@ -198,6 +200,27 @@ type RepoDiagnostics = {
   freshness: 'fresh' | 'skipped' | 'stale' | 'warming'
   git: RepoGitState
   health: RepoHealth
+}
+
+type SideLoadOutputRole = RepoSideLoadArtifact['role']
+
+type SideLoadSourcesInput = {
+  bytes?: unknown
+  mtimeMs?: unknown
+  path?: unknown
+  role?: unknown
+  sha256?: unknown
+}
+
+type SideLoadSourcesOutput = {
+  path?: unknown
+  role?: unknown
+}
+
+type SideLoadSourcesFile = {
+  generatedAt?: unknown
+  inputs?: unknown
+  outputs?: unknown
 }
 
 type WorkspaceDiscoveryResult = {
@@ -588,6 +611,172 @@ async function readJsonIfPresent<T>(targetPath: string): Promise<T | null> {
     return JSON.parse(await readFile(targetPath, 'utf8')) as T
   } catch {
     return null
+  }
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isSideLoadOutputRole(value: unknown): value is SideLoadOutputRole {
+  return value === 'abstract' || value === 'overview' || value === 'sources'
+}
+
+function createMissingSideLoad(fullPath: string): RepoSideLoad {
+  const repoName = path.basename(fullPath)
+  const baseDir = path.join(cacheRoot, 'context', 'repos', repoName)
+  const roles: SideLoadOutputRole[] = ['abstract', 'overview', 'sources']
+
+  return {
+    generatedAt: null,
+    inputCount: 0,
+    outputs: roles.map((role) => {
+      const fileName = role === 'sources' ? 'sources.json' : `${role}.md`
+      const absolutePath = path.join(baseDir, fileName)
+
+      return {
+        path: absolutePath,
+        relativePath: path.relative(workspaceRoot, absolutePath),
+        role,
+      }
+    }),
+    status: 'missing',
+  }
+}
+
+function parseSideLoadInput(value: unknown): SideLoadSourcesInput | null {
+  if (!isObjectRecord(value)) {
+    return null
+  }
+
+  if (
+    !isNonEmptyString(value.path) ||
+    !isNonEmptyString(value.role) ||
+    typeof value.bytes !== 'number' ||
+    typeof value.mtimeMs !== 'number' ||
+    !isNonEmptyString(value.sha256)
+  ) {
+    return null
+  }
+
+  return value
+}
+
+function parseSideLoadOutput(value: unknown): SideLoadSourcesOutput | null {
+  if (!isObjectRecord(value)) {
+    return null
+  }
+
+  if (!isNonEmptyString(value.path) || !isSideLoadOutputRole(value.role)) {
+    return null
+  }
+
+  return value
+}
+
+function resolveWorkspaceRelativePath(targetPath: string) {
+  const absolutePath = path.resolve(workspaceRoot, targetPath)
+
+  if (
+    absolutePath !== workspaceRoot &&
+    !absolutePath.startsWith(`${workspaceRoot}${path.sep}`)
+  ) {
+    return null
+  }
+
+  return absolutePath
+}
+
+async function readRepoSideLoad(fullPath: string): Promise<RepoSideLoad> {
+  const fallback = createMissingSideLoad(fullPath)
+  const sourcesOutput = fallback.outputs.find((output) => output.role === 'sources')
+
+  if (!sourcesOutput || !(await fileExists(sourcesOutput.path))) {
+    return fallback
+  }
+
+  const parsed = await readJsonIfPresent<SideLoadSourcesFile>(sourcesOutput.path)
+  if (!parsed || !Array.isArray(parsed.inputs) || !Array.isArray(parsed.outputs)) {
+    return fallback
+  }
+
+  const inputs = parsed.inputs
+    .map((value) => parseSideLoadInput(value))
+    .filter((value): value is SideLoadSourcesInput => Boolean(value))
+  const outputs = parsed.outputs
+    .map((value) => parseSideLoadOutput(value))
+    .filter((value): value is SideLoadSourcesOutput => Boolean(value))
+
+  if (inputs.length !== parsed.inputs.length || outputs.length !== parsed.outputs.length) {
+    return fallback
+  }
+
+  const outputByRole = new Map(outputs.map((output) => [output.role as SideLoadOutputRole, output]))
+  const requiredRoles: SideLoadOutputRole[] = ['abstract', 'overview', 'sources']
+  if (!requiredRoles.every((role) => outputByRole.has(role))) {
+    return fallback
+  }
+
+  const normalizedOutputs: RepoSideLoadArtifact[] = requiredRoles.map((role) => {
+    const output = outputByRole.get(role)!
+    const absolutePath = resolveWorkspaceRelativePath(output.path as string)
+
+    if (!absolutePath) {
+      return {
+        path: path.join(cacheRoot, 'context', 'repos', path.basename(fullPath), `${role}.invalid`),
+        relativePath: output.path as string,
+        role,
+      }
+    }
+
+    return {
+      path: absolutePath,
+      relativePath: path.relative(workspaceRoot, absolutePath),
+      role,
+    }
+  })
+
+  let status: RepoSideLoad['status'] = 'fresh'
+
+  if (normalizedOutputs.some((output) => !output.path.startsWith(`${workspaceRoot}${path.sep}`))) {
+    status = 'stale'
+  }
+
+  if (status === 'fresh') {
+    for (const output of normalizedOutputs) {
+      if (!(await fileExists(output.path))) {
+        status = 'stale'
+        break
+      }
+    }
+  }
+
+  if (status === 'fresh') {
+    for (const input of inputs) {
+      const absolutePath = resolveWorkspaceRelativePath(input.path as string)
+      if (!absolutePath) {
+        status = 'stale'
+        break
+      }
+
+      try {
+        const currentStat = await stat(absolutePath)
+        if (currentStat.mtimeMs !== input.mtimeMs) {
+          status = 'stale'
+          break
+        }
+      } catch {
+        status = 'stale'
+        break
+      }
+    }
+  }
+
+  return {
+    generatedAt: isNonEmptyString(parsed.generatedAt) ? parsed.generatedAt : null,
+    inputCount: inputs.length,
+    outputs: normalizedOutputs,
+    status,
   }
 }
 
@@ -2105,6 +2294,7 @@ export async function buildWorkspaceRepoDetails(
   )
 
   if (repo) {
+    repo.sideLoad = await readRepoSideLoad(fullPath)
     recordRepoDetailsRequest(Date.now() - startedAt)
   }
 

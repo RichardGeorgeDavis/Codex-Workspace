@@ -1017,7 +1017,8 @@ export function App({ initialThemePreference }: AppProps) {
 
     if (
       selectedRepo.detailLevel === 'detail' &&
-      selectedRepo.diagnosticsFreshness === 'fresh'
+      selectedRepo.diagnosticsFreshness === 'fresh' &&
+      selectedRepo.sideLoad !== undefined
     ) {
       return
     }
@@ -1302,6 +1303,7 @@ export function App({ initialThemePreference }: AppProps) {
                       onCopyError={setActionError}
                       loading={loading}
                       onOpenAction={handleOpenAction}
+                      onOpenWorkspacePath={handleOpenWorkspacePath}
                       onResetMetadata={handleResetMetadata}
                       onRuntimeAction={handleRuntimeAction}
                       onSaveMetadata={handleSaveMetadata}
@@ -1329,6 +1331,7 @@ export function App({ initialThemePreference }: AppProps) {
                   onCopyError={setActionError}
                   loading={loading}
                   onOpenAction={handleOpenAction}
+                  onOpenWorkspacePath={handleOpenWorkspacePath}
                   onResetMetadata={handleResetMetadata}
                   onRuntimeAction={handleRuntimeAction}
                   onSaveMetadata={handleSaveMetadata}

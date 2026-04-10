@@ -15,6 +15,8 @@ Current wrappers include:
 - `workspace-memory build-graph` for target-scoped graph artifacts under `cache/mempalace/<user>/graphs/`
 - `workspace-memory save-repo` and `workspace-memory save-workspace` for explicit closeout saves without the Hub UI
 
+The write-heavy closeout and ingest paths now serialize through a workspace-owned lock under `cache/mempalace/<user>/locks/` so overlapping `save-repo`, `save-workspace`, `mine-*`, and `wake-up` runs do not contend on the same local MemPalace store.
+
 These wrappers are operator-facing workspace commands. When their behavior or placement changes, update the public docs in the same slice:
 
 - `README.md`

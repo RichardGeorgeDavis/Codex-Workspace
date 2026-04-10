@@ -252,6 +252,80 @@ clear_existing_venv() {
   rm -rf "$mempalace_repo/.venv"
 }
 
+ensure_mempalace_write_lock_dirs() {
+  ensure_mempalace_dirs
+  mkdir -p "$mempalace_cache_root/locks"
+}
+
+cleanup_mempalace_write_lock() {
+  lock_dir=${MEMPALACE_WRITE_LOCK_DIR:-}
+  [ -n "$lock_dir" ] || return 0
+
+  if [ -d "$lock_dir" ]; then
+    rm -rf "$lock_dir"
+  fi
+
+  unset MEMPALACE_WRITE_LOCK_DIR
+}
+
+pid_is_running() {
+  candidate_pid=${1:-}
+  [ -n "$candidate_pid" ] || return 1
+  ps -p "$candidate_pid" >/dev/null 2>&1
+}
+
+with_mempalace_write_lock() {
+  if [ "${MEMPALACE_WRITE_LOCK_ACTIVE:-0}" = 1 ]; then
+    "$@"
+    return $?
+  fi
+
+  ensure_mempalace_write_lock_dirs
+
+  lock_timeout=${MEMPALACE_WRITE_LOCK_TIMEOUT_SEC:-30}
+  lock_poll=${MEMPALACE_WRITE_LOCK_POLL_SEC:-1}
+  lock_dir="$mempalace_cache_root/locks/write.lock"
+  start_time=$(date +%s)
+
+  while ! mkdir "$lock_dir" 2>/dev/null; do
+    owner_pid=''
+    if [ -f "$lock_dir/pid" ]; then
+      owner_pid=$(cat "$lock_dir/pid" 2>/dev/null || printf '')
+    fi
+
+    if [ -n "$owner_pid" ] && ! pid_is_running "$owner_pid"; then
+      rm -rf "$lock_dir"
+      continue
+    fi
+
+    now=$(date +%s)
+    elapsed=$((now - start_time))
+    if [ "$elapsed" -ge "$lock_timeout" ]; then
+      printf 'Timed out waiting for MemPalace write lock after %ss.\n' "$lock_timeout" >&2
+      if [ -n "$owner_pid" ]; then
+        printf 'Active owner PID: %s\n' "$owner_pid" >&2
+      fi
+      exit 1
+    fi
+
+    sleep "$lock_poll"
+  done
+
+  printf '%s\n' "$$" >"$lock_dir/pid"
+  MEMPALACE_WRITE_LOCK_DIR=$lock_dir
+  export MEMPALACE_WRITE_LOCK_DIR
+  export MEMPALACE_WRITE_LOCK_ACTIVE=1
+  trap 'cleanup_mempalace_write_lock' EXIT INT TERM HUP
+
+  "$@"
+  command_exit=$?
+
+  cleanup_mempalace_write_lock
+  trap - EXIT INT TERM HUP
+  unset MEMPALACE_WRITE_LOCK_ACTIVE
+  return "$command_exit"
+}
+
 mempalace_repo_mine_excludes='pnpm-lock.yaml yarn.lock bun.lockb composer.lock Cargo.lock Gemfile.lock Podfile.lock Pipfile.lock poetry.lock uv.lock dist/** build/** coverage/** vendor/** .next/** .nuxt/** .output/** storybook-static/** target/**'
 mempalace_docs_mine_excludes='.workspace/mempalace/** entities.json mempalace.yaml mempalace.yml'
 
@@ -479,6 +553,13 @@ mine_docs() {
     target_path=$(resolve_workspace_docs_target)
   fi
 
+  with_mempalace_write_lock mine_docs_locked "$target_path" "$@"
+}
+
+mine_docs_locked() {
+  target_path=$1
+  shift
+
   ensure_target_initialized "$target_path"
   run_with_target_metadata "$target_path" run_filtered_project_mine docs "$target_path" "$@"
   record_mempalace_event "mine-docs" "$target_path"
@@ -493,6 +574,13 @@ mine_repo() {
   target_path=$(resolve_workspace_repo_target "$1")
   shift
 
+  with_mempalace_write_lock mine_repo_locked "$target_path" "$@"
+}
+
+mine_repo_locked() {
+  target_path=$1
+  shift
+
   ensure_target_initialized "$target_path"
   run_with_target_metadata "$target_path" run_filtered_project_mine repo "$target_path" "$@"
   record_mempalace_event "mine-repo" "$target_path"
@@ -500,6 +588,13 @@ mine_repo() {
 
 mine_convos() {
   target_path=$(resolve_general_target "${1:-}")
+  shift
+
+  with_mempalace_write_lock mine_convos_locked "$target_path" "$@"
+}
+
+mine_convos_locked() {
+  target_path=$1
   shift
 
   invoke_mempalace_module mempalace mine "$target_path" --mode convos "$@"
@@ -521,6 +616,13 @@ mine_codex() {
     target_path=$(resolve_general_target "$workspace_operator_home/.codex/archived_sessions")
   fi
 
+  with_mempalace_write_lock mine_codex_locked "$target_path" "$@"
+}
+
+mine_codex_locked() {
+  target_path=$1
+  shift
+
   invoke_mempalace_module mempalace mine "$target_path" --mode convos "$@"
   record_mempalace_event "mine-convos" "$target_path"
 }
@@ -540,6 +642,13 @@ search_memory() {
 
 wake_up_memory() {
   wake_target=${*:-}
+
+  with_mempalace_write_lock wake_up_memory_locked "$wake_target" "$@"
+}
+
+wake_up_memory_locked() {
+  wake_target=$1
+  shift
 
   invoke_mempalace_module mempalace wake-up "$@"
   record_mempalace_event "wake-up" "$wake_target"
@@ -729,6 +838,13 @@ mine_codex_current() {
     requested_session=current
   fi
 
+  with_mempalace_write_lock mine_codex_current_locked "$requested_session" "$@"
+}
+
+mine_codex_current_locked() {
+  requested_session=$1
+  shift
+
   export_dir=$(export_codex_session "$requested_session")
   invoke_mempalace_module mempalace mine "$export_dir/raw" --mode convos "$@"
   record_mempalace_event "mine-convos" "$export_dir/raw"
@@ -770,6 +886,22 @@ save_repo_memory() {
 
   repo_target=$1
   shift
+
+  with_mempalace_write_lock save_repo_memory_locked \
+    "$include_docs" \
+    "$include_codex" \
+    "$include_wake_up" \
+    "$repo_target" \
+    "$@"
+}
+
+save_repo_memory_locked() {
+  include_docs=$1
+  include_codex=$2
+  include_wake_up=$3
+  repo_target=$4
+  shift 4
+
   repo_path=$(resolve_workspace_repo_target "$repo_target")
 
   mine_repo "$repo_target" "$@"
@@ -819,6 +951,19 @@ save_workspace_memory() {
   else
     docs_target=$workspace_root/docs
   fi
+
+  with_mempalace_write_lock save_workspace_memory_locked \
+    "$include_codex" \
+    "$include_wake_up" \
+    "$docs_target" \
+    "$@"
+}
+
+save_workspace_memory_locked() {
+  include_codex=$1
+  include_wake_up=$2
+  docs_target=$3
+  shift 3
 
   docs_path=$(resolve_workspace_docs_target "$docs_target")
   mine_docs "$docs_path" "$@"
