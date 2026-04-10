@@ -1825,6 +1825,14 @@
   background: var(--surface-card-subtle);
 }
 
+.memory-search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
 .memory-checklist {
   margin: 0;
   padding-left: 1.2rem;
@@ -2060,6 +2068,7 @@ textarea:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .memory-search-form,
   .memory-page-grid,
   .repo-toolbar,
   .editor-grid {

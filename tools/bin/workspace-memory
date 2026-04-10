@@ -23,6 +23,7 @@ Commands:
   mine-codex     Mine Codex archived session logs from ~/.codex
   mine-codex-current
                  Export and mine the active Codex session or a chosen session file
+  build-graph    Build a target-scoped graph export from MemPalace sidecars and nearby docs
   save-repo      Close out a repo by saving repo docs, optional workspace docs, and the current Codex thread
   save-workspace Save workspace docs and the current Codex thread without a repo target
   search         Run a MemPalace search and record it in service state
@@ -155,6 +156,11 @@ resolve_workspace_repo_target() {
   fi
 
   printf '%s\n' "$resolved_path"
+}
+
+resolve_workspace_repo_relative_path() {
+  repo_path=$(resolve_workspace_repo_target "$1")
+  printf '%s\n' "${repo_path#"$workspace_root/"}"
 }
 
 invoke_mempalace_module() {
@@ -539,6 +545,96 @@ wake_up_memory() {
   record_mempalace_event "wake-up" "$wake_target"
 }
 
+graph_target_slug() {
+  target_kind=$1
+  repo_relative_path=${2:-}
+
+  case "$target_kind" in
+    workspace-docs)
+      printf 'workspace-docs\n'
+      ;;
+    repo)
+      if [ -z "$repo_relative_path" ]; then
+        printf 'A repo-relative path is required for repo graph targets.\n' >&2
+        exit 1
+      fi
+      sanitized=$(printf '%s' "$repo_relative_path" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-')
+      printf 'repo-%s\n' "$sanitized"
+      ;;
+    *)
+      printf 'Unknown graph target kind: %s\n' "$target_kind" >&2
+      exit 1
+      ;;
+  esac
+}
+
+build_graph() {
+  if [ $# -eq 0 ]; then
+    printf 'Usage: workspace-memory build-graph workspace-docs | workspace-memory build-graph repo <relative-path>\n' >&2
+    exit 1
+  fi
+
+  target_kind=$1
+  shift
+
+  case "$target_kind" in
+    workspace-docs)
+      target_path="$workspace_root/docs"
+      target_label='Workspace docs'
+      repo_relative_path=''
+      ;;
+    repo)
+      if [ $# -eq 0 ]; then
+        printf 'A repo path or repo name is required for repo graph builds.\n' >&2
+        exit 1
+      fi
+      repo_relative_path=$(resolve_workspace_repo_relative_path "$1")
+      shift
+      target_path="$workspace_root/$repo_relative_path"
+      target_label=$repo_relative_path
+      ;;
+    *)
+      printf 'Unknown graph target kind: %s\n' "$target_kind" >&2
+      exit 1
+      ;;
+  esac
+
+  graph_script="$workspace_root/tools/scripts/build-mempalace-graph.mjs"
+  if [ ! -f "$graph_script" ]; then
+    printf 'Missing graph builder: %s\n' "$graph_script" >&2
+    exit 1
+  fi
+
+  if ! command -v node >/dev/null 2>&1; then
+    printf 'Node.js is required to build graph artifacts.\n' >&2
+    exit 1
+  fi
+
+  target_slug=$(graph_target_slug "$target_kind" "$repo_relative_path")
+  output_dir="$mempalace_cache_root/graphs/$target_slug"
+
+  if [ -n "$repo_relative_path" ]; then
+    node "$graph_script" \
+      --workspace-root "$workspace_root" \
+      --target-kind "$target_kind" \
+      --target-path "$target_path" \
+      --target-label "$target_label" \
+      --target-slug "$target_slug" \
+      --output-dir "$output_dir" \
+      --repo-relative-path "$repo_relative_path"
+  else
+    node "$graph_script" \
+      --workspace-root "$workspace_root" \
+      --target-kind "$target_kind" \
+      --target-path "$target_path" \
+      --target-label "$target_label" \
+      --target-slug "$target_slug" \
+      --output-dir "$output_dir"
+  fi
+
+  record_mempalace_event "build-graph" "$target_slug"
+}
+
 find_codex_session_by_thread() {
   thread_id=$1
 
@@ -786,6 +882,9 @@ case "$command_name" in
     ;;
   mine-codex-current)
     mine_codex_current "$@"
+    ;;
+  build-graph)
+    build_graph "$@"
     ;;
   save-repo)
     save_repo_memory "$@"

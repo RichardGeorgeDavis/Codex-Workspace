@@ -42,6 +42,8 @@ Workspace Hub is a local control plane for people who manage many standalone rep
 - exports the shared workspace Playwright browser cache to repo install and runtime commands by default, so Playwright-based smoke runs can reuse one Chromium download
 - streams live runtime, install, cover, and activity updates from the local API
 - indexes repo metadata, manifests, recent logs, failure reports, and local agent-job artifacts for server-side search
+- exposes a dedicated Workspace memory surface for MemPalace service state, target selection, in-app retrieval search, target-scoped graph builds, and safe wrapper actions
+- builds target-scoped MemPalace graph artifacts from normalized sidecars and nearby markdown instead of introducing a second ingestion engine
 - stores lightweight per-repo metadata and recent activity locally
 - writes structured local failure reports for install and runtime errors
 - includes persisted appearance controls with five built-in presets and light or dark mode
@@ -192,6 +194,9 @@ pnpm dev:web --host 127.0.0.1 --port 4174
 curl -s http://127.0.0.1:4101/api/workspace/summary/base | jq '{repoCount: (.repos | length), capabilityCount: (.capabilities | length), firstRepo: (.repos[0] | {relativePath, detailLevel})}'
 curl -s http://127.0.0.1:4101/api/capabilities | jq '{generatedAt, stats}'
 curl -s "http://127.0.0.1:4101/api/search?q=memory" | jq '{total: (.results | length), categories: (.results | map(.category))}'
+curl -s -X POST http://127.0.0.1:4101/api/services/context -H 'Content-Type: application/json' -d '{"serviceId":"mempalace","targetKind":"workspace-docs"}' | jq '{targetLabel, graph: .graph | {lastBuiltAt, nodeCount, edgeCount}}'
+curl -s -X POST http://127.0.0.1:4101/api/services/command -H 'Content-Type: application/json' -d '{"serviceId":"mempalace","commandId":"search","searchQuery":"workspace memory"}' | jq '{command, ok}'
+curl -s -X POST http://127.0.0.1:4101/api/services/command -H 'Content-Type: application/json' -d '{"serviceId":"mempalace","commandId":"build-graph"}' | jq '{command, ok}'
 curl -s --get http://127.0.0.1:4101/api/repos/details --data-urlencode "relativePath=repos/workspace-hub" | jq '{relativePath, detailLevel, diagnosticsFreshness}'
 curl -s http://127.0.0.1:4101/api/health | jq '.workspaceHub.repoDetails'
 npx playwright screenshot --wait-for-selector 'text=Workspace memory' http://127.0.0.1:4174 /tmp/workspace-hub-workspace-memory.png
@@ -216,7 +221,7 @@ EOF
 npx playwright screenshot --load-storage /tmp/workspace-hub-discovery-storage.json --wait-for-selector 'text=Select a repo to open details.' --full-page http://127.0.0.1:4174 /tmp/workspace-hub-discovery-mode.png
 ```
 
-That smoke pass validates the current base-summary list projection, indexed capability-aware search, selected repo-detail hydration, `Workspace memory`, the capability panel, the discovery-first inline empty-state prompt, and the inline selected-repo details rendering path.
+That smoke pass validates the current base-summary list projection, indexed capability-aware search, selected repo-detail hydration, `Workspace memory`, the in-app MemPalace search flow, target-scoped graph builds, the capability panel, the discovery-first inline empty-state prompt, and the inline selected-repo details rendering path.
 
 Default local endpoints:
 
@@ -289,6 +294,21 @@ Current expectation:
 - install or update those optional helpers through `tools/scripts/manage-workspace-capabilities.sh`, not through `update-all.sh`
 
 At the moment, Workspace Hub has no required optional ability dependency.
+
+## Workspace Memory Graph
+
+Workspace Hub now includes a Phase 1 graph flow for Workspace memory.
+
+Current model:
+
+- keep MemPalace as the memory source of truth
+- normalize target-scoped MemPalace sidecars plus nearby markdown into a graph export
+- write rebuildable graph artifacts under `cache/mempalace/<user>/graphs/`
+- expose `Build graph`, `Rebuild graph`, `Open graph`, and `Open graph folder` from the Workspace memory page
+
+This is intentionally a derived view, not a second memory engine beside MemPalace.
+
+The design note and implementation reference live in [docs/memory-graph.md](./docs/memory-graph.md).
 
 ## Safety And Trust
 
@@ -372,7 +392,9 @@ Current layout note:
 
 ## Next Batches
 
-- Batch 1: Capability status drill-down.
+- Batch 1: Memory graph Phase 2, only if operators need it.
+  Add better derived relationships, filtering, and optional in-app embedding only when the current file-open graph flow stops being enough.
+- Batch 2: Capability status drill-down.
   Add deeper per-capability state such as post-install command health or last update output if operators need more than the current read-only snapshot and action feedback.
-- Batch 2: Repo intake polish.
+- Batch 3: Repo intake polish.
   Tighten intake output so new repos get clearer runtime notes, explicit optional ability dependency guidance when relevant, and better first-run defaults.

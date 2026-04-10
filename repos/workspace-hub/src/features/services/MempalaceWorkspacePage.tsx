@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import { SectionCard } from '../../components/SectionCard.tsx'
 import type {
   WorkspaceCoreService,
@@ -16,10 +18,21 @@ type MempalaceWorkspacePageProps = {
   onInstallAction: (serviceId: string) => Promise<void>
   onOpenAction: (
     serviceId: string,
-    target: 'cache' | 'docs' | 'exports' | 'readme' | 'repo' | 'storage' | 'terminal',
+    target:
+      | 'cache'
+      | 'docs'
+      | 'exports'
+      | 'graph'
+      | 'graph-folder'
+      | 'readme'
+      | 'repo'
+      | 'storage'
+      | 'terminal',
+    targetPath?: string | null,
   ) => Promise<void>
   onReturnToDashboard: () => void
   onRunCommand: (commandId: WorkspaceCoreServiceCommandId) => Promise<void>
+  onSearchAction: (query: string) => Promise<void>
   onTargetKindChange: (value: WorkspaceCoreServiceTargetKind) => void
   onTargetRepoChange: (value: string) => void
   service: WorkspaceCoreService
@@ -49,6 +62,7 @@ export function MempalaceWorkspacePage({
   onOpenAction,
   onReturnToDashboard,
   onRunCommand,
+  onSearchAction,
   onTargetKindChange,
   onTargetRepoChange,
   repos,
@@ -57,6 +71,7 @@ export function MempalaceWorkspacePage({
   service,
 }: MempalaceWorkspacePageProps) {
   const pendingPrefix = `service:${service.id}:`
+  const [searchQuery, setSearchQuery] = useState(service.lastSearchQuery ?? '')
 
   return (
     <main className="memory-workspace-page">
@@ -150,6 +165,10 @@ export function MempalaceWorkspacePage({
             <div className="details-row">
               <dt>Last search</dt>
               <dd>{formatTimestamp(service.lastSearchAt)}</dd>
+            </div>
+            <div className="details-row stacked">
+              <dt>Last search query</dt>
+              <dd>{service.lastSearchQuery ?? 'No search query recorded yet.'}</dd>
             </div>
             <div className="details-row">
               <dt>Last sync</dt>
@@ -305,14 +324,148 @@ export function MempalaceWorkspacePage({
         </SectionCard>
 
         <SectionCard
-          body="The immediate cleanup priority is corpus quality. Wake-up is already working, but older lockfile-heavy drawers still bias the summary unless low-signal sources are filtered out."
+          body="Search runs against the current MemPalace corpus for this workspace user. Use plain-language recall questions, repo names, architecture topics, or thread-specific phrases."
           className="reveal delayed-more"
-          eyebrow="Cleanup Note"
-          title="Current MemPalace follow-up"
+          eyebrow="Retrieval"
+          title="Search workspace memory"
+        >
+          <form
+            className="memory-search-form"
+            onSubmit={(event) => {
+              event.preventDefault()
+              const trimmedQuery = searchQuery.trim()
+              if (!trimmedQuery) {
+                return
+              }
+              void onSearchAction(trimmedQuery)
+            }}
+          >
+            <label className="field">
+              <span>Search query</span>
+              <input
+                onChange={(event) => {
+                  setSearchQuery(event.target.value)
+                }}
+                placeholder="what do we already know about workspace memory?"
+                type="search"
+                value={searchQuery}
+              />
+            </label>
+
+            <button
+              className="primary-button"
+              disabled={
+                actionPendingKey === `${pendingPrefix}search` || searchQuery.trim().length === 0
+              }
+              type="submit"
+            >
+              {actionPendingKey === `${pendingPrefix}search` ? 'Searching...' : 'Run search'}
+            </button>
+          </form>
+
+          <dl className="details-list">
+            <div className="details-row">
+              <dt>Latest query</dt>
+              <dd>{service.lastSearchQuery ?? 'No search query recorded yet.'}</dd>
+            </div>
+            <div className="details-row">
+              <dt>Latest search time</dt>
+              <dd>{formatTimestamp(service.lastSearchAt)}</dd>
+            </div>
+          </dl>
+        </SectionCard>
+
+        <SectionCard
+          body="Graph artifacts are derived views of the selected target. Phase 1 stays sidecar-first, writes rebuildable files under workspace cache, and does not add a second memory engine beside MemPalace."
+          className="reveal delayed-more"
+          eyebrow="Graph View"
+          title="Target-scoped memory graph"
+        >
+          {context ? (
+            <>
+              <dl className="details-list">
+                <div className="details-row">
+                  <dt>Graph status</dt>
+                  <dd>{context.graph.lastBuiltAt ? 'built' : 'not built yet'}</dd>
+                </div>
+                <div className="details-row">
+                  <dt>Last built</dt>
+                  <dd>{formatTimestamp(context.graph.lastBuiltAt)}</dd>
+                </div>
+                <div className="details-row">
+                  <dt>Node count</dt>
+                  <dd>{context.graph.nodeCount ?? 'Not recorded'}</dd>
+                </div>
+                <div className="details-row">
+                  <dt>Edge count</dt>
+                  <dd>{context.graph.edgeCount ?? 'Not recorded'}</dd>
+                </div>
+                <div className="details-row stacked">
+                  <dt>Output directory</dt>
+                  <dd>{context.graph.outputDirectory ?? 'Select an available target to build a graph.'}</dd>
+                </div>
+                <div className="details-row stacked">
+                  <dt>Graph HTML</dt>
+                  <dd>{context.graph.artifacts.htmlPath ?? 'Build the graph to create graph.html.'}</dd>
+                </div>
+                <div className="details-row stacked">
+                  <dt>Graph report</dt>
+                  <dd>{context.graph.artifacts.reportPath ?? 'Build the graph to create graph-report.md.'}</dd>
+                </div>
+              </dl>
+
+              <div className="service-actions">
+                <button
+                  className="primary-button"
+                  disabled={!context.graph.available || actionPendingKey === `${pendingPrefix}build-graph`}
+                  onClick={() => {
+                    void onRunCommand('build-graph')
+                  }}
+                  type="button"
+                >
+                  {actionPendingKey === `${pendingPrefix}build-graph`
+                    ? 'Building graph...'
+                    : context.graph.lastBuiltAt
+                      ? 'Rebuild graph'
+                      : 'Build graph'}
+                </button>
+                <button
+                  className="action-button"
+                  disabled={!context.graph.artifacts.htmlPath}
+                  onClick={() => {
+                    void onOpenAction(service.id, 'graph', context.graph.artifacts.htmlPath)
+                  }}
+                  type="button"
+                >
+                  Open graph
+                </button>
+                <button
+                  className="action-button"
+                  disabled={!context.graph.outputDirectoryExists || !context.graph.outputDirectory}
+                  onClick={() => {
+                    void onOpenAction(service.id, 'graph-folder', context.graph.outputDirectory)
+                  }}
+                  type="button"
+                >
+                  Open graph folder
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="loading-copy">Load a target context to inspect graph status.</p>
+          )}
+        </SectionCard>
+
+        <SectionCard
+          body="Workspace Hub reads the installed MemPalace version directly from the local repo. With 3.1.0, wake-up filtering now suppresses low-signal sources by default and repo mining can opt into explicit exclude globs for generated output."
+          className="reveal delayed-more"
+          eyebrow="Release Status"
+          title="MemPalace 3.1.0 in workspace"
         >
           <ul className="memory-checklist">
-            <li>Wake-up should prefer project guidance over dependency metadata.</li>
-            <li>Repo mining now needs explicit low-signal excludes such as lockfiles and generated output.</li>
+            <li>Workspace Hub surfaces the installed MemPalace version from the local package metadata.</li>
+            <li>Wake-up now prefers project guidance over dependency metadata by skipping low-signal drawers.</li>
+            <li>Repo mining supports explicit `--exclude` patterns for lockfiles and generated output.</li>
             <li>Tracked docs remain canonical; MemPalace is supporting retrieval and long-term operator memory.</li>
             <li>Future phases can add automation for recurring saves and more conversation exporters.</li>
           </ul>

@@ -12,6 +12,8 @@ Thanks for contributing to Codex Workspace. The repo has one concrete app surfac
 
 Start with the public contribution map in [docs/13-contributor-roadmap.md](../docs/13-contributor-roadmap.md) if you want current help-wanted areas or ready-to-open starter issue briefs.
 
+Use [docs/14-git-and-github-workflow.md](../docs/14-git-and-github-workflow.md) as the default issue, discussion, branch, and PR baseline when a repo does not already document a clearer local collaboration path.
+
 ## Small Contributions
 
 - README and docs fixes.
@@ -22,12 +24,14 @@ Start with the public contribution map in [docs/13-contributor-roadmap.md](../do
 
 ## Larger Changes
 
-Open or comment on an issue before starting:
+Open or comment on an issue before starting work in a GitHub-backed repo when the change is:
 
 - broad structural changes
 - major runtime-policy changes
 - large UI shifts in Workspace Hub
 - changes that affect workspace conventions across multiple surfaces
+
+For local-only or git-only repos, record the same scope in tracked local docs such as `README.md`, `HANDOVER.md`, or `Next Batches` instead of forcing a GitHub issue queue.
 
 ## Lightweight PR Path
 
@@ -76,6 +80,7 @@ pnpm build
 
 - Review [README.md](../README.md)
 - Review [docs/13-contributor-roadmap.md](../docs/13-contributor-roadmap.md)
+- Review [docs/14-git-and-github-workflow.md](../docs/14-git-and-github-workflow.md)
 - Start with [docs/README.md](../docs/README.md)
 - Use [GitHub Discussions Q&A](https://github.com/RichardGeorgeDavis/Codex-Workspace/discussions/categories/q-a) for setup or usage questions
 - Open an issue if the intended change affects workspace conventions
