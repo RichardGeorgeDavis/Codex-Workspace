@@ -15,6 +15,7 @@ Use this folder for repo-local documentation that does not need to live in the r
 - `discovery.md` explains Repo Discovery, archive listing, filters, and the current dashboard rail layout.
 - `manifest.md` documents the supported `.workspace/project.json` fields and write behaviour.
 - `data.md` explains what the local `data/` folder is for.
+- `memory-graph.md` defines the MemPalace graph-visualization feature and its adapter-first design.
 - `runtime-troubleshooting.md` covers missing installs, failed runtime starts, and port conflicts.
 - `skills.md` explains extension patterns without assuming a specific local skills setup.
 

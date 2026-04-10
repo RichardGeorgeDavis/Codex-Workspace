@@ -12,15 +12,15 @@ Use it after reading the core handover pack when you need to understand:
 
 Current release baseline:
 
-- workspace release tag: `v1.1.0`
-- `repos/workspace-hub` version: `1.1.0`
-- stable release gate passed on `2026-04-03`
+- workspace release tag: `v1.2.0`
+- `repos/workspace-hub` version: `1.2.0`
+- stable release gate passed on `2026-04-10`
 
 Current published release record:
 
-- release commit: `d8a3920`
-- previous implementation alignment commit: `cdf88b3`
-- release URL: `https://github.com/RichardGeorgeDavis/Codex-Workspace/releases/tag/v1.1.0`
+- release ref: `v1.2.0`
+- previous stable release tag: `v1.1.0`
+- release URL: `https://github.com/RichardGeorgeDavis/Codex-Workspace/releases/tag/v1.2.0`
 
 ## Canonical doc location
 
@@ -193,7 +193,7 @@ Current likely pickup:
 
 ## Acceptance closeout (2026-04-10)
 
-This released `v1.1.0` baseline now has a complete verification snapshot:
+This released `v1.2.0` baseline now has a complete verification snapshot:
 
 - `tools/scripts/install-mcp-profile.sh default-full`
 - `tools/scripts/check-mcp-health.sh --profile default-full`
@@ -227,7 +227,7 @@ Observed runtime result:
 - the managed Codex Workspace MCP block now validates in a temp Codex home before apply and can be generated into ignored local overlay files under `tools/local/agents/codex/`
 - the official MCP v1 support boundary is now documented explicitly around five servers, five profiles, and a one-command downgrade path to `safe-readonly`
 - the local Codex config now carries the managed `default-full` MCP block with `openaiDeveloperDocs`, `context7`, `playwright`, `chrome-devtools`, and `github`, while pre-existing non-workspace MCP servers such as `figma` and `xcodebuildmcp` remain intact
-- the live MCP health check passed with `0` failures and `1` warning, where the remaining warning is the optional unset `CONTEXT7_API_KEY`
+- the live MCP health check now passes with `0` warnings and `0` failures after the local MCP env enabled `CONTEXT7_API_KEY` and `GITHUB_PAT` on this machine without changing any tracked files or exposing secret values
 - the browser wrappers are now hardened against host sessions that expose `HOME=/`, so the managed Playwright and Chrome DevTools commands fall back to workspace-owned runtime paths under `cache/` instead of writing under the filesystem root
 - base summary returned live repo and capability data with list projection active (`detailLevel: list` on summary repos)
 - read-only `GET /api/capabilities` returned live installed/enabled/reference-only stats plus capability records with per-capability `updatedAt` state
@@ -823,7 +823,7 @@ Verification after this slice:
 - `find tools/templates/mcp repos/workspace-hub/.workspace/mcp -name '*.json' -exec jq empty {} \;`: passed
 - `sh tools/scripts/install-mcp-profile.sh default-full`: passed
 - `sh tools/scripts/install-mcp-profile.sh --run default-full`: passed
-- `sh tools/scripts/check-mcp-health.sh --profile default-full`: passed with `1` warning (`CONTEXT7_API_KEY` unset)
+- `sh tools/scripts/check-mcp-health.sh --profile default-full`: passed with `0` warnings and `0` failures after the local MCP env enabled `CONTEXT7_API_KEY` and `GITHUB_PAT`
 
 Pickup notes:
 

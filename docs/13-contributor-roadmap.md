@@ -8,6 +8,7 @@ The main concrete contributor surface today is [`repos/workspace-hub/`](../repos
 
 - Read [../README.md](../README.md) for the short public overview.
 - Read [../.github/CONTRIBUTING.md](../.github/CONTRIBUTING.md) for the lightweight PR path and guardrails.
+- Read [14-git-and-github-workflow.md](14-git-and-github-workflow.md) when you need the default issue, discussion, branch, and PR path for a repo that does not already document its own workflow.
 - Browse current [`help wanted`](https://github.com/RichardGeorgeDavis/Codex-Workspace/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22help%20wanted%22) and [`good first issue`](https://github.com/RichardGeorgeDavis/Codex-Workspace/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22) issues.
 - Use [GitHub Discussions Q&A](https://github.com/RichardGeorgeDavis/Codex-Workspace/discussions/categories/q-a) for setup or usage questions.
 

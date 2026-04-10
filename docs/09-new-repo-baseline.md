@@ -45,6 +45,16 @@ When useful, add small explicit metadata instead of hidden assumptions:
 - `.agents/skills/` only when the repo also wants a tracked compatibility mirror for workspace-native agent tooling
 - a repo-local `Next Batches` section in `README.md`, `HANDOVER.md`, or tracked `openspec/changes/.../tasks.md` when the work is large enough to need end-to-end implementation batches
 
+## Default collaboration workflow
+
+If a repo does not already define a clearer collaboration path in `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, or `HANDOVER.md`, use the workspace baseline in `docs/14-git-and-github-workflow.md`.
+
+For repo intake, keep only the repo-specific implications here:
+
+- identify whether the repo is local-only, git-only, GitHub-backed, or a fork-plus-upstream case
+- prefer recording any repo-specific issue, PR, or discussion path in repo-local docs instead of restating the workspace baseline
+- do not make GitHub Projects, a uniform label taxonomy, or `gh auth login` mandatory just because a repo lives inside this workspace
+
 For public site reference copies, also prefer a short acquisition note in `README.md` or `HANDOVER.md` that records:
 
 - source URL
@@ -178,6 +188,8 @@ For a repo to feel workspace-ready, it should ideally have:
 3. a `README.md` that captures setup, run, and preview expectations
 4. a repo-local cover image path in the README, even if it begins as a placeholder
 5. enough docs that another person can resume work without guessing
+
+For GitHub-backed repos, that usually means enough repo-local docs to explain setup plus a readable issue and PR path. For local-only or git-only repos, it means the tracked local docs carry the same resumable context without pretending GitHub is required.
 
 ## Override rule
 

@@ -11,6 +11,7 @@ import { generateRepoCover } from './repo-cover.ts'
 import { runRepoIntake } from './repo-intake.ts'
 import { writeRepoManifest } from './repo-manifest.ts'
 import { findCoreService } from './core-services.ts'
+import { readMempalaceGraphSnapshot } from './mempalace-graph.ts'
 import {
   buildWorkspaceCapabilitiesSnapshot,
   findWorkspaceCapability,
@@ -200,6 +201,25 @@ function readOptionalRelativePath(body: unknown, fieldName: string) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null
 }
 
+function readOptionalString(body: unknown, fieldName: string) {
+  if (typeof body !== 'object' || body === null) {
+    return null
+  }
+
+  const value = (body as Record<string, unknown>)[fieldName]
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null
+}
+
+function isPathWithinRoot(rootPath: string, candidatePath: string) {
+  const normalizedRootPath = path.resolve(rootPath)
+  const normalizedCandidatePath = path.resolve(candidatePath)
+
+  return (
+    normalizedCandidatePath === normalizedRootPath ||
+    normalizedCandidatePath.startsWith(`${normalizedRootPath}${path.sep}`)
+  )
+}
+
 function targetMatchesPath(servicePath: string | null, targetPath: string | null) {
   if (!servicePath || !targetPath) {
     return false
@@ -221,11 +241,25 @@ function buildMempalaceContextCommands(
   targetAvailable: boolean,
 ) {
   const saveRepoEnabled = targetAvailable && (targetKind === 'current-repo' || targetKind === 'repo')
+  const buildGraphCommand =
+    targetAvailable && repoRelativePath
+      ? `tools/bin/workspace-memory build-graph repo ${repoRelativePath}`
+      : targetKind === 'workspace-docs'
+        ? 'tools/bin/workspace-memory build-graph workspace-docs'
+        : 'tools/bin/workspace-memory build-graph repo <relative-path>'
   const saveRepoCommand = repoRelativePath
     ? `tools/bin/workspace-memory save-repo ${repoRelativePath}`
     : 'tools/bin/workspace-memory save-repo <repo-name>'
 
   return [
+    {
+      description: 'Build a target-scoped graph export from MemPalace sidecars and nearby docs.',
+      enabled: targetAvailable,
+      id: 'build-graph',
+      label: 'Build graph',
+      reasonDisabled: targetAvailable ? null : 'Choose an available target before building a graph.',
+      shellCommand: buildGraphCommand,
+    },
     {
       description: 'Check local service readiness and key workspace paths.',
       enabled: true,
@@ -592,6 +626,10 @@ app.post(
           : resolvedRepo
             ? 'save-repo'
             : null
+      const graph = await readMempalaceGraphSnapshot(service, {
+        available: targetKind === 'workspace-docs' || Boolean(resolvedRepo),
+        repoRelativePath: resolvedRepo?.relativePath ?? resolvedRepoRelativePath,
+      })
 
       response.json({
         commands: buildMempalaceContextCommands(
@@ -600,6 +638,7 @@ app.post(
           resolvedRepo?.relativePath ?? resolvedRepoRelativePath,
           targetKind === 'workspace-docs' || Boolean(resolvedRepo),
         ),
+        graph,
         lastRelevantIngestTarget,
         metadataExists,
         metadataPath,
@@ -632,6 +671,7 @@ app.post(
       const commandId =
         typeof request.body?.commandId === 'string' ? request.body.commandId.trim() : ''
       const repoRelativePath = readOptionalRelativePath(request.body, 'repoRelativePath')
+      const searchQuery = readOptionalString(request.body, 'searchQuery')
 
       if (!serviceId) {
         response.status(400).json({ message: 'A service id is required.' })
@@ -656,6 +696,7 @@ app.post(
 
       const result = await runCoreServiceCommand(service, commandId as WorkspaceCoreServiceCommandId, {
         repoRelativePath,
+        searchQuery,
       })
       invalidateWorkspaceCaches()
       response.json({ ok: true, ...result })
@@ -673,6 +714,7 @@ app.post(
         typeof request.body?.serviceId === 'string' ? request.body.serviceId.trim() : ''
       const target =
         typeof request.body?.target === 'string' ? request.body.target.trim() : ''
+      const targetPath = readOptionalString(request.body, 'targetPath')
 
       if (!serviceId) {
         response.status(400).json({ message: 'A service id is required.' })
@@ -710,6 +752,20 @@ app.post(
         await openTarget(service.cacheRoot)
       } else if (target === 'exports') {
         await openTarget(service.exportsRoot)
+      } else if (target === 'graph' || target === 'graph-folder') {
+        if (!targetPath) {
+          response.status(400).json({ message: 'A graph target path is required.' })
+          return
+        }
+        if (!isPathWithinRoot(path.join(service.cacheRoot, 'graphs'), targetPath)) {
+          response.status(400).json({ message: 'Graph targets must stay inside the service graph cache.' })
+          return
+        }
+        if (!(await fileExists(targetPath))) {
+          response.status(400).json({ message: 'The requested graph artifact does not exist yet.' })
+          return
+        }
+        await openTarget(targetPath)
       } else if (target === 'terminal') {
         await openInTerminal(service.repoPath)
       } else {

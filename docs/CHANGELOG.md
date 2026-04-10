@@ -2,6 +2,7 @@
 
 ## 2026-04-10
 
+- Bumped the workspace baseline release to `v1.2.0` and updated `repos/workspace-hub` to `1.2.0` to capture the finished MemPalace search flow, onboarding alignment, Memory Graph Phase 1, and the managed MCP v1 rollout.
 - Hardened the managed Playwright and Chrome DevTools wrappers against bad host environments where `HOME=/`, by falling back to workspace-owned runtime and npm-cache paths under `cache/` and forcing Playwright into isolated mode with a stable output directory.
 - Added the MCP v1 operating-model pack as `docs/15-mcp-profiles-and-trust-levels.md` through `docs/19-mcp-authoring-rules.md`, preserving the existing `10` through `14` docs and turning the older generic MCP note into a concrete support boundary.
 - Added tracked MCP profile and server examples under `tools/templates/mcp/`, plus repo-safe `workspace-hub` examples under `repos/workspace-hub/.workspace/mcp/`.

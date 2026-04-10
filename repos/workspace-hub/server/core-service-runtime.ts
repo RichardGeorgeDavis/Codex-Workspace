@@ -40,6 +40,10 @@ function timestamp() {
   return new Date().toISOString()
 }
 
+function quoteShellArg(value: string) {
+  return `'${value.replace(/'/g, `'\\''`)}'`
+}
+
 function trimLogTail(lines: string[]) {
   return lines.slice(-maxLogLines)
 }
@@ -308,6 +312,7 @@ export async function runCoreServiceSync(service: WorkspaceCoreService) {
 
 type CoreServiceCommandOptions = {
   repoRelativePath?: string | null
+  searchQuery?: string | null
 }
 
 function buildCoreServiceCommandInvocation(
@@ -324,6 +329,19 @@ function buildCoreServiceCommandInvocation(
   switch (commandId) {
     case 'status':
       return { commandPath: wrapperPath, shellCommand: 'tools/bin/workspace-memory status', args: ['status'] }
+    case 'build-graph':
+      if (options.repoRelativePath) {
+        return {
+          commandPath: wrapperPath,
+          shellCommand: `tools/bin/workspace-memory build-graph repo ${options.repoRelativePath}`,
+          args: ['build-graph', 'repo', options.repoRelativePath],
+        }
+      }
+      return {
+        commandPath: wrapperPath,
+        shellCommand: 'tools/bin/workspace-memory build-graph workspace-docs',
+        args: ['build-graph', 'workspace-docs'],
+      }
     case 'save-workspace':
       return {
         commandPath: wrapperPath,
@@ -338,6 +356,15 @@ function buildCoreServiceCommandInvocation(
         commandPath: wrapperPath,
         shellCommand: `tools/bin/workspace-memory save-repo ${options.repoRelativePath}`,
         args: ['save-repo', options.repoRelativePath],
+      }
+    case 'search':
+      if (!options.searchQuery?.trim()) {
+        throw new Error('A search query is required.')
+      }
+      return {
+        commandPath: wrapperPath,
+        shellCommand: `tools/bin/workspace-memory search ${quoteShellArg(options.searchQuery)}`,
+        args: ['search', options.searchQuery],
       }
     case 'export-codex-current':
       return {

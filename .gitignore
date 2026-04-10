@@ -26,6 +26,8 @@ tools/ref/
 tools/local/
 .cognetivy/
 .agents/
+cache/*
+!cache/.gitignore
 cache/context/
 cache/design-md/
 cache/playwright-browsers/

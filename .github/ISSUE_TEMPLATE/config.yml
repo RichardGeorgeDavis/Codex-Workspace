@@ -6,6 +6,9 @@ contact_links:
   - name: Contributor roadmap
     url: https://github.com/RichardGeorgeDavis/Codex-Workspace/blob/main/docs/13-contributor-roadmap.md
     about: See what is stable now, what is evolving next, and which contribution areas are currently in scope.
+  - name: Git and GitHub workflow baseline
+    url: https://github.com/RichardGeorgeDavis/Codex-Workspace/blob/main/docs/14-git-and-github-workflow.md
+    about: Use this when you need the default local-docs versus Discussions, Issues, and Pull Requests path.
   - name: Ask a question in Discussions
     url: https://github.com/RichardGeorgeDavis/Codex-Workspace/discussions/categories/q-a
     about: Use Discussions Q&A for setup help, usage questions, and workflow discussion.

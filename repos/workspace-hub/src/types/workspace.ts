@@ -341,9 +341,11 @@ export type WorkspaceCoreService = {
 export type WorkspaceCoreServiceTargetKind = 'current-repo' | 'repo' | 'workspace-docs'
 
 export type WorkspaceCoreServiceCommandId =
+  | 'build-graph'
   | 'export-codex-current'
   | 'mine-codex-current'
   | 'runtime-start'
+  | 'search'
   | 'save-repo'
   | 'save-workspace'
   | 'status'
@@ -359,8 +361,23 @@ export type WorkspaceCoreServiceCommand = {
   shellCommand: string
 }
 
+export type WorkspaceCoreServiceGraph = {
+  artifacts: {
+    htmlPath: string | null
+    jsonPath: string | null
+    reportPath: string | null
+  }
+  available: boolean
+  edgeCount: number | null
+  lastBuiltAt: string | null
+  nodeCount: number | null
+  outputDirectory: string | null
+  outputDirectoryExists: boolean
+}
+
 export type WorkspaceCoreServiceTargetContext = {
   commands: WorkspaceCoreServiceCommand[]
+  graph: WorkspaceCoreServiceGraph
   lastRelevantIngestTarget: string | null
   metadataExists: boolean
   metadataPath: string | null

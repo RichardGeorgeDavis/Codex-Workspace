@@ -200,6 +200,8 @@ The practical model is:
 - local-only memory and MCP config kept separate from tracked repo content
 - a small official MCP v1 profile set for Codex, installed through workspace-owned scripts instead of ad hoc one-off setup
 
+The current MCP v1 support set is intentionally small: OpenAI Docs, Context7, Playwright, Chrome DevTools, and GitHub.
+
 This keeps context easier to inspect, reason about, and adapt across tools while keeping each repo independently runnable.
 
 Tracked repo knowledge belongs in public docs, manifests, and portable skills. Local operator memory belongs in ignored local files until it becomes stable enough to promote into tracked project guidance.

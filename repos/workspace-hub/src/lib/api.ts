@@ -115,10 +115,20 @@ export async function openWorkspacePath(targetPath: string) {
 
 export async function openCoreServiceTarget(
   serviceId: string,
-  target: 'cache' | 'docs' | 'exports' | 'readme' | 'repo' | 'storage' | 'terminal',
+  target:
+    | 'cache'
+    | 'docs'
+    | 'exports'
+    | 'graph'
+    | 'graph-folder'
+    | 'readme'
+    | 'repo'
+    | 'storage'
+    | 'terminal',
+  targetPath?: string | null,
 ) {
   const response = await fetch('/api/services/open', {
-    body: JSON.stringify({ serviceId, target }),
+    body: JSON.stringify({ serviceId, target, targetPath: targetPath ?? null }),
     headers: {
       'Content-Type': 'application/json',
     },
@@ -196,15 +206,18 @@ export async function runCoreServiceCommand(
   serviceId: string,
   payload: {
     commandId:
+      | 'build-graph'
       | 'export-codex-current'
       | 'mine-codex-current'
       | 'runtime-start'
+      | 'search'
       | 'save-repo'
       | 'save-workspace'
       | 'status'
       | 'sync'
       | 'wake-up'
     repoRelativePath?: string | null
+    searchQuery?: string | null
   },
 ) {
   const response = await fetch('/api/services/command', {

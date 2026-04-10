@@ -192,6 +192,7 @@ These wrappers should own workspace-specific path wiring and environment setup s
 
 Current wrapper coverage includes:
 
+- `workspace-memory build-graph`
 - `workspace-memory export-codex`
 - `workspace-memory mine-docs`
 - `workspace-memory mine-repo`
@@ -199,6 +200,7 @@ Current wrapper coverage includes:
 - `workspace-memory split-convos`
 - `workspace-memory mine-codex`
 - `workspace-memory mine-codex-current`
+- `workspace-memory search`
 - `workspace-memory save-repo`
 - `workspace-memory save-workspace`
 
@@ -234,6 +236,41 @@ The page should show:
 - health and runtime status
 - last ingest and last sync metadata
 - links to config and docs
+
+### Graph view
+
+Workspace Hub now includes a Phase 1 graph visualization flow for the selected memory target.
+
+Design rules:
+
+- MemPalace remains the source of truth for memory
+- graph artifacts are derived views, not canonical records
+- the first implementation normalizes MemPalace sidecars plus nearby markdown into a graph-ready export instead of assuming MemPalace already emits a rich graph
+- graph output should stay target-scoped for `workspace-docs`, `current-repo`, or a chosen repo
+- rebuildable graph artifacts should live under `cache/mempalace/<user>/graphs/`
+- do not introduce automatic agent-hook or `AGENTS.md` mutation as part of graph rendering
+
+Current wrapper command shape:
+
+```bash
+tools/bin/workspace-memory build-graph workspace-docs
+tools/bin/workspace-memory build-graph repo repos/workspace-hub
+```
+
+Current Hub actions are:
+
+- `Build graph`
+- `Rebuild graph`
+- `Open graph`
+- `Open graph folder`
+
+Current artifacts:
+
+- `graph.json`
+- `graph.html`
+- `graph-report.md`
+
+The repo-local design note for Workspace Hub lives at `repos/workspace-hub/docs/memory-graph.md`.
 
 ## Search and retrieval
 

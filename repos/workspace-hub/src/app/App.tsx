@@ -418,14 +418,24 @@ export function App({ initialThemePreference }: AppProps) {
 
   async function handleOpenCoreServiceAction(
     serviceId: string,
-    target: 'cache' | 'docs' | 'exports' | 'readme' | 'repo' | 'storage' | 'terminal',
+    target:
+      | 'cache'
+      | 'docs'
+      | 'exports'
+      | 'graph'
+      | 'graph-folder'
+      | 'readme'
+      | 'repo'
+      | 'storage'
+      | 'terminal',
+    targetPath?: string | null,
   ) {
     const pendingKey = `service:${serviceId}:${target}`
     setActionPendingKey(pendingKey)
     setActionError(null)
 
     try {
-      await openCoreServiceTarget(serviceId, target)
+      await openCoreServiceTarget(serviceId, target, targetPath ?? null)
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -581,7 +591,12 @@ export function App({ initialThemePreference }: AppProps) {
     }
   }
 
-  async function handleCoreServiceCommandAction(commandId: WorkspaceCoreServiceCommandId) {
+  async function handleCoreServiceCommandAction(
+    commandId: WorkspaceCoreServiceCommandId,
+    options: {
+      searchQuery?: string | null
+    } = {},
+  ) {
     const service = selectedService
     if (!service) {
       return
@@ -595,6 +610,7 @@ export function App({ initialThemePreference }: AppProps) {
       const result = await runCoreServiceCommand(service.id, {
         commandId,
         repoRelativePath: mempalaceTargetContext?.repoRelativePath ?? null,
+        searchQuery: options.searchQuery ?? null,
       })
       setMempalaceCommandOutput(
         result.output.trim().length > 0 ? `$ ${result.command}\n${result.output}` : `$ ${result.command}`,
@@ -1230,6 +1246,9 @@ export function App({ initialThemePreference }: AppProps) {
             handleOpenDashboardView()
           }}
           onRunCommand={handleCoreServiceCommandAction}
+          onSearchAction={async (query) => {
+            await handleCoreServiceCommandAction('search', { searchQuery: query })
+          }}
           onTargetKindChange={setMempalaceTargetKind}
           onTargetRepoChange={setMempalaceTargetRepoRelativePath}
           repos={summary?.repos ?? []}
