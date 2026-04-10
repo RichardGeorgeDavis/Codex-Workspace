@@ -22,20 +22,32 @@ Read these in order:
 12. `11-core-memory-and-reference-promotion.md`
 13. `12-maintainer-runbook.md`
 14. `13-contributor-roadmap.md`
-15. `HANDOVER.md`
-16. `CHANGELOG.md`
+15. `14-git-and-github-workflow.md`
+16. `15-mcp-profiles-and-trust-levels.md`
+17. `16-mcp-profiles.md`
+18. `17-mcp-install-and-health-check.md`
+19. `18-mcp-server-catalog.md`
+20. `19-mcp-authoring-rules.md`
+21. `HANDOVER.md`
+22. `CHANGELOG.md`
 
 ## What Lives Here
 
 - `00-overview.md` to `05-examples-and-templates.md` define the handover pack.
 - `06-cross-agent-skills-and-mcp.md` defines the cross-agent portability layout for skills and MCP.
 - `07-context-cache-and-retrieval.md` defines the layered context-cache model and retrieval visibility rules.
-- `08-first-run-and-updates.md` defines the recommended onboarding questions, setup profiles, and update flow.
+- `08-first-run-and-updates.md` defines the Hub-first onboarding path, setup profiles, and update flow.
 - `09-new-repo-baseline.md` defines the default repo-intake and repo-baseline contract.
 - `10-release-readiness.md` defines the stable contract, support matrix, migration note, and stable release gate.
 - `11-core-memory-and-reference-promotion.md` defines the workspace source taxonomy and how reviewed GitHub references can graduate into abilities, repo-level adoption, or core workspace services, with MemPalace as the current target.
 - `12-maintainer-runbook.md` defines the clean-clone maintainer path, optional GitHub auth, capability lifecycle commands, update flow, and rollback guidance.
 - `13-contributor-roadmap.md` defines the public contribution map, label taxonomy, and the current help-wanted starter issue queue.
+- `14-git-and-github-workflow.md` defines the workspace-default collaboration path for local-only, git-only, GitHub-backed, and fork-plus-upstream repos when a repo does not provide its own clearer workflow.
+- `15-mcp-profiles-and-trust-levels.md` defines the official MCP v1 support boundary, trust classes, and placement rules.
+- `16-mcp-profiles.md` defines the named MCP bundles such as `default-full` and `safe-readonly`.
+- `17-mcp-install-and-health-check.md` defines the workspace-owned Codex MCP install, verify, and downgrade path.
+- `18-mcp-server-catalog.md` defines the small approved MCP server catalog for v1.
+- `19-mcp-authoring-rules.md` defines the quality bar for adding future tracked MCP examples.
 - `HANDOVER.md` summarizes the current state of the workspace, current implementation batches, and the latest acceptance evidence.
 - `CHANGELOG.md` records notable workspace-level changes.
 
@@ -48,6 +60,7 @@ Read these in order:
 - `tools/github-rulesets/` holds importable repository ruleset JSON for GitHub.
 - `docs/wiki/` holds starter content for the optional GitHub wiki surface.
 - `repos/workspace-hub/docs/` holds repo-local documentation for Workspace Hub itself.
+- `repos/workspace-hub/docs/memory-graph.md` records the adapter-first graph visualization feature for MemPalace data in Workspace Hub.
 
 Useful maintenance scripts:
 
@@ -60,6 +73,8 @@ Useful maintenance scripts:
 - `tools/scripts/cleanup-sync-noise.sh` removes macOS and sync-client noise files such as `Icon\r` and `._*`, including the broken-ref cases when they leak into `.git/`.
 - `tools/scripts/install-shared-playwright-browser.sh` installs Playwright browsers such as Chromium into the shared workspace cache so multiple repos can reuse them.
 - `tools/scripts/print-workspace-env.sh` prints the shared workspace environment exports, including the shared Playwright browser cache path.
+- `tools/scripts/install-mcp-profile.sh` generates and optionally applies the managed Codex Workspace MCP block for a named profile.
+- `tools/scripts/check-mcp-health.sh` verifies the managed MCP block, expected active servers, tracked examples, and wrapper-based browser runtime assumptions.
 - `tools/scripts/init-agent-job-bundle.sh` previews or creates a local cache/context bundle for longer-running agent jobs under `cache/context/agents/jobs/`.
 - `tools/scripts/release-readiness.sh` runs the stable release gate: workspace doctors, `workspace-hub` test/lint/build, skill-sync dry run, and placeholder-surface checks.
 - `tools/scripts/run-with-workspace-env.sh` runs a command with the shared workspace environment, including the shared Playwright browser cache path.
@@ -78,7 +93,7 @@ Useful template locations:
 - `tools/templates/repo-docs/` holds a starter repo `README.md` template plus a placeholder cover image for new repo intake.
 - `tools/templates/codex/` holds starter material for official repo-local `.codex/` setup.
 - `tools/templates/opencode/` holds starter material for optional `.opencode/` setup plus mixed-tool agent presets.
-- `tools/templates/mcp/` holds starter MCP profiles for `read-only` versus `mutating` capability tiers and stdio/logging hygiene.
+- `tools/templates/mcp/` holds the official MCP v1 profile and server examples, env templates, generic `read-only` versus `mutating` starter examples, and stdio/logging hygiene notes.
 - `tools/templates/openspec/` holds lightweight tracked spec and change templates for larger work.
 - `tools/templates/ui-previews/` holds guidance for repo-local component preview tooling.
 - `tools/templates/artifacts/` holds the local artifact-bundle convention for longer-running agent jobs.
@@ -95,9 +110,9 @@ When a workspace-wide feature lands, update the user-visible surfaces in the sam
 - relevant repo-local docs such as `repos/workspace-hub/README.md`
 - optional navigation pages under `docs/wiki/` when public navigation should expose the feature
 
-Recent examples include Workspace memory, in-app MemPalace retrieval search, the capability lifecycle, the source taxonomy, and Hub-visible layout or capability flows.
+Recent examples include Workspace memory, in-app MemPalace retrieval search, target-scoped MemPalace graph builds, the capability lifecycle, the source taxonomy, Hub-visible layout or capability flows, and the new managed Codex MCP profile flow.
 
-Contributor-facing surfaces now also include the root README funnel, `.github/CONTRIBUTING.md`, the issue-template chooser, and `13-contributor-roadmap.md`.
+Contributor-facing surfaces now also include the root README funnel, `.github/CONTRIBUTING.md`, the issue-template chooser, `13-contributor-roadmap.md`, and `14-git-and-github-workflow.md`.
 
 ## Shared Metadata
 

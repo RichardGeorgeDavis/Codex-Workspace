@@ -185,14 +185,18 @@ Status: complete and validated
 
 Current likely pickup:
 
+- apply the managed MCP v1 profiles on the machines that need them and use `safe-readonly` versus `default-full` intentionally rather than treating MCP as an always-on hidden dependency
+- `repos/workspace-hub` memory-graph Phase 2 only if operators need richer relationship extraction, filtering, or in-app embedding beyond the current file-open flow
 - `repos/workspace-hub` capability drill-down if operators need deeper per-capability install/update health than the current snapshot
-- `repos/workspace-hub` repo-intake polish if new repos need clearer first-run notes, optional ability guidance, or tighter starter docs
+- `repos/workspace-hub` repo-intake polish if new repos still need clearer first-run notes, optional ability guidance, or tighter starter docs
 - keep future batches end-to-end and update this file when a batch becomes the new practical pickup point
 
-## Acceptance closeout (2026-04-08)
+## Acceptance closeout (2026-04-10)
 
 This released `v1.1.0` baseline now has a complete verification snapshot:
 
+- `tools/scripts/install-mcp-profile.sh default-full`
+- `tools/scripts/check-mcp-health.sh --profile default-full`
 - `tools/scripts/manage-workspace-capabilities.sh list`
 - `tools/scripts/update-github-refs.sh --list`
 - `tools/scripts/update-all.sh --list-groups`
@@ -201,13 +205,16 @@ This released `v1.1.0` baseline now has a complete verification snapshot:
 - `pnpm --dir "repos/workspace-hub" test`
 - `pnpm --dir "repos/workspace-hub" build`
 
-Live Hub acceptance was also exercised against the running app on 2026-04-08:
+Live Hub acceptance was also exercised against the running app on 2026-04-10:
 
 - `pnpm --dir "repos/workspace-hub" dev:api`
 - `pnpm --dir "repos/workspace-hub" dev:web --host 127.0.0.1 --port 4174`
 - `curl -s http://127.0.0.1:4101/api/workspace/summary/base | jq ...`
 - `curl -s http://127.0.0.1:4101/api/capabilities | jq ...`
 - `curl -s "http://127.0.0.1:4101/api/search?q=memory" | jq ...`
+- `curl -s -X POST http://127.0.0.1:4101/api/services/context -H 'Content-Type: application/json' -d '{"serviceId":"mempalace","targetKind":"workspace-docs"}' | jq ...`
+- `curl -s -X POST http://127.0.0.1:4101/api/services/command -H 'Content-Type: application/json' -d '{"serviceId":"mempalace","commandId":"search","searchQuery":"workspace memory"}' | jq ...`
+- `curl -s -X POST http://127.0.0.1:4101/api/services/command -H 'Content-Type: application/json' -d '{"serviceId":"mempalace","commandId":"build-graph"}' | jq ...`
 - `curl -s --get http://127.0.0.1:4101/api/repos/details --data-urlencode "relativePath=repos/workspace-hub"`
 - `curl -s http://127.0.0.1:4101/api/health | jq '.workspaceHub.repoDetails'`
 - `npx playwright screenshot --wait-for-selector 'text=Workspace memory' ...`
@@ -217,13 +224,21 @@ Live Hub acceptance was also exercised against the running app on 2026-04-08:
 
 Observed runtime result:
 
+- the managed Codex Workspace MCP block now validates in a temp Codex home before apply and can be generated into ignored local overlay files under `tools/local/agents/codex/`
+- the official MCP v1 support boundary is now documented explicitly around five servers, five profiles, and a one-command downgrade path to `safe-readonly`
+- the local Codex config now carries the managed `default-full` MCP block with `openaiDeveloperDocs`, `context7`, `playwright`, `chrome-devtools`, and `github`, while pre-existing non-workspace MCP servers such as `figma` and `xcodebuildmcp` remain intact
+- the live MCP health check passed with `0` failures and `1` warning, where the remaining warning is the optional unset `CONTEXT7_API_KEY`
+- the browser wrappers are now hardened against host sessions that expose `HOME=/`, so the managed Playwright and Chrome DevTools commands fall back to workspace-owned runtime paths under `cache/` instead of writing under the filesystem root
 - base summary returned live repo and capability data with list projection active (`detailLevel: list` on summary repos)
 - read-only `GET /api/capabilities` returned live installed/enabled/reference-only stats plus capability records with per-capability `updatedAt` state
 - indexed search returned both the `MemPalace` service and the `VoltAgent/awesome-design-md` capability for `q=memory`
+- Workspace memory target context returned graph metadata for `workspace-docs`, including `lastBuiltAt`, `nodeCount`, and `edgeCount`
+- direct `search` command smoke returned live retrieval output for `workspace memory`
+- direct `build-graph` command smoke wrote `graph.json`, `graph.html`, and `graph-report.md` under `cache/mempalace/<user>/graphs/workspace-docs/`
 - repo-details hydration returned `detailLevel: detail` for `repos/workspace-hub`
 - repo-details observability counters incremented after the detail fetch
 - browser-level smoke confirmed the live presence of `Workspace memory`, `Workspace Capabilities`, `Repo Discovery`, the discovery-first inline empty-state prompt, and the inline selected-repo details flow
-- the Workspace memory page now also exposes an in-app MemPalace search form, with latest-query visibility and inline command output, so retrieval is usable from the Hub instead of being shell-only
+- the Workspace memory page now also exposes an in-app MemPalace search form, latest-query visibility, inline command output, and target-scoped graph actions, so retrieval and graph generation are usable from the Hub instead of being shell-only
 
 Current operator expectation:
 
@@ -239,6 +254,7 @@ Repo dependency rollout note:
 - `repos/workspace-hub` now keeps list refresh on the base summary path while hydrating the selected repo eagerly for richer diagnostics
 - `repos/workspace-hub` now exposes a dedicated read-only capability snapshot endpoint and shows installed or enabled or reference-only capability counts directly in the capability panel
 - `repos/workspace-hub` Workspace memory now includes an in-app retrieval search flow backed by `tools/bin/workspace-memory search`
+- `repos/workspace-hub` Workspace memory now also exposes target-scoped graph builds backed by `tools/bin/workspace-memory build-graph`
 - release and maintainer steps now explicitly require reviewing public-facing files when workspace-wide features such as Workspace memory land
 
 ## Completion review
@@ -730,5 +746,106 @@ Published implementation commit:
 Pickup notes:
 
 - The broad roadmap item `Clarify the "try Workspace Hub first" path` is now largely complete at the README level.
-- The narrower follow-up still open is GitHub Issue `#11`, which keeps the deeper first-run doc aligned with the new public README funnel.
+- The narrower follow-up from GitHub Issue `#11` is now complete in `docs/08-first-run-and-updates.md`, so the deeper first-run doc now matches the Hub-first README funnel.
 - Future public issues should stay scoped and contribution-ready rather than mirroring every longer-term internal roadmap note.
+
+### Implementation update (2026-04-10, MemPalace search closeout, onboarding alignment, and graph Phase 1)
+
+Completed across the workspace root and `repos/workspace-hub`:
+
+1. Finished the in-app MemPalace search slice.
+   - Finalized the `search` workspace-service command path through `workspace-hub` API wiring, app state, and the Workspace memory page.
+   - Latest query and latest search time now hydrate back from `shared/mempalace/<user>/service-state.json` after refresh instead of living only in transient UI state.
+
+2. Closed the deeper onboarding follow-up.
+   - Reworked `docs/08-first-run-and-updates.md` so it now starts with the practical `Workspace Hub` try-first path before branching into optional setup profiles.
+   - Kept the collaboration baseline in `docs/14-git-and-github-workflow.md` as the shared default and updated the README and docs index wording so the public path stays consistent.
+
+3. Landed Memory Graph Phase 1.
+   - Added `tools/bin/workspace-memory build-graph` plus the standalone adapter script `tools/scripts/build-mempalace-graph.mjs`.
+   - Graph builds now normalize MemPalace sidecars plus nearby target-scoped markdown into rebuildable artifacts under `cache/mempalace/<user>/graphs/<target-slug>/`.
+   - Phase 1 artifacts are:
+     - `graph.json`
+     - `graph.html`
+     - `graph-report.md`
+
+4. Updated Workspace Hub for graph status and actions.
+   - The selected memory target context now includes graph metadata: output directory, last build time, node count, edge count, and artifact paths.
+   - The Workspace memory page now exposes `Build graph`, `Rebuild graph`, `Open graph`, and `Open graph folder` for the selected target.
+   - Graph opening stays target-scoped and workspace-safe; it does not mutate `AGENTS.md` or add a second ingestion engine beside MemPalace.
+
+Verification after this slice:
+
+- `pnpm --dir "repos/workspace-hub" lint`: passed
+- `pnpm --dir "repos/workspace-hub" typecheck`: passed
+- `pnpm --dir "repos/workspace-hub" test`: passed (`26 passed, 0 failed`)
+
+New focused test coverage:
+
+- `repos/workspace-hub/test/mempalace-memory.test.ts`
+  - verifies the `search` command path updates persisted MemPalace service state and hydrates back through core-service reads
+  - runs `tools/bin/workspace-memory build-graph workspace-docs` in a temp workspace and verifies target-scoped graph artifacts plus summary counts
+
+Pickup notes:
+
+- The immediate MemPalace UI gap is no longer basic search or first graph generation; the next meaningful graph work is richer filtering, relationship extraction, or in-app embedding only if operators ask for it.
+- Capability drill-down and repo-intake polish remain valid later work, but they are no longer ahead of the current memory UX baseline.
+
+### Implementation update (2026-04-10, MCP v1 rollout)
+
+Completed across the workspace root:
+
+1. Turned generic MCP guidance into a concrete operating model.
+   - Added the MCP policy pack as `docs/15-mcp-profiles-and-trust-levels.md` through `docs/19-mcp-authoring-rules.md`.
+   - Kept the existing `docs/10` through `docs/14` surfaces intact rather than overwriting release, maintainer, contributor, or workflow docs.
+
+2. Shipped the tracked MCP v1 examples.
+   - Added named profile examples under `tools/templates/mcp/profiles/`.
+   - Added the approved server catalog under `tools/templates/mcp/servers/`.
+   - Added a local-only env example under `tools/templates/mcp/env/`.
+   - Added repo-safe `.workspace/mcp/` examples for `repos/workspace-hub`.
+
+3. Added a workspace-owned install and health-check path.
+   - Added `tools/scripts/install-mcp-profile.sh` to generate a local overlay, validate it in a temp Codex home, and update only the managed Codex Workspace MCP block.
+   - Added `tools/scripts/check-mcp-health.sh` to verify tracked examples, active expected servers, wrapper usage, and key auth/toolset assumptions.
+   - Added workspace-root-aware wrappers for Playwright and Chrome DevTools so local browser MCP runs inherit `WORKSPACE_ROOT` and the shared Playwright browser cache path.
+
+4. Synced the public docs to the new MCP flow.
+   - Updated the root README, docs index, `06-cross-agent-skills-and-mcp.md`, `08-first-run-and-updates.md`, and `12-maintainer-runbook.md` so the official MCP v1 path is discoverable from the normal onboarding and maintainer surfaces.
+
+Verification after this slice:
+
+- `sh -n tools/scripts/mcp-env.sh`: passed
+- `sh -n tools/scripts/mcp-run-playwright.sh`: passed
+- `sh -n tools/scripts/mcp-run-chrome-devtools.sh`: passed
+- `sh -n tools/scripts/install-mcp-profile.sh`: passed
+- `sh -n tools/scripts/check-mcp-health.sh`: passed
+- `find tools/templates/mcp repos/workspace-hub/.workspace/mcp -name '*.json' -exec jq empty {} \;`: passed
+- `sh tools/scripts/install-mcp-profile.sh default-full`: passed
+- `sh tools/scripts/install-mcp-profile.sh --run default-full`: passed
+- `sh tools/scripts/check-mcp-health.sh --profile default-full`: passed with `1` warning (`CONTEXT7_API_KEY` unset)
+
+Pickup notes:
+
+- The MCP operating model is now documented and scripted; the next practical step is deciding which machines should actually run `default-full` versus `safe-readonly`.
+- Figma MCP stays deferred until a separate profile family is ready, with remote preferred when that later batch starts.
+
+### Implementation update (2026-04-10, Playwright MCP runtime hardening)
+
+Completed in the workspace root:
+
+1. Hardened the managed browser wrappers for bad host env defaults.
+   - Updated `tools/scripts/mcp-run-playwright.sh` and `tools/scripts/mcp-run-chrome-devtools.sh` so they no longer trust `HOME=/`.
+   - Both wrappers now fall back to workspace-owned runtime paths under `cache/`.
+   - The Playwright wrapper now also uses isolated mode plus a stable output directory under `cache/playwright-mcp/`.
+
+Verification after this slice:
+
+- `HOME=/ sh tools/scripts/mcp-run-playwright.sh --doctor`: passed
+- `HOME=/ sh tools/scripts/mcp-run-playwright.sh --help`: passed
+- `HOME=/ sh tools/scripts/mcp-run-chrome-devtools.sh --doctor`: passed
+- launched `tools/scripts/mcp-run-playwright.sh` under `HOME=/` and confirmed the server stayed running instead of exiting immediately: passed
+
+Pickup note:
+
+- The managed browser wrappers are now robust even when the host process exposes an unusable home directory; any remaining Playwright-specific failure inside a separate tool host is no longer caused by the workspace wrapper.

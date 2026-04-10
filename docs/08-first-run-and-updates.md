@@ -20,7 +20,28 @@ So if we want a predictable onboarding path, we need to provide it in tracked do
 
 MemPalace is now integrated as the first core workspace memory service. The current bootstrap and doctor scripts can prepare and verify that service for the active workspace user.
 
-## First-run questions
+## Fastest way to try it
+
+If you want the most concrete path first, start with Workspace Hub rather than reading the whole docs tree up front.
+
+Run:
+
+```bash
+cd repos/workspace-hub
+pnpm install
+pnpm dev
+```
+
+Then, once the app is open:
+
+1. open `Workspace memory` from the header
+2. confirm service state and target context
+3. run a retrieval search from the in-app search form
+4. build a target-scoped graph for `Workspace docs` or a selected repo if you want the graph view
+
+If that trial path is enough, stop there and keep the rest of this doc as optional setup and maintenance guidance.
+
+## Optional first-run questions
 
 Answer these in order:
 
@@ -85,7 +106,7 @@ pnpm install
 pnpm dev
 ```
 
-Once the Hub is open, use the `Workspace memory` switch in the header to open the dedicated MemPalace page. That page is the workspace-level view for memory state, target selection, and safe wrapper commands.
+Once the Hub is open, use the `Workspace memory` switch in the header to open the dedicated MemPalace page. That page is the workspace-level view for memory state, target selection, in-app retrieval search, target-scoped graph builds, and safe wrapper commands.
 
 ### Mixed Stack
 
@@ -131,7 +152,8 @@ Current policy:
 - keep `.agents/skills/` only when repo-local compatibility mirroring helps
 - install upstream skills selectively
 - keep secrets and machine-specific MCP config local-only
-- default MCP examples to `read-only` capability tiers and opt into `mutating` only when required
+- keep the official MCP v1 server set small: `openaiDeveloperDocs`, `context7`, `playwright`, `chrome-devtools`, and `github`
+- treat `default-full` as the convenience default and `safe-readonly` as the downgrade path
 - keep third-party orchestration local-only unless it proves itself
 - if you trial `oh-my-codex`, treat it as an optional external layer or dedicated fork, not as a normal workspace dependency
 
@@ -210,16 +232,33 @@ When a reviewed upstream becomes part of how the whole workspace works, promote 
 
 ## Recommended first run
 
-### 1. Read the docs
+### 1. Try Workspace Hub first
 
-Start with:
+Run:
+
+```bash
+cd repos/workspace-hub
+pnpm install
+pnpm dev
+```
+
+Then use the app in this order:
+
+1. `Workspace memory`
+2. target selection
+3. in-app retrieval search
+4. graph build or rebuild if you want the graph artifacts
+
+### 2. Read only the docs you need next
+
+If the Hub trial was useful and you want the broader workspace path, continue with:
 
 - `README.md`
 - `docs/README.md`
 - `docs/08-first-run-and-updates.md`
 - `AGENTS.md`
 
-### 2. Run the doctor script
+### 3. Run the doctor script
 
 Use the non-destructive environment check:
 
@@ -237,7 +276,7 @@ This reports:
 - Codex-related skill and config state
 - recommended setup profiles
 
-### 2a. Bootstrap the workspace safely
+### 3a. Bootstrap the workspace safely
 
 Use the workspace bootstrap helper when you want one command that prepares the
 safe cache/context folders and, if needed, installs `workspace-hub`
@@ -250,7 +289,7 @@ tools/scripts/bootstrap-workspace.sh --run
 
 This script does not rewrite nested repos under `repos/`.
 
-### 3. Use the profile helper if you want guided next steps
+### 4. Use the profile helper if you want guided next steps
 
 Run:
 
@@ -270,7 +309,7 @@ tools/scripts/setup-workspace-profile.sh --profile ui-previews
 
 This script does not install anything. It checks the selected profile and prints the next steps that fit it.
 
-### 4. Pick the smallest profile that fits
+### 5. Pick the smallest profile that fits
 
 Recommended order:
 
@@ -284,7 +323,7 @@ Recommended order:
 8. `UI Previews` only for repos that actually need isolated component or page previews
 9. `Experimental Local` only as local-only tooling
 
-### 5. Enable agent-specific additions carefully
+### 6. Enable agent-specific additions carefully
 
 For Codex:
 
@@ -315,13 +354,32 @@ This workspace now includes starter examples under `tools/templates/skills/` for
 
 For MCP-specific planning, this workspace also includes starter examples under `tools/templates/mcp/` for:
 
-- `read-only` versus `mutating` capability tiers
+- official workspace profiles under `tools/templates/mcp/profiles/`
+- the approved v1 server catalog under `tools/templates/mcp/servers/`
+- local-only env examples under `tools/templates/mcp/env/`
+- generic `read-only` versus `mutating` capability tiers
 - stdio transport hygiene
-- local-only secret handling
 
 Treat those as design ideas, not as a reason to add a second mandatory agent platform to the workspace.
 
-### 6. Add spec-driven or preview tooling only where it helps
+If you want the supported Codex MCP path rather than the generic planning templates, use:
+
+```bash
+tools/scripts/install-mcp-profile.sh --list
+tools/scripts/install-mcp-profile.sh default-full
+tools/scripts/install-mcp-profile.sh --run default-full
+tools/scripts/check-mcp-health.sh --profile default-full
+```
+
+The official MCP docs now live in:
+
+- `docs/15-mcp-profiles-and-trust-levels.md`
+- `docs/16-mcp-profiles.md`
+- `docs/17-mcp-install-and-health-check.md`
+- `docs/18-mcp-server-catalog.md`
+- `docs/19-mcp-authoring-rules.md`
+
+### 7. Add spec-driven or preview tooling only where it helps
 
 For larger changes:
 
@@ -435,6 +493,23 @@ This includes:
 
 These should not be treated as tracked workspace state.
 
+### 5a. Re-apply or verify the managed Codex MCP profile when needed
+
+If the tracked MCP docs, templates, wrappers, or the selected profile changed:
+
+```bash
+tools/scripts/install-mcp-profile.sh default-full
+tools/scripts/install-mcp-profile.sh --run default-full
+tools/scripts/check-mcp-health.sh --profile default-full
+```
+
+If you want the smallest supported MCP surface instead:
+
+```bash
+tools/scripts/install-mcp-profile.sh --run safe-readonly
+tools/scripts/check-mcp-health.sh --profile safe-readonly
+```
+
 If you keep reviewed GitHub-backed upstreams for comparison or local catalog use, update them separately too:
 
 ```bash
@@ -459,6 +534,7 @@ Codex usually detects skill changes automatically, but restart it if:
 - a newly installed skill does not appear
 - a disabled or enabled skill does not reflect config changes
 - a new MCP setup is not being picked up
+- a shell-only MCP auth env var is present but the desktop app still reports missing auth
 
 ## Updating skills specifically
 

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "name": "safe-readonly",
+  "description": "Read-oriented default for operators who want docs augmentation without browser runtime or GitHub mutation surfaces.",
+  "trustClass": "trusted-remote-read",
+  "defaultActivation": "fallback",
+  "servers": [
+    "openaiDeveloperDocs",
+    "context7"
+  ],
+  "notes": [
+    "Use this when you want the official docs stack only.",
+    "This is the documented downgrade path from default-full."
+  ]
+}

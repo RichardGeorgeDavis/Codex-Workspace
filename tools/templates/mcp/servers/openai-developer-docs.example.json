@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "name": "openaiDeveloperDocs",
+  "displayName": "OpenAI Docs MCP",
+  "category": "docs-context",
+  "transport": "streamable_http",
+  "defaultUrl": "https://developers.openai.com/mcp",
+  "trustClass": "trusted-remote-read",
+  "capabilityTier": "read-only",
+  "profiles": [
+    "default-full",
+    "safe-readonly",
+    "research"
+  ],
+  "notes": [
+    "Use this for OpenAI product and API documentation.",
+    "Keep it separate from package and library documentation sources."
+  ]
+}

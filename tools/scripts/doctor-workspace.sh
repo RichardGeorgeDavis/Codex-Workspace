@@ -398,6 +398,18 @@ else
   mark_warn "codex command" "not found in PATH"
 fi
 
+if [ -f "$workspace_root/tools/scripts/install-mcp-profile.sh" ]; then
+  mark_ok "MCP installer" "$workspace_root/tools/scripts/install-mcp-profile.sh"
+else
+  mark_warn "MCP installer" "missing"
+fi
+
+if [ -f "$workspace_root/tools/scripts/check-mcp-health.sh" ]; then
+  mark_ok "MCP health" "$workspace_root/tools/scripts/check-mcp-health.sh"
+else
+  mark_warn "MCP health" "missing"
+fi
+
 printf '\nRecommended setup profiles\n'
 core_status=$(profile_status "$core_missing")
 hub_status=$(profile_status "$hub_missing")
@@ -436,6 +448,8 @@ printf -- '- Start Workspace Hub when ready: cd %s && pnpm dev\n' "$workspace_hu
 printf -- '- Before calling the workspace stable, run tools/scripts/release-readiness.sh\n'
 printf -- '- Review tracked repo guidance in AGENTS.md before changing repo structure or runtime rules\n'
 printf -- '- Use tools/scripts/sync-codex-skills.sh only after you have tracked skill sources to sync into repo .codex/skills/ and optional .agents/skills/\n'
+printf -- '- Use tools/scripts/install-mcp-profile.sh --list when you want the supported Codex MCP profiles\n'
+printf -- '- Use tools/scripts/check-mcp-health.sh after changing the managed MCP block\n'
 printf -- '- Install extra upstream Codex skills selectively with $skill-installer, not by vendoring full catalogs\n'
 printf -- '- Use tools/scripts/update-github-refs.sh when you want reviewed GitHub refs or managed upstream repos updated\n'
 printf -- '- Use tools/scripts/update-all.sh only when you want to fast-forward clean sibling repos under repos/\n'

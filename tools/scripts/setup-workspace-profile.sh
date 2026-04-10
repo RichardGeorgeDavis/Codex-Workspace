@@ -248,7 +248,7 @@ case "$profile" in
     printf -- '- Keep WordPress handling repo-native or external rather than forcing it through Workspace Hub\n'
     ;;
   agent-enhanced)
-    printf 'Purpose: add Codex-visible skills, optional MCP examples, and other agent-facing improvements without turning the workspace into a full harness platform.\n\n'
+    printf 'Purpose: add Codex-visible skills, managed MCP profiles, and other agent-facing improvements without turning the workspace into a full harness platform.\n\n'
     printf 'Checks\n'
     check_cmd "codex" codex recommended
     if [ -f "$HOME/.codex/config.toml" ]; then
@@ -272,7 +272,9 @@ case "$profile" in
     printf -- '- Publish tracked repo skills under .codex/skills/ when a workflow becomes stable enough\n'
     printf -- '- Mirror into .agents/skills/ only when repo-local compatibility helps\n'
     printf -- '- Use tools/scripts/sync-codex-skills.sh only after you have tracked skill sources to sync\n'
-    printf -- '- Keep MCP examples read-only by default and move mutating configs into local-only files when needed\n'
+    printf -- '- Use tools/scripts/install-mcp-profile.sh --list to inspect the supported Codex MCP profiles\n'
+    printf -- '- Use tools/scripts/install-mcp-profile.sh --run safe-readonly for the smallest supported MCP surface\n'
+    printf -- '- Use tools/scripts/check-mcp-health.sh after changing the managed MCP profile\n'
     printf -- '- Install upstream skills selectively with $skill-installer rather than vendoring full catalogs\n'
     ;;
   workflow-state)

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "name": "browser-debug",
+  "description": "Workspace-root-aware browser runtime profile for UI-heavy repos and interactive debugging.",
+  "trustClass": "local-browser-runtime",
+  "defaultActivation": "optional",
+  "servers": [
+    "playwright",
+    "chrome-devtools"
+  ],
+  "notes": [
+    "Use this when runtime inspection matters more than docs or GitHub context.",
+    "Playwright reuses the shared workspace browser cache."
+  ]
+}

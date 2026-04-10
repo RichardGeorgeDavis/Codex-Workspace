@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "name": "playwright",
+  "displayName": "Playwright MCP",
+  "category": "browser-runtime",
+  "transport": "stdio",
+  "commandTemplate": "${WORKSPACE_ROOT}/tools/scripts/mcp-run-playwright.sh",
+  "trustClass": "local-browser-runtime",
+  "capabilityTier": "read-only",
+  "profiles": [
+    "default-full",
+    "browser-debug"
+  ],
+  "workspaceEnv": [
+    "WORKSPACE_ROOT",
+    "PLAYWRIGHT_BROWSERS_PATH",
+    "PLAYWRIGHT_SKIP_BROWSER_GC"
+  ],
+  "notes": [
+    "Use the workspace wrapper so browser downloads stay in cache/playwright-browsers.",
+    "The wrapper also falls back to workspace-owned home, npm-cache, and output paths when the host process exposes an unusable HOME such as '/'.",
+    "Do not hard-code machine-specific absolute paths in tracked examples."
+  ]
+}

@@ -33,8 +33,19 @@ Recommended when you maintain forks, pull requests, or reviewed upstream mirrors
 
 - install `gh`
 - run `gh auth login`
+- install `codex` if you want to use the managed MCP profile flow locally
 
 This is a maintainer convenience, not a release-gate requirement.
+
+## Collaboration defaults across repos
+
+If a repo does not define its own clearer workflow, use [14-git-and-github-workflow.md](14-git-and-github-workflow.md) as the workspace baseline.
+
+For maintenance work, the practical implication is simple:
+
+- check first whether the target repo overrides the workspace baseline
+- if it does not, follow `14-git-and-github-workflow.md` rather than copying a second workflow into repo-local notes
+- `gh` remains recommended convenience tooling rather than a clean-clone requirement
 
 ## Capability lifecycle
 
@@ -98,6 +109,37 @@ tools/bin/mempalace-sync
 
 Workspace Hub should surface MemPalace as a core service, but these commands remain the direct shell fallback.
 
+## Codex MCP profile management
+
+The official workspace MCP v1 surface is intentionally small and documented in:
+
+- `docs/15-mcp-profiles-and-trust-levels.md`
+- `docs/16-mcp-profiles.md`
+- `docs/17-mcp-install-and-health-check.md`
+
+Useful maintainer commands:
+
+```bash
+tools/scripts/install-mcp-profile.sh --list
+tools/scripts/install-mcp-profile.sh default-full
+tools/scripts/install-mcp-profile.sh --run default-full
+tools/scripts/check-mcp-health.sh --profile default-full
+```
+
+If you want the smallest supported profile instead:
+
+```bash
+tools/scripts/install-mcp-profile.sh --run safe-readonly
+tools/scripts/check-mcp-health.sh --profile safe-readonly
+```
+
+Rules:
+
+- tracked examples stay in `tools/templates/mcp/` and repo-local `.workspace/mcp/`
+- generated overlays stay in ignored `tools/local/agents/codex/`
+- the installer manages only the Codex Workspace MCP block in the active Codex config
+- real credentials stay local-only
+
 ## Verification pass
 
 Before handing off a workspace-maintenance slice:
@@ -112,6 +154,13 @@ pnpm --dir "repos/workspace-hub" test
 ```
 
 Add `pnpm --dir "repos/workspace-hub" lint` when frontend or server code changed.
+
+If MCP scripts, templates, or docs changed, also run:
+
+```bash
+tools/scripts/install-mcp-profile.sh default-full
+tools/scripts/check-mcp-health.sh --profile default-full
+```
 
 Public-file review step:
 

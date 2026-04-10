@@ -49,7 +49,7 @@ pnpm install
 pnpm dev
 ```
 
-Once the Hub is open, use the `Workspace memory` switch in the header to open the dedicated MemPalace page directly. That page now covers service state, target selection, in-app memory search, and safe wrapper actions.
+Once the Hub is open, use the `Workspace memory` switch in the header to open the dedicated MemPalace page directly. That page now covers service state, target selection, in-app memory search, target-scoped graph builds, and safe wrapper actions.
 The dashboard also exposes installable abilities and core services through the Workspace Capabilities panel, and supports a persisted `split` versus `discovery-first` repo layout.
 
 If you want the fuller workspace path after that:
@@ -61,6 +61,7 @@ If you want the fuller workspace path after that:
 ## How To Contribute
 
 - Start with [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md).
+- Use [docs/14-git-and-github-workflow.md](docs/14-git-and-github-workflow.md) for the default issue, discussion, branch, and PR path when a repo does not already document its own collaboration flow.
 - Browse current [`help wanted`](https://github.com/RichardGeorgeDavis/Codex-Workspace/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22help%20wanted%22) and [`good first issue`](https://github.com/RichardGeorgeDavis/Codex-Workspace/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22) tickets.
 - If the queue is thin, use [docs/13-contributor-roadmap.md](docs/13-contributor-roadmap.md) for the current contribution map and ready-to-open starter issue briefs.
 - Use [GitHub Discussions Q&A](https://github.com/RichardGeorgeDavis/Codex-Workspace/discussions/categories/q-a) for setup or usage questions.
@@ -150,8 +151,12 @@ Start here:
 - [docs/README.md](docs/README.md)
 - [docs/08-first-run-and-updates.md](docs/08-first-run-and-updates.md)
 - [docs/09-new-repo-baseline.md](docs/09-new-repo-baseline.md)
-- [docs/13-contributor-roadmap.md](docs/13-contributor-roadmap.md)
 - [docs/12-maintainer-runbook.md](docs/12-maintainer-runbook.md)
+- [docs/13-contributor-roadmap.md](docs/13-contributor-roadmap.md)
+- [docs/14-git-and-github-workflow.md](docs/14-git-and-github-workflow.md)
+- [docs/15-mcp-profiles-and-trust-levels.md](docs/15-mcp-profiles-and-trust-levels.md)
+- [docs/16-mcp-profiles.md](docs/16-mcp-profiles.md)
+- [docs/17-mcp-install-and-health-check.md](docs/17-mcp-install-and-health-check.md)
 - [repos/workspace-hub/README.md](repos/workspace-hub/README.md)
 
 Deeper docs:
@@ -166,6 +171,8 @@ Deeper docs:
 - [docs/07-context-cache-and-retrieval.md](docs/07-context-cache-and-retrieval.md)
 - [docs/10-release-readiness.md](docs/10-release-readiness.md)
 - [docs/11-core-memory-and-reference-promotion.md](docs/11-core-memory-and-reference-promotion.md)
+- [docs/18-mcp-server-catalog.md](docs/18-mcp-server-catalog.md)
+- [docs/19-mcp-authoring-rules.md](docs/19-mcp-authoring-rules.md)
 
 Supporting references:
 - [docs/HANDOVER.md](docs/HANDOVER.md)
@@ -191,6 +198,7 @@ The practical model is:
 - generated context summaries under `cache/context/`
 - optional local workflow-state folders such as `.cognetivy/` kept separate from canonical tracked docs
 - local-only memory and MCP config kept separate from tracked repo content
+- a small official MCP v1 profile set for Codex, installed through workspace-owned scripts instead of ad hoc one-off setup
 
 This keeps context easier to inspect, reason about, and adapt across tools while keeping each repo independently runnable.
 
@@ -222,6 +230,8 @@ When a capability becomes part of how the whole workspace operates, prefer a cor
 
 See:
 - [docs/06-cross-agent-skills-and-mcp.md](docs/06-cross-agent-skills-and-mcp.md)
+- [docs/15-mcp-profiles-and-trust-levels.md](docs/15-mcp-profiles-and-trust-levels.md)
+- [docs/17-mcp-install-and-health-check.md](docs/17-mcp-install-and-health-check.md)
 - [docs/07-context-cache-and-retrieval.md](docs/07-context-cache-and-retrieval.md)
 - [docs/11-core-memory-and-reference-promotion.md](docs/11-core-memory-and-reference-promotion.md)
 - [docs/12-maintainer-runbook.md](docs/12-maintainer-runbook.md)

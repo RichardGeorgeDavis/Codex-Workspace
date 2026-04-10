@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "name": "context7",
+  "displayName": "Context7",
+  "category": "docs-context",
+  "transport": "streamable_http",
+  "defaultUrl": "https://mcp.context7.com/mcp",
+  "trustClass": "trusted-remote-read",
+  "capabilityTier": "read-only",
+  "profiles": [
+    "default-full",
+    "safe-readonly",
+    "research"
+  ],
+  "envHeaders": {
+    "CONTEXT7_API_KEY": "CONTEXT7_API_KEY"
+  },
+  "notes": [
+    "Context7 is the package and library docs source in this workspace.",
+    "The API key is optional but recommended for higher rate limits."
+  ]
+}

@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-04-10
+
+- Hardened the managed Playwright and Chrome DevTools wrappers against bad host environments where `HOME=/`, by falling back to workspace-owned runtime and npm-cache paths under `cache/` and forcing Playwright into isolated mode with a stable output directory.
+- Added the MCP v1 operating-model pack as `docs/15-mcp-profiles-and-trust-levels.md` through `docs/19-mcp-authoring-rules.md`, preserving the existing `10` through `14` docs and turning the older generic MCP note into a concrete support boundary.
+- Added tracked MCP profile and server examples under `tools/templates/mcp/`, plus repo-safe `workspace-hub` examples under `repos/workspace-hub/.workspace/mcp/`.
+- Added `tools/scripts/install-mcp-profile.sh`, `tools/scripts/check-mcp-health.sh`, and workspace-root-aware browser wrappers so Codex can generate and manage a bounded MCP block in local Codex config instead of relying on ad hoc manual setup.
+- Updated the root README, docs index, first-run guide, maintainer runbook, setup-profile guidance, doctor guidance, and handover notes so the official MCP v1 flow is now documented alongside the existing skills and memory surfaces.
+- Finished the Workspace Hub MemPalace search flow end to end, including the `search` service command path, persisted latest-query state, and focused test coverage for command plumbing plus service-state hydration.
+- Added `tools/bin/workspace-memory build-graph` and a standalone graph adapter under `tools/scripts/build-mempalace-graph.mjs` that writes target-scoped `graph.json`, `graph.html`, and `graph-report.md` artifacts under `cache/mempalace/<user>/graphs/`.
+- Updated Workspace Hub to surface graph metadata on the Workspace memory target context and to expose `Build graph`, `Rebuild graph`, `Open graph`, and `Open graph folder` actions for the selected target.
+- Reworked `docs/08-first-run-and-updates.md`, the docs index, the root README, and the Workspace Hub README so the Hub-first onboarding path now stays aligned with the shipped Workspace memory search and graph flows.
+
+## 2026-04-09
+
+- Added `docs/14-git-and-github-workflow.md` as the canonical workspace collaboration baseline for local-only, git-only, GitHub-backed, and fork-plus-upstream repos.
+- Updated the root README, contributor guide, docs index, maintainer runbook, contributor roadmap, and new-repo baseline to point to the new default Git and GitHub workflow without making GitHub or `gh auth login` mandatory.
+- Added `repos/workspace-hub/docs/memory-graph.md` to document the planned MemPalace graph-visualization feature as an adapter layer on top of MemPalace data rather than a second ingestion engine.
+- Updated the Workspace Hub README, the core-memory architecture note, the docs index, and repo-local docs instructions so the new planned memory-graph feature is discoverable from the main documentation surfaces.
+
 ## 2026-04-08
 
 - Reframed the root README around a faster public entry path: concrete product first, contributor path near the top, a visible help-wanted lane, and a short `Now / Next / Later` roadmap.

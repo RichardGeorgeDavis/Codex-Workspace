@@ -1,18 +1,35 @@
 # MCP Templates
 
-This folder holds starter templates for tracked MCP examples and local-only adaptation.
+This folder now holds the tracked MCP v1 planning and install examples for Codex Workspace.
 
-These templates follow a few useful patterns without adopting any product-specific stack:
+Use it for:
 
-- default to read-only capabilities first
-- make mutating capabilities an explicit opt-in
-- keep stdio transports quiet so JSON-RPC is not polluted by normal console output
-- keep one consistent config shape even if the server can be delivered in multiple ways
-- prefer local tracked samples for safe defaults and local-only files for real credentials
+- official workspace profile definitions
+- the small approved server catalog
+- repo-safe portable examples
+- local-only env templates that can be copied into ignored files
+
+The official supported v1 server set is intentionally small:
+
+- `openaiDeveloperDocs`
+- `context7`
+- `playwright`
+- `chrome-devtools`
+- `github`
+
+Do not treat this folder as an invitation to add an MCP marketplace.
+
+## Layout
+
+- `profiles/` contains the named workspace profiles
+- `servers/` contains one portable definition per approved server
+- `env/` contains local-only env examples for credentials and overrides
+- `server-profile.read-only.example.json` remains the generic safe default
+- `server-profile.mutating.example.json` remains the generic explicit opt-in example
 
 ## Capability tiers
 
-Use these tier names when documenting or templating future MCP tools:
+Use these tier names when documenting tracked MCP examples:
 
 - `read-only`
 - `mutating`
@@ -30,6 +47,14 @@ Only move to `mutating` when:
 - credentials are configured in local-only files or environment variables
 - the operator understands the blast radius
 
+## Trust classes
+
+Use these trust classes in the v1 docs and tracked examples:
+
+- `trusted-remote-read`
+- `local-browser-runtime`
+- `guarded-remote-write`
+
 ## Stdio hygiene
 
 For MCP servers that use stdio transport, keep the channel clean:
@@ -41,9 +66,13 @@ For MCP servers that use stdio transport, keep the channel clean:
 
 This prevents transport corruption and makes failures easier to debug.
 
-## Files
+## Local overlays
 
-- `server-profile.read-only.example.json` is the safe default example
-- `server-profile.mutating.example.json` is the explicit opt-in example
+Tracked examples stop here.
 
-These are planning templates, not a strict schema.
+Real Codex MCP config and real credentials should live in ignored local files such as:
+
+- `tools/local/agents/codex/mcp.env.local`
+- `tools/local/agents/codex/mcp.generated.toml`
+
+Use `tools/scripts/install-mcp-profile.sh` to generate the local overlay and update the managed Codex MCP block.

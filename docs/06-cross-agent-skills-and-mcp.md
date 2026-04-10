@@ -295,6 +295,22 @@ Additional hygiene for future workspace MCP tools:
 
 Starter templates for this live in `tools/templates/mcp/`.
 
+The current official MCP v1 policy and profile pack now lives in:
+
+- `docs/15-mcp-profiles-and-trust-levels.md`
+- `docs/16-mcp-profiles.md`
+- `docs/17-mcp-install-and-health-check.md`
+- `docs/18-mcp-server-catalog.md`
+- `docs/19-mcp-authoring-rules.md`
+
+The official v1 server set is intentionally small:
+
+- `openaiDeveloperDocs`
+- `context7`
+- `playwright`
+- `chrome-devtools`
+- `github`
+
 ## Workspace Hub scope
 
 Workspace Hub v1 should not require skills or MCP to function.
