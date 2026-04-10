@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "name": "default-full",
+  "description": "Convenience-heavy workspace default for Codex operators who want docs, browser inspection, and GitHub flows available in one profile.",
+  "trustClass": "mixed",
+  "defaultActivation": "local-default",
+  "servers": [
+    "openaiDeveloperDocs",
+    "context7",
+    "playwright",
+    "chrome-devtools",
+    "github"
+  ],
+  "notes": [
+    "This is the convenience default, not the safest default.",
+    "Downgrade to safe-readonly when you want a smaller MCP blast radius."
+  ]
+}

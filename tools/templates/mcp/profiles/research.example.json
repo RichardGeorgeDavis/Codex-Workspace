@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "name": "research",
+  "description": "Docs-only research profile for package, library, and OpenAI product reference work.",
+  "trustClass": "trusted-remote-read",
+  "defaultActivation": "optional",
+  "servers": [
+    "openaiDeveloperDocs",
+    "context7"
+  ],
+  "notes": [
+    "OpenAI Docs covers OpenAI products and APIs.",
+    "Context7 covers package and library documentation."
+  ]
+}

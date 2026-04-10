@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "name": "research",
+  "description": "Repo-safe example for docs-only research inside workspace-hub.",
+  "workspaceRootRequired": false,
+  "servers": [
+    "openaiDeveloperDocs",
+    "context7"
+  ],
+  "notes": [
+    "Use this when the task is docs-heavy and does not need browser runtime inspection.",
+    "Context7 is the default library docs source; OpenAI Docs stays the OpenAI product docs source."
+  ]
+}

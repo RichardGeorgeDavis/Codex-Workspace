@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "name": "chrome-devtools",
+  "displayName": "Chrome DevTools MCP",
+  "category": "browser-runtime",
+  "transport": "stdio",
+  "commandTemplate": "${WORKSPACE_ROOT}/tools/scripts/mcp-run-chrome-devtools.sh",
+  "trustClass": "local-browser-runtime",
+  "capabilityTier": "read-only",
+  "profiles": [
+    "default-full",
+    "browser-debug"
+  ],
+  "workspaceEnv": [
+    "WORKSPACE_ROOT"
+  ],
+  "notes": [
+    "Keep this focused on runtime and DevTools inspection.",
+    "Use Playwright alongside it when deterministic browser actions matter."
+  ]
+}

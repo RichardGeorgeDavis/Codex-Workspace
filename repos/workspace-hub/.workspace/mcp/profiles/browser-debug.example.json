@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "name": "browser-debug",
+  "description": "Repo-safe example for using the workspace browser-debug MCP profile with workspace-hub.",
+  "workspaceRootRequired": true,
+  "servers": [
+    "playwright",
+    "chrome-devtools"
+  ],
+  "notes": [
+    "Launch through the workspace installer so the Codex config points at the workspace wrappers.",
+    "Keep any repo-specific browser notes in repo docs rather than in machine-local MCP config."
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "name": "github",
+  "displayName": "GitHub MCP Server",
+  "category": "repo-collaboration",
+  "transport": "streamable_http",
+  "defaultUrl": "https://api.githubcopilot.com/mcp/",
+  "trustClass": "guarded-remote-write",
+  "capabilityTier": "mutating",
+  "profiles": [
+    "default-full",
+    "github-full"
+  ],
+  "bearerTokenEnvVar": "GITHUB_PAT",
+  "httpHeaders": {
+    "X-MCP-Toolsets": "all"
+  },
+  "notes": [
+    "This workspace intentionally enables the broad all-toolsets mode in GitHub profiles.",
+    "If you do not want GitHub mutation surfaces, use safe-readonly instead."
+  ]
+}

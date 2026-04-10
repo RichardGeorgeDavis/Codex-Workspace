@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "name": "github-full",
+  "description": "GitHub-only profile for repository, issue, PR, Actions, and code-security workflows.",
+  "trustClass": "guarded-remote-write",
+  "defaultActivation": "optional",
+  "servers": [
+    "github"
+  ],
+  "notes": [
+    "This profile uses the GitHub remote server with the broad all-toolsets header.",
+    "Prefer safe-readonly when you do not need GitHub context or write-capable collaboration flows."
+  ]
+}
