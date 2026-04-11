@@ -24,4 +24,4 @@ Use this skill when a repo in the workspace fails to install, start, preview, or
 ## Guardrails
 
 - Do not hard-code one package manager across all repos.
-- Do not switch a repo into ServBay or another proxy mode unless it solves a real problem.
+- Do not switch a repo into a proxy or mapped-host preview mode unless it solves a real problem.

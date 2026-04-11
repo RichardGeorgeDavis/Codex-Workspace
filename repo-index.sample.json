@@ -33,7 +33,7 @@
         "wordpress",
         "client"
       ],
-      "notes": "Managed primarily through Local or ServBay mapping."
+      "notes": "Managed primarily through Local or a mapped local hostname."
     },
     {
       "name": "threejs-scene",
@@ -50,7 +50,7 @@
         "webgl",
         "art"
       ],
-      "notes": "Direct mode preferred; ServBay proxy optional."
+      "notes": "Direct mode preferred; mapped-host proxy optional."
     },
     {
       "name": "static-portfolio",

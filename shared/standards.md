@@ -7,7 +7,7 @@ Codex Workspace keeps repositories portable and independently runnable.
 - Do not create a shared dependency install across unrelated repositories.
 - Share caches under `cache/`, not `node_modules` or equivalent installs.
 - Keep each repo runnable on its own terms.
-- Treat ServBay as optional convenience, not a mandatory runtime layer.
+- Treat reverse-proxy or mapped-host tooling as optional convenience, not a mandatory runtime layer.
 - Default frontend-style repos to direct local runtime unless a repo explicitly prefers otherwise.
 
 ## Structure

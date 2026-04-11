@@ -71,7 +71,7 @@ pnpm build
 
 - Keep unrelated repositories independent.
 - Share caches, not installs.
-- Do not make ServBay mandatory.
+- Do not make a reverse-proxy or mapped-host layer mandatory.
 - Put canonical workspace docs in `docs/`.
 - Keep repo-local docs with the repo they describe.
 - Avoid unrelated cleanup in the same PR.

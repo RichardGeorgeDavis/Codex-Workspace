@@ -41,7 +41,7 @@ Accepted `preferredMode` values:
 
 - `direct`
 - `external`
-- `servbay`
+- `servbay` (mapped host / reverse-proxy preview; the JSON value is stable for compatibility even though the label is generic in docs)
 
 ## Optional fields
 
@@ -126,7 +126,7 @@ Unknown preserved keys are appended after the known keys.
 
 - Prefer `direct` for Vite, Three.js, and similar frontend repos unless a repo explicitly needs something else.
 - Prefer `external` for WordPress repos already managed by Local or another app.
-- Use `servbayPath` or `servbaySubdomain` only when that routing is stable and tested.
+- Use `servbayPath` or `servbaySubdomain` only when mapped-host routing is stable and tested (field names are stable JSON keys).
 - Keep manifests explicit and readable; do not turn them into a dump of every inferred value unless the repo benefits from that clarity.
 - Keep local-only values in `project.local.json` when they should not ship with the repo.
 - If the repo needs a workspace ability for operator workflows, mention the install command in repo docs instead of trying to encode that dependency implicitly in the manifest.

@@ -28,5 +28,5 @@ List the checks you ran or explain why no runtime verification was needed. Keep 
 - [ ] The change is focused and does not mix unrelated cleanup
 - [ ] Repo independence is preserved
 - [ ] No shared dependency install structure was introduced
-- [ ] ServBay was kept optional
+- [ ] Optional proxy or mapped-host previews were not made mandatory
 - [ ] New behavior is documented where needed
