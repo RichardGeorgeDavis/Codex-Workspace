@@ -21,7 +21,7 @@ Build the system in layers.
 Do not attempt to solve:
 - every runtime edge case
 - every project type
-- full ServBay automation
+- full automation of every reverse-proxy or mapped-host setup
 - advanced process orchestration
 - deep Git tooling
 - rich analytics
@@ -95,7 +95,7 @@ Scaffold the separate `workspace-hub` repo as a first-class project inside `repo
 - scaffold the preferred app stack
 - create initial README
 - create initial app shell
-- ensure the Hub runs on its own without ServBay
+- ensure the Hub runs on its own without any optional proxy front door
 
 ### Definition of done
 Stage 3 is complete when:
@@ -203,24 +203,24 @@ Stage 8 is complete when:
 - metadata remains lightweight and non-sensitive
 - the Hub becomes meaningfully more useful over repeated use
 
-## Stage 9 — Add ServBay-aware integration
+## Stage 9 — Add mapped-host-aware integration
 
 ### Objective
-Allow the Hub to participate in the single-domain local model without becoming dependent on it.
+Allow the Hub to participate in a single-domain local model without becoming dependent on it.
 
 ### Tasks
-- add ServBay settings
+- add settings for optional proxy base domain and preview preference
 - support base-domain configuration
-- generate ServBay-friendly preview links when configured
-- allow switching between direct and ServBay preview modes
+- generate mapped-host preview links when configured
+- allow switching between direct and mapped-host preview modes
 
 ### Definition of done
 Stage 9 is complete when:
 
-- the Hub works perfectly without ServBay
-- the Hub can also generate or use ServBay-mode links when enabled
+- the Hub works perfectly without optional proxy tooling
+- the Hub can also generate or use mapped-host links when enabled
 - the direct preview path remains available
-- repo handling does not become ServBay-only
+- repo handling does not become proxy-only
 
 ## Stage 10 — Refine and harden
 
@@ -281,7 +281,7 @@ Includes:
 - Stage 10
 
 Outcome:
-- metadata, ServBay support, and refinement are in place
+- metadata, optional mapped-host support, and refinement are in place
 
 ## Definition of done for the overall project
 
@@ -296,8 +296,8 @@ The project is done for v1 when all of the following are true:
 - the Hub can read optional manifests
 - the Hub can open repos and previews
 - the Hub can start and stop supported repos
-- the Hub remains useful without ServBay
-- the Hub can optionally support ServBay-based preview links
+- the Hub remains useful without optional proxy tooling
+- the Hub can optionally support mapped-host preview links
 - the system does not rely on shared project dependency folders
 - the system remains understandable and maintainable
 
@@ -314,7 +314,7 @@ These may be added later, but should not block v1:
 - team/user permissions
 - advanced analytics
 - screenshot generation for every repo
-- automatic SSL/domain provisioning beyond what ServBay already handles
+- automatic SSL/domain provisioning beyond what your local stack already provides
 
 ## Quality bar
 
@@ -344,7 +344,7 @@ A final acceptance check for v1 should confirm:
 - [ ] Hub can open previews
 - [ ] Hub can start and stop supported repos
 - [ ] Hub can store useful non-sensitive metadata
-- [ ] Hub works without ServBay
-- [ ] Hub can optionally generate or use ServBay preview links
+- [ ] Hub works without optional proxy front door
+- [ ] Hub can optionally generate or use mapped-host preview links
 - [ ] Shared caches are separated from repo-specific installs
 - [ ] No shared `node_modules` or equivalent cross-repo dependency structure has been introduced

@@ -166,7 +166,7 @@ Status: complete
 
 - workspace docs now share one classification model: `reference-only`, `ability`, `repo-level adoption`, `core service`
 - `gh auth login` is documented as recommended optional maintainer setup
-- ServBay remains supported but de-emphasized as optional
+- optional mapped-host or reverse-proxy previews remain documented as non-mandatory
 - repo-specific batching guidance now points to tracked `openspec/changes/.../tasks.md` or a repo-local `Next Batches` section
 
 ### Batch 2: Managed source lifecycle for refs, abilities, and core services
@@ -298,7 +298,7 @@ What still reads as open or incomplete in the docs:
 - deeper repo diagnostics and drill-down polish
 - favourites and last-opened polish
 - clearer dependency-readiness feedback
-- fuller ServBay-aware polish beyond the current optional stance
+- clearer mapped-host and proxy preview polish where operators use that workflow
 - additional runtime troubleshooting documentation
 
 ## Core memory decision (2026-04-08)
@@ -370,7 +370,7 @@ If continuing implementation, read in this order:
 
 ## Project review addendum (2026-04-07)
 
-This addendum captures the latest implementation review of `repos/workspace-hub` and should be treated as the current technical pickup note.
+This addendum captures an implementation review of `repos/workspace-hub` from that date. Several items below were **addressed in subsequent Hub work** (see `docs/CHANGELOG.md` entries from 2026-04-07 onward: summary caching, safer API errors, cross-platform openers, artifact search gating). Treat the remaining bullets as **backlog**, not an open release gate.
 
 ### Findings (ordered by severity)
 

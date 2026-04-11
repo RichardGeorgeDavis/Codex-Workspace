@@ -12,7 +12,7 @@ This workspace must:
 - keep repositories portable and self-contained
 - improve install and workflow performance by centralising caches and utility scripts
 - support the Workspace Hub application as a first-class repo in the workspace
-- remain compatible with ServBay, Local, and direct local repo execution
+- remain compatible with Local, direct local ports, and optional mapped-host or proxy previews
 
 ## Root path
 
@@ -289,8 +289,8 @@ It should:
 - follow the same repo rules as other repos
 - maintain its own dependencies
 - contain its own README and local config
-- be able to run without ServBay
-- optionally integrate with ServBay
+- be able to run without optional proxy or mapped-host tooling
+- optionally integrate with a local reverse proxy or mapped hostname when useful
 
 ## What Codex may scaffold
 
@@ -309,7 +309,7 @@ Codex must not:
 - assume all repos use the same runtime
 - move project dependencies into shared folders
 - replace Local for WordPress by default
-- require ServBay to be present for all repos
+- require a reverse-proxy or mapped-host layer to be present for all repos
 
 ## Suggested helper scripts
 

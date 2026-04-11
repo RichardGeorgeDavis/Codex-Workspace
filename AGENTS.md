@@ -30,8 +30,8 @@ Favour shared caches and stores under the workspace `cache/` folder.
 ### 3. Treat each repo as independently runnable
 Every repository must remain runnable on its own terms.
 
-### 4. Do not make ServBay mandatory
-ServBay is a convenience layer and optional front door, not a required dependency for all repos.
+### 4. Do not make a reverse proxy or mapped-host layer mandatory
+Optional local proxy or hostname tooling is convenience only, not a required dependency for all repos.
 
 ### 5. Prefer direct local runtime for frontend/dev-server projects
 Vite, Three.js, WebGL, and similar repos usually work best on their own local ports unless explicitly configured otherwise.
@@ -67,7 +67,7 @@ The `workspace-hub` repo should:
 - read or infer repo metadata
 - show runtime status
 - allow start/stop/open actions
-- support both direct local previews and ServBay-linked previews
+- support both direct local previews and mapped-host or proxy-linked previews when configured
 
 Do not overcomplicate v1.
 
@@ -76,14 +76,14 @@ Do not overcomplicate v1.
 ### WordPress
 Preferred mode:
 - `external`
-- usually managed by Local or mapped in ServBay
+- usually managed by Local or mapped under a local hostname when you use that workflow
 
 ### Static / Vite / Three.js / WebGL
 Preferred mode:
 - `direct`
 
 ### Other server-side projects
-Use repo-native runtime and only proxy through ServBay where it adds clear value.
+Use repo-native runtime and only use a proxy or mapped host where it adds clear value.
 
 ## Detection guidance
 
@@ -165,5 +165,5 @@ Design the workspace so it can grow, but keep implementation practical.
 The immediate target is:
 - a strong local workspace structure
 - a useful Workspace Hub v1
-- optional ServBay integration
+- optional mapped-host or proxy integration
 - reliable daily use

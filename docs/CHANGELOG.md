@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-04-11
+
+- Refreshed the root [README](../README.md) with tool-agnostic positioning (Codex, Cursor, Claude), a **Workspace Hub** subsection with the cover image, and a **What's included (and why)** table; shifted public docs to neutral language for optional reverse-proxy and mapped-host previews while keeping compatibility manifest keys documented where needed.
+- Updated [HANDOVER](HANDOVER.md) completion review, the project review addendum pointer to [CHANGELOG](CHANGELOG.md) for resolved Hub items, and aligned [docs/README](README.md), wiki stubs, contributor templates, and [AGENTS.md](../AGENTS.md) with the same stance.
+- Rewrote [00-overview](00-overview.md) and [02-local-runtime-handover](02-local-runtime-handover.md) so runtime guidance uses generic mapped-host terminology while keeping stable manifest enum and field names (`servbay`, `servbayPath`, `servbaySubdomain`) documented in [repos/workspace-hub/docs/manifest.md](../repos/workspace-hub/docs/manifest.md).
+- Added a tracked [docs/plans/readme-docs-closeout.md](plans/readme-docs-closeout.md) plan for future reference, and aligned small Workspace Hub/operator copy surfaces with the same mapped-host wording in `repos/workspace-hub`, `tools/scripts/doctor-workspace.sh`, and `tools/scripts/setup-workspace-profile.sh`.
+
 ## 2026-04-10
 
 - Bumped the workspace baseline release to `v1.2.1` and updated `repos/workspace-hub` to `1.2.1` to capture the AI side-load cache flow, handover-closeout automation, and the serialized `workspace-memory` write path.

@@ -63,7 +63,7 @@ Answer these in order:
 
 1. Do you only want the workspace structure and docs, or do you also want to run Workspace Hub?
 2. Do you need Node-only repo support, or mixed-stack support with Python and PHP tools too?
-3. Do you manage WordPress projects here and need Local and/or ServBay?
+3. Do you manage WordPress projects here and need Local and/or a mapped-host or proxy setup?
 4. Do you want Codex-specific enhancements such as tracked repo skills, selected upstream skills, or MCP integrations?
 5. Do you want an optional local workflow-state layer for runs, events, or collections?
 6. Do you want a tracked spec-driven layer for larger changes?
@@ -145,7 +145,7 @@ Use this only if your workspace actually contains WordPress projects.
 Preferred options:
 
 - Local for existing WordPress projects already managed there
-- ServBay when a shared local front door or proxy layer is useful
+- optional reverse-proxy or mapped-host tooling when a shared local front door is useful
 
 Do not make either one mandatory for the whole workspace.
 
@@ -497,7 +497,7 @@ This includes:
 - Node version managers
 - Python environments
 - Composer and WP-CLI
-- ServBay
+- optional proxy or mapped-host stack
 - Local
 - browser binaries
 - private MCP configuration
@@ -582,7 +582,7 @@ Do not turn onboarding into:
 
 - a mandatory global install step
 - a single shared dependency tree across repos
-- a requirement that every user install ServBay, Local, or mixed-stack tooling
+- a requirement that every user install specific optional stacks such as Local or mixed-stack tooling
 - a requirement that every user install experimental orchestration layers
 - a requirement that every user add an upstream orchestration layer as a tracked workspace dependency
 - a hidden prompt or agent setup blob that cannot be inspected in normal files

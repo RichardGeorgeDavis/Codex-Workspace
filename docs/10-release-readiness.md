@@ -69,7 +69,7 @@ Do not skip the manual repo check just because automated verification passed.
 - `.omx/`
 - shared Playwright browser cache under `cache/playwright-browsers`
 - shared shell helpers for Playwright and other workspace-wide env defaults via `tools/scripts/print-workspace-env.sh` and `tools/scripts/run-with-workspace-env.sh`
-- Local or ServBay for WordPress-oriented workflows
+- Local (or similar) for WordPress-oriented workflows
 - workspace abilities under `repos/abilities/` when they are explicitly installed and documented
 
 ### Not part of the stable baseline
@@ -77,7 +77,7 @@ Do not skip the manual repo check just because automated verification passed.
 - vendored third-party harnesses as workspace runtime dependencies
 - placeholder plugins or TODO manifest surfaces
 - forcing every repo into one dependency tree
-- mandatory OpenCode, OMX, Bun, ServBay, or Local installs
+- mandatory OpenCode, OMX, Bun, or Local installs
 - mandatory `gh auth login` as part of baseline clone or release verification
 
 ## Migration note

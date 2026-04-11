@@ -22,7 +22,7 @@ For a clean clone, the baseline expectation is still conservative:
 
 This baseline must work without:
 
-- ServBay
+- optional reverse-proxy or mapped-host tooling (only if you use that workflow)
 - Local
 - `gh auth login`
 - optional abilities under `repos/abilities/`

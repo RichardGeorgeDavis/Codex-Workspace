@@ -2,7 +2,7 @@
 
 ## Goal
 
-Define how repositories inside Codex Workspace are discovered, launched, previewed, stopped, and optionally routed through ServBay.
+Define how repositories inside Codex Workspace are discovered, launched, previewed, stopped, and optionally routed through a **mapped host or reverse proxy** when that mode is configured.
 
 This document governs the runtime and orchestration layer, not the base folder structure.
 
@@ -12,12 +12,12 @@ The system must support mixed project types without forcing them into one unifor
 
 Key rule:
 
-**Every repository must remain runnable without ServBay.**
+**Every repository must remain runnable without optional proxy or mapped-host tooling.**
 
-ServBay is useful as:
+A reverse proxy or local hostname layer is useful as:
 - a single local domain entry point
 - a reverse proxy layer
-- local HTTPS/domain convenience
+- local HTTPS or hostname convenience
 - a front door for the workspace
 
 It is not the only runtime method.
@@ -33,14 +33,8 @@ repos/workspace-hub/
 
 This app acts as the local control centre.
 
-### 2. ServBay
-Optional but preferred as a single-domain entry point.
-
-Recommended primary local domain:
-
-```text
-workspace.servbay.demo
-```
+### 2. Optional mapped-host / proxy layer
+Optional. Some operators use a single local domain or reverse proxy (for example Caddy, nginx, or a dev-stack app) as a unified entry point. The Hub can generate preview links for that setup when manifest fields are set.
 
 ### 3. Repo-native runtime
 Each repo should run according to its own stack and preferred command.
@@ -57,7 +51,7 @@ The Workspace Hub application should:
 - open preview URLs
 - open repos in Finder, terminal, editor, or Codex where useful
 - store known ports and preferred launch methods
-- optionally provide ServBay-aware preview links
+- optionally provide **mapped-host-aware** preview links when `servbayPath` / `servbaySubdomain` (stable manifest keys) are set
 
 ## Recommended Hub app approach
 
@@ -80,10 +74,10 @@ Typical indicators:
 - WordPress structure
 - PHP entrypoints
 - composer setup for WordPress
-- Local or ServBay mapping already exists
+- Local or another host mapping may already exist
 
 Preferred handling:
-- usually opened through Local or ServBay
+- usually opened through Local or similar
 - Hub may store external URL and helper actions
 - Hub does not need to become a full WP environment manager in v1
 
@@ -96,7 +90,7 @@ Typical indicators:
 Preferred handling:
 - static file server
 - direct port preview
-- optional ServBay proxy
+- optional proxy path when configured
 
 ### `vite`
 Typical indicators:
@@ -106,7 +100,7 @@ Typical indicators:
 Preferred handling:
 - run dev server via package manager
 - default to direct port
-- optional proxy via ServBay where compatible
+- optional proxy path where compatible
 
 ### `threejs`
 Typical indicators:
@@ -117,7 +111,7 @@ Typical indicators:
 Preferred handling:
 - treat similarly to `vite` or `static`
 - direct port usually preferred
-- ServBay proxy optional
+- proxy path optional
 
 ### `node-app`
 Typical indicators:
@@ -137,7 +131,7 @@ Typical indicators:
 - non-WordPress PHP projects
 
 Preferred handling:
-- ServBay-friendly where appropriate
+- mapped-host friendly where appropriate
 - or direct repo-native method depending on stack
 
 ### `other`
@@ -175,7 +169,7 @@ Suggested fields:
 
 - `name`
 - `type`
-- `preferredMode` → `direct` | `servbay` | `external`
+- `preferredMode` → `direct` | `servbay` | `external` (the value `servbay` means mapped-host/proxy preview; see Hub manifest docs for stable JSON keys)
 - `packageManager`
 - `devCommand`
 - `buildCommand`
@@ -224,15 +218,12 @@ Use this when:
 - proxying adds unnecessary complexity
 - the project expects to run at root
 
-### `servbay`
-Expose via ServBay domain or path.
-
-Example:
-- `https://workspace.servbay.demo/repo/three-lab`
+### `servbay` (mapped host / proxy)
+The manifest uses the stable enum value `servbay` for previews served through a configured path or subdomain on your local domain (see `servbayPath` and `servbaySubdomain`).
 
 Use this when:
 - clean URLs are useful
-- local HTTPS is desired
+- local HTTPS or a stable hostname is desired
 - proxying is stable for that project
 - the Hub is being used as a single front door
 
@@ -251,13 +242,13 @@ Use this when:
 Default to:
 - `external` for WordPress projects already managed in Local
 - `direct` for Vite, Three.js, WebGL, and most static repos
-- `servbay` only where it is clearly useful and stable
+- `servbay` only where a mapped path or subdomain is clearly useful and stable
 
 This avoids fragile path/proxy assumptions.
 
-## ServBay integration rules
+## Optional mapped-host integration rules
 
-ServBay is treated as:
+Treat reverse-proxy or mapped-host tooling as:
 - optional convenience
 - single-domain entry point
 - reverse-proxy front door
@@ -268,21 +259,15 @@ It should be able to surface:
 - selected local services
 
 Recommended pattern:
-- one main ServBay website entry
-- one main local domain
+- one main site entry on your local domain
+- one main local hostname
 - reverse-proxy rules to local repo ports where needed
 
-Do not assume each repo needs its own ServBay site entry.
+Do not assume each repo needs its own site entry.
 
 ## URL strategy
 
-Recommended main domain:
-
-```text
-workspace.servbay.demo
-```
-
-Suggested path structure:
+Pick a main local domain in operator docs if you use this mode (example: `https://workspace.local`). Suggested path structure:
 
 - `/` → Workspace Hub
 - `/repo/<slug>` → proxied preview where appropriate
@@ -374,7 +359,7 @@ Per repo, aim to support actions such as:
 - save metadata
 
 ### Phase 3
-- ServBay integration
+- optional mapped-host integration
 - proxy-aware preview links
 - health checks
 - install helpers
@@ -391,8 +376,8 @@ Per repo, aim to support actions such as:
 This runtime handover is complete when Codex can implement a system where:
 
 - repositories can be discovered from the shared workspace
-- the Workspace Hub can run independently of ServBay
-- ServBay can act as a single local domain entry point
+- the Workspace Hub can run independently of any optional reverse-proxy front door
+- an optional mapped host or proxy can act as a single local entry point when configured
 - repos can still be opened directly when that is better
 - repo handling differs appropriately by project type
 - the Hub can start, stop, and open supported repos

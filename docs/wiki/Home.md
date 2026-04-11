@@ -24,7 +24,7 @@ It combines:
 - Do not merge unrelated repos into one dependency structure.
 - Share caches, not installs.
 - Treat each repo as independently runnable.
-- Do not make ServBay mandatory.
+- Do not make a reverse-proxy or mapped-host layer mandatory.
 - Prefer direct local runtime for frontend and dev-server projects.
 - Keep WordPress handling pragmatic.
 - Use lightweight manifests where explicit runtime behavior helps.

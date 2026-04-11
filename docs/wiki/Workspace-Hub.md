@@ -10,7 +10,7 @@ Its role is to scan sibling repositories under `repos/`, classify them conservat
 - read or infer repo metadata
 - show runtime status
 - allow start, stop, and open actions
-- support both direct local previews and ServBay-linked previews
+- support both direct local previews and mapped-host or proxy-linked previews when configured
 
 The goal is useful local control without forcing all repos into one runtime model.
 

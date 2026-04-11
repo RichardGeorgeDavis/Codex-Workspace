@@ -33,9 +33,9 @@ Build a local control-centre app that:
 - lists and classifies repositories
 - allows opening, starting, stopping, and previewing repositories
 - stores useful repo metadata
-- supports both direct local previews and ServBay-linked previews
-- works without ServBay
-- can optionally be surfaced through ServBay as the main local dashboard
+- supports both direct local previews and mapped-host or proxy-linked previews when configured
+- works without any optional reverse-proxy front door
+- can optionally be surfaced through a mapped local hostname as the main local dashboard
 
 ## Product framing
 
@@ -177,8 +177,8 @@ Include:
 - workspace root
 - repos folder path
 - default ports or ranges
-- ServBay base domain
-- whether to prefer direct or ServBay preview links
+- optional mapped-host base domain (when using proxy preview mode)
+- whether to prefer direct or mapped-host preview links
 - metadata storage options
 
 ## Required v1 features
@@ -219,7 +219,7 @@ The app must support:
 The app must be able to:
 - open direct local URLs
 - open external URLs
-- open ServBay-based URLs if configured
+- open mapped-host or proxy-based URLs if configured
 
 ### Repo utility actions
 At minimum support:
@@ -398,25 +398,25 @@ Preferred for:
 - WordPress sites already managed in Local
 - any repo controlled by another app
 
-### ServBay
+### Mapped host preview (`servbay` mode in manifests)
 Use when:
 - proxying is useful
 - a stable mapped path is known
 - the dashboard is being used as the front door
 
-Do not force everything into ServBay mode.
+The manifest enum value remains `servbay` for compatibility; do not force every repo into this mode.
 
-## ServBay integration requirements
+## Optional mapped-host integration requirements
 
-The Hub must support ServBay without depending on it.
+The Hub must support mapped-host previews **without** depending on any specific vendor stack.
 
 Suggested configuration fields:
-- base domain, e.g. `workspace.servbay.demo`
-- whether ServBay is enabled
-- whether preview links should prefer ServBay when available
+- base domain for proxy previews (example: `https://workspace.local`)
+- whether that mode is enabled
+- whether preview links should prefer mapped-host URLs when available
 
 The Hub should be able to generate preview links like:
-- `https://workspace.servbay.demo/repo/<slug>`
+- `https://<your-domain>/repo/<slug>`
 
 But direct URLs must remain supported.
 
@@ -429,7 +429,7 @@ The `workspace-hub` repo must include a proper `README.md` covering:
 - how to run it
 - how repo detection works
 - how manifests work
-- how direct vs ServBay previews work
+- how direct vs mapped-host previews work
 - future roadmap
 
 ## Suggested v1 development phases
@@ -460,12 +460,12 @@ Build:
 - saved preview preferences
 - better filtering and search
 
-### Phase 4 — ServBay support
+### Phase 4 — Mapped-host support
 Build:
-- ServBay settings
-- ServBay preview-link generation
-- optional ServBay path awareness
-- dashboard mode through ServBay domain
+- settings for optional proxy base domain
+- mapped-host preview-link generation
+- optional path and subdomain awareness (manifest keys `servbayPath`, `servbaySubdomain`)
+- dashboard mode through a configured local hostname when used
 
 ## Definition of done
 
@@ -476,9 +476,9 @@ This build spec is complete when Codex can implement a Workspace Hub that:
 - classifies repo types conservatively
 - reads optional repo manifests
 - starts and stops supported repos
-- opens previews in direct, external, or ServBay mode
+- opens previews in direct, external, or mapped-host (`servbay`) mode
 - stores useful non-sensitive metadata
-- remains useful even if ServBay is not present
+- remains useful even if no proxy front door is configured
 - feels lightweight, practical, and scalable
 
 ## Implementation guardrails

@@ -61,6 +61,7 @@ Read these in order:
 - `tools/manifests/` holds source lists and supporting manifests for scripts.
 - `tools/github-rulesets/` holds importable repository ruleset JSON for GitHub.
 - `docs/wiki/` holds starter content for the optional GitHub wiki surface.
+- `docs/plans/` holds tracked implementation plans for multi-session work (for example docs closeout).
 - `repos/workspace-hub/docs/` holds repo-local documentation for Workspace Hub itself.
 - `repos/workspace-hub/docs/memory-graph.md` records the adapter-first graph visualization feature for MemPalace data in Workspace Hub.
 
@@ -126,7 +127,7 @@ The `shared/` folder is reserved for workspace-facing metadata such as `shared/r
 - Core: `git`, `gh`, `jq`, `rg`, `fd`, `tree`
 - Node: a version manager plus `npm`, `pnpm`, and `yarn` where legacy repos need it
 - Python: `python3`, `pip`, optional `uv`
-- PHP: `composer`, `wp`, optional ServBay or Local
+- PHP: `composer`, `wp`, optional Local or similar WordPress tooling
 
 `gh` is recommended for maintainers and contributors who manage forks, pull requests, or reviewed upstream mirrors. `gh auth login` is optional setup, not a baseline requirement for a clean clone or release verification.
 

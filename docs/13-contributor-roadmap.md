@@ -27,7 +27,7 @@ The main concrete contributor surface today is [`repos/workspace-hub/`](../repos
 - Now: Workspace Hub UX, docs clarity, manifest examples, repo-classification behavior, and script ergonomics are stable enough for outside contribution.
 - Next: Contributor-friendly observability, tighter verification flows, screenshot and preview reliability, and more explicit classification explanations in the UI.
 - Later: Broader capability-promotion work, deeper workspace-memory workflows, and larger architecture changes after the public surfaces settle.
-- Out of scope for now: Shared dependency installs across unrelated repos, making ServBay mandatory, or forcing every repo through one centralized runtime model.
+- Out of scope for now: Shared dependency installs across unrelated repos, making a reverse-proxy or mapped-host layer mandatory, or forcing every repo through one centralized runtime model.
 
 ## Ready-To-Open Starter Issues
 

@@ -10,9 +10,17 @@ In practice, that means:
 - local context can survive repo switches, handover updates, and long gaps between sessions
 - shared memory, docs, and tooling can sit above the repos without flattening their runtime models
 
+**Tool-agnostic context.** Whether you use Codex, Cursor, Claude, or mix assistants, the same tracked docs, manifests, optional generated side-load summaries under `cache/context/`, and Workspace Hub give you a stable place to resume work when you switch tools—without rebuilding context from scratch. See [docs/20-ai-context-side-load.md](docs/20-ai-context-side-load.md) and [Context for agents](#context-for-agents) below.
+
 ## What Exists Today
 
-The most concrete product in this repo today is [Workspace Hub](repos/workspace-hub/README.md), a local control plane for mixed-stack workspaces. It scans sibling repos, classifies them conservatively, shows runtime and metadata state, and provides start, stop, open, and preview actions without forcing every repo into one toolchain.
+### Workspace Hub
+
+The most concrete product in this repo today is [Workspace Hub](repos/workspace-hub/README.md), a local control plane for mixed-stack workspaces. It scans sibling repos, classifies them conservatively, shows runtime and metadata state, and provides start, stop, open, and preview actions without forcing every repo into one toolchain. It complements the filesystem-first docs and scripts rather than replacing them.
+
+<!-- workspace-hub:cover:start -->
+![Codex Workspace cover](.github/assets/cover-readme-20260321.png)
+<!-- workspace-hub:cover:end -->
 
 Around that, the workspace turns the usual pile of local scripts, scattered notes, and one-off agent setup into a more deliberate system.
 
@@ -25,9 +33,19 @@ The workspace repo around it provides:
 - a filesystem-first context model for docs, manifests, and agent guidance
 - a practical way to resume work across multiple repos without reconstructing context from scratch
 
-<!-- workspace-hub:cover:start -->
-![Codex Workspace cover](.github/assets/cover-readme-20260321.png)
-<!-- workspace-hub:cover:end -->
+## What's included (and why)
+
+| Area | What it is | Why |
+| --- | --- | --- |
+| `docs/` | Canonical handover pack, indexes, and deep docs | Single source of truth for workspace behavior and conventions |
+| `repos/` | Standalone clones (including `workspace-hub/`) | Each project stays its own repo with its own dependencies |
+| `tools/` | Scripts, manifests, optional core services (e.g. MemPalace), MCP helpers | Shared automation without merging unrelated installs |
+| `cache/` | Shared stores (npm/pnpm, generated context, service artifacts) | Speed and repeatability without a monorepo `node_modules` |
+| `shared/` | Workspace metadata, standards, per-user MemPalace state | Durable state that is not duplicated inside each repo |
+| `repos/workspace-hub/` | Hub app (React + API) | Discovery, runtime control, manifests, previews, and Workspace memory UI |
+| Manifests & `.workspace/` | `project.json` and similar | Explicit runtime when inference is not enough |
+
+For layout detail, see [Workspace layout](#workspace-layout) and [How it works](#how-it-works).
 
 ## Who It's For
 
@@ -38,7 +56,7 @@ The workspace repo around it provides:
 ## Who It's Not For
 
 - Teams looking for one shared dependency graph across unrelated repos.
-- Setups that expect ServBay, Docker, or a proxy layer to be mandatory for every project.
+- Setups that expect Docker or a reverse-proxy layer to be mandatory for every project.
 - Projects that already want a full monorepo with centralized installs and one runtime model.
 
 ## Why This Instead Of A Monorepo
@@ -100,7 +118,7 @@ If you want the fuller workspace path after that:
 - Now: Docs clarity, Workspace Hub UX, repo classification, manifest examples, and script ergonomics are stable enough for outside contribution.
 - Next: Capability-surface polish, observability visibility, screenshot and preview reliability, and tighter contributor verification paths.
 - Later: Broader capability promotion and deeper workspace-memory flows after the current public surfaces settle.
-- Out of scope: Shared dependency installs across unrelated repos, making ServBay mandatory, or forcing every repo through one runtime model.
+- Out of scope: Shared dependency installs across unrelated repos, mandatory reverse-proxy or mapped-host tooling for every repo, or forcing every repo through one runtime model.
 
 ## Why It Exists
 
@@ -110,7 +128,7 @@ This repo exists to keep local development practical when your machine contains 
 - caches can be shared without sharing installs
 - local runtime behaviour stays explicit
 - WordPress, Vite, static, PHP, and utility repos can coexist cleanly
-- ServBay remains optional rather than becoming a hard dependency
+- optional mapped-host or proxy previews stay optional, not a hidden requirement
 
 ## How It Works
 
@@ -155,7 +173,7 @@ Use the starter files when you need explicit repo metadata:
 Recommended maintainer extras:
 - `gh` is recommended when you maintain forks, PRs, or reviewed upstream mirrors
 - `gh auth login` is optional maintainer setup, not part of the baseline release gate
-- ServBay remains optional and should only be installed when specific repos benefit from a shared local front door
+- optional local reverse-proxy or mapped-host tooling only when specific repos benefit from a shared local front door
 
 ## Documentation
 
@@ -297,4 +315,4 @@ The stable repo contract and `.codex/` migration note live in [docs/10-release-r
 
 ## Current Status
 
-The current baseline is a stable local workspace structure plus Workspace Hub 1.0, with optional ServBay integration and enough documentation and tooling to keep mixed repos practical on one machine.
+The current baseline is a stable local workspace structure plus Workspace Hub 1.x, with enough documentation and tooling to keep mixed repos practical on one machine. Optional mapped-host or reverse-proxy previews remain optional.

@@ -11,7 +11,7 @@ The goal is to create a central workspace on the Mac desktop that:
 - avoids unnecessary duplication of shared tools and caches
 - supports both WordPress and non-WordPress repositories
 - allows repositories to be previewed and tested locally
-- uses **ServBay** as an optional single local domain entry point
+- optionally uses a **reverse proxy or mapped local hostname** as a single entry point when that genuinely helps
 - uses a separate **Workspace Hub** application to browse, launch, stop, and open repositories
 
 This pack is intentionally split into separate files so Codex can reason about architecture and runtime concerns clearly.
@@ -58,7 +58,7 @@ Codex Workspace addresses that with a practical local-first model:
 Use this file when creating the main folder structure, shared tooling layout, cache strategy, conventions, and workspace rules.
 
 ### `02-local-runtime-handover.md`
-Use this file when building local runtime behaviour, the Workspace Hub app, ServBay integration, local preview logic, and repo launch rules.
+Use this file when building local runtime behaviour, the Workspace Hub app, optional mapped-host or proxy preview integration, local preview logic, and repo launch rules.
 
 ### `AGENTS.md`
 Use this as the operating instruction layer for Codex when working inside the workspace or inside the Workspace Hub repository.
@@ -77,7 +77,7 @@ This is a local control panel app for browsing repositories, viewing metadata, s
 
 ### 3. Repo-native runtimes
 Each repository remains independently runnable in the way that best suits it:
-- WordPress via Local or ServBay where appropriate
+- WordPress via Local (or similar) where appropriate
 - static sites via a static server
 - Vite / Three.js / WebGL projects via their dev server
 - other stacks according to their own tooling
@@ -104,13 +104,13 @@ Current reviewed-source taxonomy:
 
 ## Important architectural rule
 
-**Every repository must remain runnable without ServBay.**
+**Every repository must remain runnable without a workspace-wide reverse proxy or mapped-host layer.**
 
-ServBay is treated as:
-- a convenient local front door
+Optional proxy or mapped-host tooling is treated as:
+- a convenient local front door when you choose it
 - a single-domain entry point
 - a reverse-proxy convenience layer
-- an optional local HTTPS/domain layer
+- an optional local HTTPS or hostname layer
 
 It must not become a hard dependency for every repo.
 
@@ -125,15 +125,9 @@ It may live anywhere on disk. Example locations:
 ~/Local Sites/Codex Workspace/
 ```
 
-## Recommended local domain
+## Recommended local domain (optional)
 
-Where ServBay is used as the entry point, the recommended main local domain is:
-
-```text
-workspace.servbay.demo
-```
-
-This may be changed later if needed.
+If you use a reverse proxy or local DNS with a stable hostname, pick one main domain (for example `workspace.local` or another name your tools agree on) and document it in operator notes. The Hub manifest can store path and subdomain fields for stable routing when you use that mode.
 
 ## Design intent
 
@@ -155,7 +149,7 @@ This system must **not** assume:
 
 - one shared `node_modules` for all repos
 - one monolithic runtime for all stacks
-- that every project should be proxied through ServBay
+- that every project should be proxied through a shared local front door
 - that WordPress, static sites, and JS apps should be run the same way
 
 ## Sequence of implementation
@@ -167,6 +161,6 @@ Suggested order:
 3. create the Workspace Hub repository
 4. add repo manifest conventions
 5. implement direct local runtime support
-6. add ServBay integration where useful
+6. add optional mapped-host or proxy preview integration where useful
 7. refine launch rules and project status tracking
 8. update public-facing docs when workspace-wide features such as Workspace memory or capability lifecycle changes land

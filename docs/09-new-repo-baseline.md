@@ -9,7 +9,7 @@ This is not meant to force every repo into one shape. The goal is to keep each r
 - Keep the repo independently runnable on its own terms.
 - Do not merge unrelated repos into one shared dependency install.
 - Use shared caches under workspace `cache/` where that helps, but keep installs local to the repo.
-- Do not make ServBay mandatory unless the repo genuinely needs proxy or mapped-host behaviour.
+- Do not make a reverse-proxy or mapped-host layer mandatory unless the repo genuinely needs that behaviour.
 - Prefer the repo's native runtime and package manager.
 
 ## Default runtime expectations
@@ -18,13 +18,13 @@ This is not meant to force every repo into one shape. The goal is to keep each r
 
 - Default to `direct` runtime.
 - Prefer running on the repo's own local port.
-- Do not force these repos behind ServBay by default.
+- Do not force these repos behind a proxy or mapped host by default.
 
 ### WordPress repos
 
 - Default to `external` runtime.
 - Keep existing Local-managed projects on Local unless there is a clear reason to move them.
-- Use ServBay only when it adds practical value and does not become a hidden requirement.
+- Use mapped-host or proxy preview only when it adds practical value and does not become a hidden requirement.
 
 ### Other server-side repos
 

@@ -8,9 +8,9 @@ No. Codex Workspace is a workspace structure for many standalone repositories. E
 
 No. Share caches and stores where useful, but do not merge unrelated repos into one dependency structure.
 
-## Does this require ServBay?
+## Does this require a reverse proxy or mapped local hostname?
 
-No. ServBay is optional. It can be useful as a front door or proxy layer, but it should not become a mandatory dependency for all repos.
+No. Optional proxy or mapped-host tooling is only for operators who want a single local front door. It should not become a mandatory dependency for all repos.
 
 ## What runtime mode should I use?
 
