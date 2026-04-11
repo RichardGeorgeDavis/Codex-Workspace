@@ -8,6 +8,8 @@
 - Added a tracked [docs/plans/readme-docs-closeout.md](plans/readme-docs-closeout.md) plan for future reference, and aligned small Workspace Hub/operator copy surfaces with the same mapped-host wording in `repos/workspace-hub`, `tools/scripts/doctor-workspace.sh`, and `tools/scripts/setup-workspace-profile.sh`.
 - Extended `repos/workspace-hub` backlog follow-through with better repo-list prioritization for pinned and recent work, clearer Python-aware dependency readiness, intake-result surfacing in repo details, capability search and inspection, explicit mapped-host routing status, and richer runtime troubleshooting guidance.
 - Advanced Workspace memory graph support from file-open-only toward Phase 2 by surfacing derived-edge counts, node-type breakdown, and an in-app graph report preview for the selected target, while clarifying intentional MCP profile usage in the Workspace Hub settings panel.
+- Added generated `entry.md` side-load packets for workspace and repo context caches, updated manifest support for `entryDocs`, and aligned the side-load docs so Hub operators have one default routing document before they open deeper generated summaries.
+- Split Workspace Hub indexed search into `thin` and `deep` modes so the default path stays fast and side-load-aware while deeper searches can still opt into repo-local docs, logs, and artifact content when that extra cost is justified.
 
 ## 2026-04-10
 

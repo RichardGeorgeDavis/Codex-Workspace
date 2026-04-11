@@ -39,6 +39,7 @@ import { readWorkspaceMetadata, type StoredRepoMetadata } from './workspace-meta
 type RepoManifest = {
   buildCommand?: unknown
   devCommand?: unknown
+  entryDocs?: unknown
   externalUrl?: unknown
   healthcheckUrl?: unknown
   installCommand?: unknown
@@ -530,6 +531,14 @@ function normalizeTags(value: unknown) {
   return value.map((entry) => (typeof entry === 'string' ? entry.trim() : '')).filter(Boolean)
 }
 
+function normalizeEntryDocs(value: unknown) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.map((entry) => (typeof entry === 'string' ? entry.trim() : '')).filter(Boolean)
+}
+
 function createManifestRecord(
   manifest: WorkspaceManifestRecord,
 ): WorkspaceManifestRecord {
@@ -619,13 +628,13 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isSideLoadOutputRole(value: unknown): value is SideLoadOutputRole {
-  return value === 'abstract' || value === 'overview' || value === 'sources'
+  return value === 'abstract' || value === 'entry' || value === 'overview' || value === 'sources'
 }
 
 function createMissingSideLoad(fullPath: string): RepoSideLoad {
   const repoName = path.basename(fullPath)
   const baseDir = path.join(cacheRoot, 'context', 'repos', repoName)
-  const roles: SideLoadOutputRole[] = ['abstract', 'overview', 'sources']
+  const roles: SideLoadOutputRole[] = ['abstract', 'entry', 'overview', 'sources']
 
   return {
     generatedAt: null,
@@ -712,7 +721,7 @@ async function readRepoSideLoad(fullPath: string): Promise<RepoSideLoad> {
   }
 
   const outputByRole = new Map(outputs.map((output) => [output.role as SideLoadOutputRole, output]))
-  const requiredRoles: SideLoadOutputRole[] = ['abstract', 'overview', 'sources']
+  const requiredRoles: SideLoadOutputRole[] = ['abstract', 'entry', 'overview', 'sources']
   if (!requiredRoles.every((role) => outputByRole.has(role))) {
     return fallback
   }
@@ -1738,6 +1747,7 @@ function buildRecommendedPreset(type: RepoType, packageManager: string): RepoPre
 function buildSuggestedManifest(options: {
   buildCommand: string | null
   devCommand: string | null
+  entryDocs: string[]
   externalUrl: string | null
   healthcheckUrl: string | null
   installCommand: string | null
@@ -1756,6 +1766,7 @@ function buildSuggestedManifest(options: {
   return createManifestRecord({
     buildCommand: options.buildCommand ?? undefined,
     devCommand: options.devCommand ?? undefined,
+    entryDocs: options.entryDocs.length ? options.entryDocs : undefined,
     externalUrl: options.externalUrl ?? undefined,
     healthcheckUrl: options.healthcheckUrl ?? undefined,
     installCommand: options.installCommand ?? undefined,
@@ -1777,6 +1788,18 @@ function detectReadmePath(fullPath: string, names: string[]) {
   const fileName = readmeCandidates.find((candidate) => names.includes(candidate))
 
   return fileName ? path.join(fullPath, fileName) : null
+}
+
+function deriveEntryDocs(relativePath: string, names: string[], manifest: RepoManifest | null) {
+  const manifestEntryDocs = normalizeEntryDocs(manifest?.entryDocs)
+  if (manifestEntryDocs.length) {
+    return manifestEntryDocs
+  }
+
+  const candidates = ['README.md', 'HANDOVER.md', 'AGENTS.md']
+  return candidates
+    .filter((candidate) => names.includes(candidate))
+    .map((candidate) => path.posix.join(relativePath, candidate))
 }
 
 async function readAgentTooling(fullPath: string): Promise<RepoAgentTooling> {
@@ -1930,6 +1953,7 @@ async function buildRepoRecord(
   const name = formatName(folderName, manifest?.name)
   const slug = deriveSlug(folderName, manifest?.slug)
   const manifestNotes = isNonEmptyString(manifest?.notes) ? manifest.notes : ''
+  const manifestEntryDocs = deriveEntryDocs(relativePath, names, manifest)
   const manifestTags = normalizeTags(manifest?.tags)
   const recommendedPreset = buildRecommendedPreset(type, packageManager)
   const servbayPath = isNonEmptyString(manifest?.servbayPath) ? manifest.servbayPath : null
@@ -1939,6 +1963,7 @@ async function buildRepoRecord(
   const suggestedManifest = buildSuggestedManifest({
     buildCommand: manifestBuildCommand,
     devCommand: manifestDevCommand,
+    entryDocs: manifestEntryDocs,
     externalUrl: manifestExternalUrl,
     healthcheckUrl: manifestHealthcheckUrl,
     installCommand,

@@ -43,11 +43,13 @@ V1 generates only these paths:
 cache/context/
 ├── workspace/
 │   ├── abstract.md
+│   ├── entry.md
 │   ├── overview.md
 │   └── sources.json
 └── repos/
     └── workspace-hub/
         ├── abstract.md
+        ├── entry.md
         ├── overview.md
         └── sources.json
 ```
@@ -78,9 +80,9 @@ Use this when starting a fresh chat that needs repo-aware handover context.
 
 Recommended sequence:
 
-1. treat tracked docs as canonical and start with the relevant handover or README surface
+1. treat tracked docs as canonical and start with the relevant side-load entry packet
 2. refresh the side-load cache if the session is broad, new, or likely to re-read workspace context repeatedly
-3. let the chat use generated `abstract.md` and `overview.md` as the fast entry layer
+3. let the chat use generated `entry.md`, `abstract.md`, and `overview.md` as the fast entry layer
 4. fall back to tracked docs, manifests, and repo files for any real decision or ambiguity
 5. regenerate or ignore the cache if Workspace Hub reports the side-load state as `stale` or `missing`
 
@@ -95,7 +97,7 @@ Then start the chat with a handover instruction such as:
 
 > Read `docs/HANDOVER.md` first for the current workspace state. Use generated side-load files under `cache/context/` only as a compact entry layer, and treat tracked docs and repo files as canonical.
 
-For repo-specific work, point the chat at the relevant repo README or handover note as well as the repo side-load cache when it exists.
+For repo-specific work, point the chat at the repo `entry.md` first, then the repo README or handover note only when the side-load packet is insufficient.
 
 ## Source set
 
@@ -126,6 +128,18 @@ It should stay small enough for quick relevance decisions and answer:
 - what kind of surface it is
 - the main runtime or entrypoint
 - the main constraint or warning
+
+### `entry.md`
+
+Use this as the default repo-scoped routing packet.
+
+It should stay compact enough to answer:
+
+- what to open first
+- repo type and runtime mode
+- the main commands
+- the primary canonical docs
+- the main constraints that should prevent broad workspace loading
 
 ### `overview.md`
 
@@ -188,7 +202,7 @@ The details panel should show:
 - `fresh` when all declared inputs still exist, `mtimeMs` values still match, and required outputs exist
 - `stale` when an input changed or disappeared, or a required output file is missing
 
-The Hub can open the generated `abstract.md`, `overview.md`, and `sources.json` files directly through the existing generic open-path route.
+The Hub can open the generated `entry.md`, `abstract.md`, `overview.md`, and `sources.json` files directly through the existing generic open-path route.
 
 ## Practical rule
 

@@ -29,6 +29,7 @@ type RepoSnapshotProps = {
   onFilterChange: (value: RepoFilterValue) => void
   onOpenIndexedPath: (targetPath: string) => Promise<void>
   onSearchChange: (value: string) => void
+  onSearchModeChange: (value: WorkspaceSearchResult['mode']) => void
   onSelectIndexedCapability: (capabilityId: string) => void
   onSelectIndexedRepo: (relativePath: string) => void
   onSelectIndexedService: (serviceId: string) => void
@@ -36,6 +37,7 @@ type RepoSnapshotProps = {
   onToggleArchived: () => void
   repoLayoutMode: RepoLayoutMode
   searchTerm: string
+  searchMode: WorkspaceSearchResult['mode']
   selectedRepoInlineDetails: ReactNode
   selectedPath: string | null
   selectedFilter: RepoFilterValue
@@ -285,6 +287,7 @@ export function RepoSnapshot({
   onFilterChange,
   onOpenIndexedPath,
   onSearchChange,
+  onSearchModeChange,
   onSelectIndexedCapability,
   onSelectIndexedRepo,
   onSelectIndexedService,
@@ -292,6 +295,7 @@ export function RepoSnapshot({
   onToggleArchived,
   repoLayoutMode,
   searchTerm,
+  searchMode,
   selectedRepoInlineDetails,
   selectedPath,
   selectedFilter,
@@ -323,10 +327,24 @@ export function RepoSnapshot({
               onSearchChange(event.target.value)
               setIndexedSearchFilter('all')
             }}
-            placeholder="name, path, type, tag, archive"
+            placeholder="name, path, type, tag, side-load"
             type="search"
             value={searchTerm}
           />
+        </label>
+
+        <label className="field compact">
+          <span>Search mode</span>
+          <select
+            onChange={(event) => {
+              onSearchModeChange(event.target.value as WorkspaceSearchResult['mode'])
+              setIndexedSearchFilter('all')
+            }}
+            value={searchMode}
+          >
+            <option value="thin">Thin</option>
+            <option value="deep">Deep</option>
+          </select>
         </label>
 
         <label className="field compact">
@@ -411,11 +429,19 @@ export function RepoSnapshot({
               ))}
             </div>
           ) : indexedSearchLoading ? (
-            <p className="loading-copy">Searching indexed metadata, logs, and local artifacts...</p>
+            <p className="loading-copy">
+              {searchMode === 'deep'
+                ? 'Searching indexed metadata plus debug-only docs, logs, and artifacts...'
+                : 'Searching indexed metadata and side-load summaries...'}
+            </p>
           ) : (
             <div className="empty-state">
               <strong>No indexed matches for this filter yet.</strong>
-              <p>Try a broader phrase or switch to another result type such as repos, capabilities, or services.</p>
+              <p>
+                {searchMode === 'deep'
+                  ? 'Try a broader phrase or switch filters. Deep search includes debug-only docs and artifacts when available.'
+                  : 'Try a broader phrase, switch filters, or use Deep mode for README, HANDOVER, log, and artifact content.'}
+              </p>
             </div>
           )}
         </div>

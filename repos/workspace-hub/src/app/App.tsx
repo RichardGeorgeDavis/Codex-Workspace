@@ -234,6 +234,7 @@ export function App({ initialThemePreference }: AppProps) {
   const [indexedSearchError, setIndexedSearchError] = useState<string | null>(null)
   const [indexedSearchLoading, setIndexedSearchLoading] = useState(false)
   const [indexedSearchResults, setIndexedSearchResults] = useState<WorkspaceSearchResult[]>([])
+  const [indexedSearchMode, setIndexedSearchMode] = useState<WorkspaceSearchResult['mode']>('thin')
   const [intakeResultsByPath, setIntakeResultsByPath] = useState<Record<string, RepoIntakeResult>>(
     {},
   )
@@ -869,7 +870,7 @@ export function App({ initialThemePreference }: AppProps) {
     setIndexedSearchLoading(true)
     setIndexedSearchError(null)
 
-    void searchWorkspace(query, controller.signal)
+    void searchWorkspace(query, indexedSearchMode, controller.signal)
       .then((payload) => {
         setIndexedSearchResults(payload.results)
       })
@@ -893,7 +894,7 @@ export function App({ initialThemePreference }: AppProps) {
     return () => {
       controller.abort()
     }
-  }, [deferredSearchTerm, summary?.generatedAt])
+  }, [deferredSearchTerm, indexedSearchMode, summary?.generatedAt])
 
   useEffect(() => {
     const unsubscribe = subscribeWorkspaceEvents(
@@ -1308,6 +1309,7 @@ export function App({ initialThemePreference }: AppProps) {
                 loading={loading}
                 onOpenIndexedPath={handleOpenWorkspacePath}
                 onSearchChange={setSearchTerm}
+                onSearchModeChange={setIndexedSearchMode}
                 onSelectIndexedCapability={handleSelectIndexedCapability}
                 onSelectIndexedRepo={handleSelectIndexedRepo}
                 onSelectIndexedService={handleSelectIndexedService}
@@ -1321,6 +1323,7 @@ export function App({ initialThemePreference }: AppProps) {
                 }}
                 repoLayoutMode={repoLayoutMode}
                 searchTerm={searchTerm}
+                searchMode={indexedSearchMode}
                 selectedRepoInlineDetails={
                   repoLayoutMode === 'discovery-first' && selectedRepo ? (
                     <RepoDetails

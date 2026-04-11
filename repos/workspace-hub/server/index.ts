@@ -434,6 +434,10 @@ app.get(
     try {
       const query =
         typeof request.query.q === 'string' ? request.query.q.trim() : ''
+      const mode =
+        request.query.mode === 'deep' || request.query.mode === 'thin'
+          ? request.query.mode
+          : 'thin'
 
       if (!query) {
         response.status(400).json({ message: 'A search query is required.' })
@@ -445,6 +449,9 @@ app.get(
         apiPort,
         getInstallSnapshots(),
         getRuntimeSnapshots(),
+        mode === 'deep'
+          ? undefined
+          : { includeDiagnostics: false, repoProjection: 'list' },
       )
 
       response.json(
@@ -453,6 +460,7 @@ app.get(
           summary.repos,
           summary.coreServices,
           summary.capabilities,
+          mode,
         ),
       )
     } catch (error) {

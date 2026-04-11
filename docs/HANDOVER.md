@@ -866,3 +866,33 @@ Verification after this slice:
 Pickup note:
 
 - The managed browser wrappers are now robust even when the host process exposes an unusable home directory; any remaining Playwright-specific failure inside a separate tool host is no longer caused by the workspace wrapper.
+
+### Implementation update (2026-04-11, side-load entry packet and thin/deep search)
+
+Current local workspace changes after `7591ded` focus on the side-load entry path and indexed search behavior.
+
+Completed in the current local slice:
+
+1. Added `entry.md` as the default side-load routing packet.
+   - `tools/scripts/generate-context-cache.sh` now emits `entry.md` for both workspace and repo targets alongside `abstract.md`, `overview.md`, and `sources.json`.
+   - `docs/07-context-cache-and-retrieval.md` and `docs/20-ai-context-side-load.md` now treat `entry.md` as the first compact read for repo-scoped work.
+   - Repo manifests now support optional `entryDocs` so a repo can declare the small set of canonical files operators should open before scanning broadly.
+
+2. Added `thin` versus `deep` indexed search modes in `workspace-hub`.
+   - `thin` is now the default indexed search path and stays focused on repo metadata plus side-load summaries.
+   - `deep` is explicit and expands search into README content, logs, docs, failure reports, and artifacts where those sources exist.
+   - Search document caching is now keyed by mode instead of assuming one global index shape.
+
+3. Updated Hub UI copy and repo details to match the new side-load flow.
+   - Repo Discovery now exposes the indexed-search mode selector.
+   - Repo details can open the generated repo `entry.md` packet directly.
+   - Discovery and manifest docs now explain `entryDocs` plus thin/deep search behavior.
+
+Verification status for this local slice:
+
+- tests were updated for `entry.md` generation, side-load hydration, and thin/deep search behavior
+- final runtime verification for this exact local slice should still be re-run before the next commit or push
+
+Pickup note:
+
+- if this slice lands, update `docs/CHANGELOG.md`, `docs/README.md`, and any relevant `workspace-hub` docs summary so the public side-load contract reflects `entry.md` and the new indexed-search modes

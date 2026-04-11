@@ -21,7 +21,7 @@ Repo Discovery currently supports:
 - `External repos`
 - repo-type filters such as `vite`, `wordpress`, or `static`
 
-Search matches repo metadata plus archive file names and paths.
+Search defaults to thin indexed metadata plus repo side-load summaries. Deep mode is explicit and expands into debug-only docs, logs, and local artifacts when those sources are available.
 
 ## Dashboard layout
 

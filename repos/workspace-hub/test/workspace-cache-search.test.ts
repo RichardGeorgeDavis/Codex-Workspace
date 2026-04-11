@@ -51,10 +51,12 @@ async function writeRepoSideLoadFixture(
   const inputStat = await stat(inputPath)
   const sourcesPath = path.join(root, 'cache', 'context', 'repos', repoName, 'sources.json')
   const abstractPath = path.join(root, 'cache', 'context', 'repos', repoName, 'abstract.md')
+  const entryPath = path.join(root, 'cache', 'context', 'repos', repoName, 'entry.md')
   const overviewPath = path.join(root, 'cache', 'context', 'repos', repoName, 'overview.md')
   const sourcesRelativePath = path.relative(root, sourcesPath).replaceAll(path.sep, '/')
 
   await writeTextFile(abstractPath, '# abstract\n')
+  await writeTextFile(entryPath, '# entry\n')
   await writeTextFile(overviewPath, '# overview\n')
   await writeTextFile(
     sourcesPath,
@@ -80,6 +82,10 @@ async function writeRepoSideLoadFixture(
           {
             path: path.relative(root, abstractPath).replaceAll(path.sep, '/'),
             role: 'abstract',
+          },
+          {
+            path: path.relative(root, entryPath).replaceAll(path.sep, '/'),
+            role: 'entry',
           },
           {
             path: path.relative(root, overviewPath).replaceAll(path.sep, '/'),
@@ -185,12 +191,151 @@ test('artifact search indexing is opt-in via env gate', async () => {
   await writeTextFile(artifactPath, `${token}\n`)
 
   const searchDefault = await importWorkspaceSearchModule(tempWorkspaceRoot, 'false')
-  const defaultResult = await searchDefault.searchWorkspace(token, [])
+  const defaultResult = await searchDefault.searchWorkspace(token, [], [], [], 'thin')
   assert.equal(defaultResult.results.length, 0)
 
   const searchEnabled = await importWorkspaceSearchModule(tempWorkspaceRoot, 'true')
-  const enabledResult = await searchEnabled.searchWorkspace(token, [])
+  const enabledResult = await searchEnabled.searchWorkspace(token, [], [], [], 'deep')
   assert.ok(enabledResult.results.some((entry) => entry.category === 'artifact'))
+})
+
+test('thin search uses side-load summaries while deep search can include debug-only repo content', async () => {
+  await createNodeRepo(tempWorkspaceRoot, 'repo-search-modes')
+  const readmePath = path.join(tempWorkspaceRoot, 'repos', 'repo-search-modes', 'README.md')
+  await writeTextFile(readmePath, '# Repo Search Modes\nDeep-only token alpha-987\n')
+  await writeRepoSideLoadFixture(
+    tempWorkspaceRoot,
+    'repo-search-modes',
+    path.join('repos', 'repo-search-modes', 'README.md'),
+  )
+  await writeTextFile(
+    path.join(tempWorkspaceRoot, 'cache', 'context', 'repos', 'repo-search-modes', 'entry.md'),
+    '# entry\nThin-token beta-654\n',
+  )
+  await writeTextFile(
+    path.join(tempWorkspaceRoot, 'cache', 'context', 'repos', 'repo-search-modes', 'overview.md'),
+    '# overview\nThin-token beta-654\n',
+  )
+
+  const searchModule = await importWorkspaceSearchModule(tempWorkspaceRoot, 'false')
+  const repo = {
+    agentTooling: {
+      agentsPath: null,
+      agentStackPath: null,
+      codexProjectConfigPath: null,
+      codexProjectSkillsPath: null,
+      codexSkillsPath: null,
+      omxPath: null,
+      openAgentConfigPath: null,
+      openAgentLegacyConfigPath: null,
+      openCodePath: null,
+      workspaceSkillsPath: null,
+    },
+    buildCommand: 'pnpm build',
+    collection: 'direct',
+    detectedBy: 'files',
+    detailLevel: 'list',
+    diagnosticsFreshness: 'skipped',
+    dependencies: {
+      installPath: null,
+      reason: 'skipped for base summary',
+      state: 'unknown',
+    },
+    devCommand: 'pnpm dev',
+    externalUrl: null,
+    failureReport: null,
+    git: {
+      branch: null,
+      hasGit: false,
+      remoteUrl: null,
+      state: 'unavailable',
+      summary: 'git probe skipped for base summary',
+      visibility: 'unknown',
+      visibilitySource: 'none',
+    },
+    hasManifest: false,
+    hasSavedMetadata: false,
+    health: {
+      checkedAt: null,
+      httpStatus: null,
+      state: 'unknown',
+      url: null,
+    },
+    healthcheckUrl: null,
+    install: {
+      command: 'pnpm install',
+      finishedAt: null,
+      lastExitCode: null,
+      lastSignal: null,
+      logTail: ['debug-log gamma-321'],
+      message: null,
+      startedAt: null,
+      status: 'idle',
+      updatedAt: null,
+    },
+    installCommand: 'pnpm install',
+    isPinned: false,
+    location: 'direct',
+    manifestPath: null,
+    metadataUpdatedAt: null,
+    name: 'Repo Search Modes',
+    notes: '',
+    packageManager: 'pnpm',
+    path: path.join(tempWorkspaceRoot, 'repos', 'repo-search-modes'),
+    preferredMode: 'direct',
+    previewCommand: null,
+    previewUrl: null,
+    previewUrlSource: 'unknown',
+    readmePath,
+    recent: {
+      lastActionAt: null,
+      lastActionKind: null,
+      lastOpenedAt: null,
+      lastSelectedAt: null,
+    },
+    recommendedPreset: {
+      id: 'node-pnpm-direct',
+      label: 'Node direct',
+      rationale: 'Node repos usually run directly.',
+    },
+    relativePath: 'repos/repo-search-modes',
+    runtime: {
+      command: 'pnpm dev',
+      lastExitCode: null,
+      lastSignal: null,
+      logTail: ['runtime-log gamma-321'],
+      message: null,
+      pid: null,
+      startedAt: null,
+      status: 'idle',
+      stoppedAt: null,
+      updatedAt: null,
+    },
+    savedMetadata: null,
+    servbayPath: null,
+    servbaySubdomain: null,
+    slug: 'repo-search-modes',
+    suggestedManifest: {
+      entryDocs: ['repos/repo-search-modes/README.md'],
+      name: 'Repo Search Modes',
+      preferredMode: 'direct',
+      slug: 'repo-search-modes',
+      type: 'node-app',
+    },
+    tags: [],
+    type: 'node-app',
+  }
+
+  const thinResult = await searchModule.searchWorkspace('beta-654', [repo], [], [], 'thin')
+  assert.equal(thinResult.mode, 'thin')
+  assert.ok(thinResult.results.some((entry) => entry.category === 'repo'))
+
+  const thinMiss = await searchModule.searchWorkspace('gamma-321', [repo], [], [], 'thin')
+  assert.equal(thinMiss.results.length, 0)
+
+  const deepResult = await searchModule.searchWorkspace('gamma-321', [repo], [], [], 'deep')
+  assert.equal(deepResult.mode, 'deep')
+  assert.ok(deepResult.results.some((entry) => entry.category === 'repo'))
 })
 
 test('indexed search can surface installable workspace capabilities', async () => {
@@ -226,6 +371,7 @@ test('indexed search can surface installable workspace capabilities', async () =
         updateStrategy: 'git-fast-forward',
       },
     ],
+    'deep',
   )
 
   assert.ok(result.results.some((entry) => entry.category === 'capability'))
@@ -344,10 +490,12 @@ test('repo details hydrate side-load freshness without adding side-load data to 
   assert.ok(detailedRepo.sideLoad)
   assert.equal(detailedRepo.sideLoad?.status, 'fresh')
   assert.equal(detailedRepo.sideLoad?.inputCount, 1)
-  assert.deepEqual(
-    detailedRepo.sideLoad?.outputs.map((entry) => entry.role),
-    ['abstract', 'overview', 'sources'],
-  )
+  assert.deepEqual(detailedRepo.sideLoad?.outputs.map((entry) => entry.role), [
+    'abstract',
+    'entry',
+    'overview',
+    'sources',
+  ])
 })
 
 test('repo side-load freshness becomes stale when an input changes or a generated output disappears', async () => {

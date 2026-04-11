@@ -155,6 +155,11 @@ test('RepoDetails renders the context cache block when side-load metadata is pre
           role: 'abstract',
         },
         {
+          path: '/tmp/workspace/cache/context/repos/workspace-hub/entry.md',
+          relativePath: 'cache/context/repos/workspace-hub/entry.md',
+          role: 'entry',
+        },
+        {
           path: '/tmp/workspace/cache/context/repos/workspace-hub/overview.md',
           relativePath: 'cache/context/repos/workspace-hub/overview.md',
           role: 'overview',
@@ -170,6 +175,7 @@ test('RepoDetails renders the context cache block when side-load metadata is pre
   )
 
   assert.match(markup, /Context cache/)
+  assert.match(markup, /Open entry packet/)
   assert.match(markup, /Open abstract/)
   assert.match(markup, /cache\/context\/repos\/workspace-hub\/sources\.json/)
 })

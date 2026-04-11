@@ -57,6 +57,7 @@ Workspace Hub currently supports these optional fields:
 - `healthcheckUrl`
 - `servbayPath`
 - `servbaySubdomain`
+- `entryDocs`
 - `tags`
 - `notes`
 
@@ -88,8 +89,9 @@ When Workspace Hub writes a manifest, it uses this order for known fields:
 12. `healthcheckUrl`
 13. `servbayPath`
 14. `servbaySubdomain`
-15. `tags`
-16. `notes`
+15. `entryDocs`
+16. `tags`
+17. `notes`
 
 Unknown preserved keys are appended after the known keys.
 
@@ -108,6 +110,10 @@ Unknown preserved keys are appended after the known keys.
   "previewCommand": "pnpm preview",
   "previewUrl": "http://127.0.0.1:4100",
   "healthcheckUrl": "http://127.0.0.1:4101/api/health",
+  "entryDocs": [
+    "repos/workspace-hub/README.md",
+    "repos/workspace-hub/docs/INSTRUCTIONS.md"
+  ],
   "tags": ["hub", "workspace", "tooling"],
   "notes": "Local-first dashboard for managing mixed-stack repo workspaces."
 }
@@ -127,6 +133,7 @@ Unknown preserved keys are appended after the known keys.
 - Prefer `direct` for Vite, Three.js, and similar frontend repos unless a repo explicitly needs something else.
 - Prefer `external` for WordPress repos already managed by Local or another app.
 - Use `servbayPath` or `servbaySubdomain` only when mapped-host routing is stable and tested (field names are stable JSON keys).
+- Use `entryDocs` for the small set of canonical files the operator should open before scanning the repo broadly.
 - Keep manifests explicit and readable; do not turn them into a dump of every inferred value unless the repo benefits from that clarity.
 - Keep local-only values in `project.local.json` when they should not ship with the repo.
 - If the repo needs a workspace ability for operator workflows, mention the install command in repo docs instead of trying to encode that dependency implicitly in the manifest.

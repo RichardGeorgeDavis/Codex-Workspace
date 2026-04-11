@@ -41,8 +41,8 @@ Workspace Hub is a local control plane for people who manage many standalone rep
 - applies tracked repo-local agent presets for Codex baseline, OMX-ready, OpenCode, or an all-in-one setup directly from the details panel
 - exports the shared workspace Playwright browser cache to repo install and runtime commands by default, so Playwright-based smoke runs can reuse one Chromium download
 - streams live runtime, install, cover, and activity updates from the local API
-- indexes repo metadata, manifests, recent logs, failure reports, and local agent-job artifacts for server-side search
-- reads generated repo side-load summaries on repo-detail hydration so operators can inspect context-cache freshness and open the generated summary files without paying for that metadata on every base summary refresh
+- indexes repo metadata, manifests, side-load summaries, recent logs, failure reports, and local agent-job artifacts for server-side search, with a fast default `thin` mode plus an opt-in `deep` mode for heavier repo content
+- reads generated repo side-load summaries on repo-detail hydration so operators can inspect context-cache freshness and open the generated `entry.md`, `abstract.md`, `overview.md`, and provenance files without paying for that metadata on every base summary refresh
 - exposes a dedicated Workspace memory surface for MemPalace service state, target selection, in-app retrieval search, target-scoped graph builds, and safe wrapper actions
 - builds target-scoped MemPalace graph artifacts from normalized sidecars and nearby markdown instead of introducing a second ingestion engine
 - stores lightweight per-repo metadata and recent activity locally
@@ -201,7 +201,8 @@ pnpm dev:api
 pnpm dev:web --host 127.0.0.1 --port 4174
 curl -s http://127.0.0.1:4101/api/workspace/summary/base | jq '{repoCount: (.repos | length), capabilityCount: (.capabilities | length), firstRepo: (.repos[0] | {relativePath, detailLevel})}'
 curl -s http://127.0.0.1:4101/api/capabilities | jq '{generatedAt, stats}'
-curl -s "http://127.0.0.1:4101/api/search?q=memory" | jq '{total: (.results | length), categories: (.results | map(.category))}'
+curl -s "http://127.0.0.1:4101/api/search?q=memory&mode=thin" | jq '{mode, total: (.results | length), categories: (.results | map(.category))}'
+curl -s "http://127.0.0.1:4101/api/search?q=memory&mode=deep" | jq '{mode, total: (.results | length), categories: (.results | map(.category))}'
 curl -s -X POST http://127.0.0.1:4101/api/services/context -H 'Content-Type: application/json' -d '{"serviceId":"mempalace","targetKind":"workspace-docs"}' | jq '{targetLabel, graph: .graph | {lastBuiltAt, nodeCount, edgeCount}}'
 curl -s -X POST http://127.0.0.1:4101/api/services/command -H 'Content-Type: application/json' -d '{"serviceId":"mempalace","commandId":"search","searchQuery":"workspace memory"}' | jq '{command, ok}'
 curl -s -X POST http://127.0.0.1:4101/api/services/command -H 'Content-Type: application/json' -d '{"serviceId":"mempalace","commandId":"build-graph"}' | jq '{command, ok}'
@@ -238,6 +239,8 @@ Default local endpoints:
 - observability: `http://127.0.0.1:4101/api/workspace/observability`
 - events: `http://127.0.0.1:4101/api/events`
 - search: `http://127.0.0.1:4101/api/search?q=preview`
+- search (thin): `http://127.0.0.1:4101/api/search?q=preview&mode=thin`
+- search (deep): `http://127.0.0.1:4101/api/search?q=preview&mode=deep`
 - capabilities: `http://127.0.0.1:4101/api/capabilities`
 
 Summary endpoints:
@@ -249,6 +252,8 @@ Summary endpoints:
 The UI now prefers base summary for frequent refreshes and hydrates full diagnostics when needed.
 The capability panel now also reads a dedicated read-only capability snapshot so operators can inspect installed, enabled, and reference-only counts without inferring them from the broader workspace summary.
 Repo details now also read optional side-load metadata for the selected repo only, so the `Context cache` block can show `missing`, `fresh`, or `stale` generated summary state without slowing the discovery-first list path.
+The `Context cache` block now treats generated `entry.md` as the default operator handoff packet and can still open the deeper side-load files when needed.
+Indexed search now defaults to `thin` mode so repo discovery, manifest signals, and side-load summaries remain cheap to query, with `deep` mode available when you explicitly want heavier repo-local content included.
 Observability now includes cache hit or miss counters, diagnostics cache behavior, eager repo-details request timing, and summary request reasons to support tuning.
 `/api/workspace/observability` now exposes a versioned schema (`observabilityVersion: 2`) with grouped sections (`discovery`, `diagnostics`, `repoDetails`, `summary`); current top-level counters remain as compatibility aliases for existing consumers.
 
@@ -407,3 +412,5 @@ Current layout note:
   Add deeper per-capability state such as post-install command health or last update output if operators need more than the current read-only snapshot and action feedback.
 - Batch 3: Repo intake polish.
   Tighten intake output so new repos get clearer runtime notes, explicit optional ability dependency guidance when relevant, and better first-run defaults.
+Each generated side-load bundle now includes an `entry.md` routing packet alongside the deeper summaries and provenance files.
+The repo-details panel opens that packet first, and indexed search uses the lighter side-load material by default unless you explicitly switch to `deep` mode.

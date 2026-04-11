@@ -50,6 +50,7 @@ type RepoDetailsProps = {
     metadata: {
       buildCommand?: string
       devCommand?: string
+      entryDocs?: string[]
       externalUrl?: string
       healthcheckUrl?: string
       notes: string
@@ -64,6 +65,7 @@ type RepoDetailsProps = {
     manifest: {
       buildCommand?: string
       devCommand?: string
+      entryDocs?: string[]
       externalUrl?: string
       healthcheckUrl?: string
       installCommand?: string
@@ -98,6 +100,7 @@ type MetadataDraft = {
 type ManifestDraft = {
   buildCommand: string
   devCommand: string
+  entryDocs: string
   externalUrl: string
   healthcheckUrl: string
   installCommand: string
@@ -196,6 +199,7 @@ function buildManifestDraft(repo: WorkspaceRepo): ManifestDraft {
   return {
     buildCommand: repo.buildCommand ?? '',
     devCommand: repo.devCommand ?? '',
+    entryDocs: (repo.suggestedManifest.entryDocs ?? []).join(', '),
     externalUrl: repo.externalUrl ?? '',
     healthcheckUrl: repo.healthcheckUrl ?? '',
     installCommand: repo.installCommand ?? '',
@@ -217,6 +221,7 @@ function buildManifestDraftFromRecord(manifest: WorkspaceManifestRecord): Manife
   return {
     buildCommand: manifest.buildCommand ?? '',
     devCommand: manifest.devCommand ?? '',
+    entryDocs: (manifest.entryDocs ?? []).join(', '),
     externalUrl: manifest.externalUrl ?? '',
     healthcheckUrl: manifest.healthcheckUrl ?? '',
     installCommand: manifest.installCommand ?? '',
@@ -252,6 +257,7 @@ function buildManifestPayload(draft: ManifestDraft) {
     ...manifest,
     buildCommand: draft.buildCommand.trim() || undefined,
     devCommand: draft.devCommand.trim() || undefined,
+    entryDocs: normalizeTags(draft.entryDocs),
     externalUrl: draft.externalUrl.trim() || undefined,
     healthcheckUrl: draft.healthcheckUrl.trim() || undefined,
     installCommand: draft.installCommand.trim() || undefined,
@@ -846,7 +852,7 @@ function RepoDetailsContent({
           title="Context cache"
         >
           <p className="section-copy">
-            Repo side-load files are generated under <code>cache/context/</code> and treated as optional read-only summaries rather than repo truth.
+            Repo side-load files are generated under <code>cache/context/</code> and treated as optional read-only summaries rather than repo truth. The default repo route is entry packet, then abstract, then overview, then canonical docs only if needed.
           </p>
 
           <dl className="details-list">
@@ -874,6 +880,13 @@ function RepoDetailsContent({
               </dd>
             </div>
             <div className="details-row">
+              <dt>Entry packet</dt>
+              <dd>
+                {sideLoad.outputs.find((output) => output.role === 'entry')?.relativePath
+                  ?? 'Not generated'}
+              </dd>
+            </div>
+            <div className="details-row">
               <dt>Overview</dt>
               <dd>
                 {sideLoad.outputs.find((output) => output.role === 'overview')?.relativePath
@@ -890,6 +903,19 @@ function RepoDetailsContent({
           </dl>
 
           <div className="action-row">
+            <button
+              className="action-button"
+              disabled={!sideLoad.outputs.find((output) => output.role === 'entry')}
+              onClick={() => {
+                const output = sideLoad.outputs.find((entry) => entry.role === 'entry')
+                if (output) {
+                  void onOpenWorkspacePath(output.path)
+                }
+              }}
+              type="button"
+            >
+              Open entry packet
+            </button>
             <button
               className="action-button"
               disabled={!sideLoad.outputs.find((output) => output.role === 'abstract')}
@@ -1443,6 +1469,21 @@ function RepoDetailsContent({
               placeholder="frontend, prototype"
               type="text"
               value={manifestDraft.tags}
+            />
+          </label>
+
+          <label className="field">
+            <span>Entry docs</span>
+            <input
+              onChange={(event) => {
+                setManifestDraft((currentDraft) => ({
+                  ...currentDraft,
+                  entryDocs: event.target.value,
+                }))
+              }}
+              placeholder="repos/example/README.md, repos/example/HANDOVER.md"
+              type="text"
+              value={manifestDraft.entryDocs}
             />
           </label>
 

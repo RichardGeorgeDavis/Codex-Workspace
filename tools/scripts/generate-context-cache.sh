@@ -216,6 +216,106 @@ Constraint: the Hub must keep base-summary refreshes cheap, so repo side-load me
 EOF
 }
 
+render_repo_entry() {
+  local manifest_summary entry_docs notable_constraints
+  local manifest_path="$REPO_ROOT/.workspace/project.json"
+
+  manifest_summary="$(
+    python3 - "$manifest_path" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+if not path.exists():
+    print("- Repo manifest: none")
+    raise SystemExit(0)
+
+try:
+    data = json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+    print("- Repo manifest: present but invalid JSON")
+    raise SystemExit(0)
+
+for key, label in (
+    ("type", "Repo type"),
+    ("preferredMode", "Preferred mode"),
+    ("devCommand", "Dev command"),
+    ("buildCommand", "Build command"),
+    ("previewUrl", "Preview URL"),
+    ("notes", "Operator note"),
+):
+    value = data.get(key)
+    if isinstance(value, str) and value.strip():
+        print(f"- {label}: {value.strip()}")
+PY
+  )"
+
+  entry_docs="$(
+    python3 - "$WORKSPACE_ROOT" "$REPO_ROOT" <<'PY'
+import json
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1]).resolve()
+repo = pathlib.Path(sys.argv[2]).resolve()
+manifest_path = repo / ".workspace" / "project.json"
+
+docs = []
+if manifest_path.exists():
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception:
+        data = {}
+    raw = data.get("entryDocs")
+    if isinstance(raw, list):
+        docs = [str(item).strip() for item in raw if isinstance(item, str) and str(item).strip()]
+
+if not docs:
+    for candidate in ("README.md", "HANDOVER.md", "AGENTS.md"):
+        if (repo / candidate).exists():
+            docs.append((repo / candidate).resolve().relative_to(root).as_posix())
+
+if docs:
+    print("\n".join(f"- {entry}" for entry in docs))
+else:
+    print("- README.md")
+PY
+  )"
+
+  notable_constraints=$(
+    cat <<'EOF'
+- Start from this entry packet, then open `abstract.md`, then `overview.md`, then canonical repo docs only if the task stays ambiguous.
+- Avoid pulling workspace-wide docs into repo work unless shared policy, shared tooling, or a cross-repo dependency actually matters.
+- Treat generated files under `cache/context/` as disposable routing aids, not canonical repo truth.
+EOF
+  )
+
+  cat <<EOF
+# Workspace Hub — entry packet
+
+Use this file as the first repo-scoped read before README or HANDOVER.
+
+## Fast route
+
+- Load `abstract.md` for quick relevance.
+- Load `overview.md` for planning.
+- Open canonical docs only when the side-load leaves real ambiguity.
+
+## Runtime snapshot
+
+$manifest_summary
+
+## Primary docs
+
+$entry_docs
+
+## Notable constraints
+
+$notable_constraints
+EOF
+}
+
 render_repo_overview() {
   local readme_points repo_agents repo_manifest
   readme_points="$(extract_bullets "$REPO_ROOT/README.md" 8 | trim_text 1200)"
@@ -382,13 +482,15 @@ run_generation() {
   local target="$2"
   local output_dir="$3"
   local abstract_content="$4"
-  local overview_content="$5"
-  local inputs_spec="$6"
-  local outputs_spec="$7"
-  local generated_at="$8"
+  local entry_content="$5"
+  local overview_content="$6"
+  local inputs_spec="$7"
+  local outputs_spec="$8"
+  local generated_at="$9"
 
-  local abstract_rel overview_rel sources_rel
+  local abstract_rel entry_rel overview_rel sources_rel
   abstract_rel="$(workspace_relative_path "$output_dir/abstract.md")"
+  entry_rel="$(workspace_relative_path "$output_dir/entry.md")"
   overview_rel="$(workspace_relative_path "$output_dir/overview.md")"
   sources_rel="$(workspace_relative_path "$output_dir/sources.json")"
   local sources_content
@@ -396,19 +498,23 @@ run_generation() {
 
   if [[ "$RUN_MODE" -eq 1 ]]; then
     write_file "$output_dir/abstract.md" "$abstract_content"
+    write_file "$output_dir/entry.md" "$entry_content"
     write_file "$output_dir/overview.md" "$overview_content"
     write_file "$output_dir/sources.json" "$sources_content"
     printf 'Wrote %s\n' "$abstract_rel"
+    printf 'Wrote %s\n' "$entry_rel"
     printf 'Wrote %s\n' "$overview_rel"
     printf 'Wrote %s\n' "$sources_rel"
   else
     printf '[plan] %s\n' "$abstract_rel"
+    printf '[plan] %s\n' "$entry_rel"
     printf '[plan] %s\n' "$overview_rel"
     printf '[plan] %s\n' "$sources_rel"
   fi
 
   if [[ "$PRINT_OUTPUT" -eq 1 ]]; then
     print_rendered_file "$abstract_rel" "$abstract_content"
+    print_rendered_file "$entry_rel" "$entry_content"
     print_rendered_file "$overview_rel" "$overview_content"
     print_rendered_file "$sources_rel" "$sources_content"
   fi
@@ -423,14 +529,15 @@ generate_workspace() {
   require_file "$WORKSPACE_ROOT/repos/workspace-hub/README.md"
 
   local output_dir="$CACHE_CONTEXT_ROOT/workspace"
-  local abstract_content overview_content generated_at inputs_spec outputs_spec
+  local abstract_content entry_content overview_content generated_at inputs_spec outputs_spec
   generated_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   abstract_content="$(render_workspace_abstract)"
+  entry_content="$abstract_content"
   overview_content="$(render_workspace_overview)"
   inputs_spec=$'README.md|workspace-readme\nAGENTS.md|workspace-agents\ndocs/07-context-cache-and-retrieval.md|context-model\ndocs/08-first-run-and-updates.md|first-run-guide\ndocs/09-new-repo-baseline.md|repo-baseline\nrepos/workspace-hub/README.md|workspace-hub-readme'
-  outputs_spec=$'cache/context/workspace/abstract.md|abstract\ncache/context/workspace/overview.md|overview\ncache/context/workspace/sources.json|sources'
+  outputs_spec=$'cache/context/workspace/abstract.md|abstract\ncache/context/workspace/entry.md|entry\ncache/context/workspace/overview.md|overview\ncache/context/workspace/sources.json|sources'
 
-  run_generation "workspace" "workspace" "$output_dir" "$abstract_content" "$overview_content" "$inputs_spec" "$outputs_spec" "$generated_at"
+  run_generation "workspace" "workspace" "$output_dir" "$abstract_content" "$entry_content" "$overview_content" "$inputs_spec" "$outputs_spec" "$generated_at"
 }
 
 generate_repo() {
@@ -440,9 +547,10 @@ generate_repo() {
   local repo_relative
   repo_relative="$(workspace_relative_path "$REPO_ROOT")"
   local output_dir="$CACHE_CONTEXT_ROOT/repos/$TARGET_REPO"
-  local generated_at abstract_content overview_content inputs_spec outputs_spec
+  local generated_at abstract_content entry_content overview_content inputs_spec outputs_spec
   generated_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   abstract_content="$(render_repo_abstract)"
+  entry_content="$(render_repo_entry)"
   overview_content="$(render_repo_overview)"
   inputs_spec="$(printf '%s|repo-readme\n' "$repo_relative/README.md")"
 
@@ -454,9 +562,9 @@ generate_repo() {
     inputs_spec+=$'\n'"$(printf '%s|repo-manifest' "$repo_relative/.workspace/project.json")"
   fi
 
-  outputs_spec="$(printf 'cache/context/repos/%s/abstract.md|abstract\ncache/context/repos/%s/overview.md|overview\ncache/context/repos/%s/sources.json|sources' "$TARGET_REPO" "$TARGET_REPO" "$TARGET_REPO")"
+  outputs_spec="$(printf 'cache/context/repos/%s/abstract.md|abstract\ncache/context/repos/%s/entry.md|entry\ncache/context/repos/%s/overview.md|overview\ncache/context/repos/%s/sources.json|sources' "$TARGET_REPO" "$TARGET_REPO" "$TARGET_REPO" "$TARGET_REPO")"
 
-  run_generation "repo" "$TARGET_REPO" "$output_dir" "$abstract_content" "$overview_content" "$inputs_spec" "$outputs_spec" "$generated_at"
+  run_generation "repo" "$TARGET_REPO" "$output_dir" "$abstract_content" "$entry_content" "$overview_content" "$inputs_spec" "$outputs_spec" "$generated_at"
 }
 
 while [[ $# -gt 0 ]]; do

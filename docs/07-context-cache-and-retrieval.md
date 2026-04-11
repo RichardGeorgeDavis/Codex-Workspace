@@ -220,6 +220,17 @@ Typical contents:
 - its preferred runtime mode
 - its main preview or entry point
 
+### `entry.md`
+
+Repo-scoped routing packet.
+
+Typical contents:
+
+- the default open order for repo work
+- key commands and runtime mode
+- the small set of canonical docs to open next
+- the constraints that should keep the session repo-scoped unless broader context is truly required
+
 ### `overview.md`
 
 `L1` summary.

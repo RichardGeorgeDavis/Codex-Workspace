@@ -49,7 +49,7 @@ Read these in order:
 - `17-mcp-install-and-health-check.md` defines the workspace-owned Codex MCP install, verify, and downgrade path.
 - `18-mcp-server-catalog.md` defines the small approved MCP server catalog for v1.
 - `19-mcp-authoring-rules.md` defines the quality bar for adding future tracked MCP examples.
-- `20-ai-context-side-load.md` defines the concrete v1 side-load generator, provenance contract, and Workspace Hub freshness semantics for generated `cache/context/` summaries.
+- `20-ai-context-side-load.md` defines the concrete v1 side-load generator, `entry.md` routing packet, provenance contract, and Workspace Hub freshness semantics for generated `cache/context/` summaries plus the thin-versus-deep search split.
 - `HANDOVER.md` summarizes the current state of the workspace, current implementation batches, and the latest acceptance evidence.
 - `CHANGELOG.md` records notable workspace-level changes.
 
@@ -79,7 +79,7 @@ Useful maintenance scripts:
 - `tools/scripts/install-mcp-profile.sh` generates and optionally applies the managed Codex Workspace MCP block for a named profile.
 - `tools/scripts/check-mcp-health.sh` verifies the managed MCP block, expected active servers, tracked examples, and wrapper-based browser runtime assumptions.
 - `tools/scripts/init-agent-job-bundle.sh` previews or creates a local cache/context bundle for longer-running agent jobs under `cache/context/agents/jobs/`.
-- `tools/scripts/generate-context-cache.sh` previews or writes workspace and repo side-load summaries under `cache/context/workspace/` and `cache/context/repos/`.
+- `tools/scripts/generate-context-cache.sh` previews or writes workspace and repo side-load summaries under `cache/context/workspace/` and `cache/context/repos/`, including the generated `entry.md` packet that now acts as the default Hub handoff surface.
 - `tools/scripts/release-readiness.sh` runs the stable release gate: workspace doctors, `workspace-hub` test/lint/build, skill-sync dry run, and placeholder-surface checks.
 - `tools/scripts/run-with-workspace-env.sh` runs a command with the shared workspace environment, including the shared Playwright browser cache path.
 - `tools/scripts/setup-workspace-profile.sh` provides a guided, non-destructive profile check for `core`, `hub`, `mixed-stack`, `wordpress`, `agent-enhanced`, `workflow-state`, `spec-driven`, and `ui-previews`.
