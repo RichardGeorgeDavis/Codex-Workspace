@@ -1040,7 +1040,7 @@ function RepoDetailsContent({
             >
               <option value="direct">direct</option>
               <option value="external">external</option>
-              <option value="servbay">servbay</option>
+              <option value="servbay">mapped host (servbay)</option>
             </select>
           </label>
 
@@ -1312,7 +1312,7 @@ function RepoDetailsContent({
             >
               <option value="direct">direct</option>
               <option value="external">external</option>
-              <option value="servbay">servbay</option>
+              <option value="servbay">mapped host (servbay)</option>
             </select>
           </label>
 
@@ -1452,7 +1452,7 @@ function RepoDetailsContent({
           </label>
 
           <label className="field">
-            <span>ServBay path</span>
+            <span>Mapped-host path</span>
             <input
               onChange={(event) => {
                 setManifestDraft((currentDraft) => ({
@@ -1467,7 +1467,7 @@ function RepoDetailsContent({
           </label>
 
           <label className="field">
-            <span>ServBay subdomain</span>
+            <span>Mapped-host subdomain</span>
             <input
               onChange={(event) => {
                 setManifestDraft((currentDraft) => ({
@@ -1721,11 +1721,11 @@ function RepoDetailsContent({
           <dd>{repo.healthcheckUrl ?? 'No healthcheck URL set'}</dd>
         </div>
         <div className="details-row">
-          <dt>ServBay</dt>
+          <dt>Mapped host</dt>
           <dd>
             {repo.servbaySubdomain
               ? `${repo.servbaySubdomain} subdomain`
-              : repo.servbayPath ?? 'No ServBay routing set'}
+              : repo.servbayPath ?? 'No mapped-host routing set'}
           </dd>
         </div>
         <div className="details-row">
