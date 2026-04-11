@@ -6,6 +6,8 @@
 - Updated [HANDOVER](HANDOVER.md) completion review, the project review addendum pointer to [CHANGELOG](CHANGELOG.md) for resolved Hub items, and aligned [docs/README](README.md), wiki stubs, contributor templates, and [AGENTS.md](../AGENTS.md) with the same stance.
 - Rewrote [00-overview](00-overview.md) and [02-local-runtime-handover](02-local-runtime-handover.md) so runtime guidance uses generic mapped-host terminology while keeping stable manifest enum and field names (`servbay`, `servbayPath`, `servbaySubdomain`) documented in [repos/workspace-hub/docs/manifest.md](../repos/workspace-hub/docs/manifest.md).
 - Added a tracked [docs/plans/readme-docs-closeout.md](plans/readme-docs-closeout.md) plan for future reference, and aligned small Workspace Hub/operator copy surfaces with the same mapped-host wording in `repos/workspace-hub`, `tools/scripts/doctor-workspace.sh`, and `tools/scripts/setup-workspace-profile.sh`.
+- Extended `repos/workspace-hub` backlog follow-through with better repo-list prioritization for pinned and recent work, clearer Python-aware dependency readiness, intake-result surfacing in repo details, capability search and inspection, explicit mapped-host routing status, and richer runtime troubleshooting guidance.
+- Advanced Workspace memory graph support from file-open-only toward Phase 2 by surfacing derived-edge counts, node-type breakdown, and an in-app graph report preview for the selected target, while clarifying intentional MCP profile usage in the Workspace Hub settings panel.
 
 ## 2026-04-10
 

@@ -1338,10 +1338,17 @@ async function readDependencyState(options: {
   names: string[]
   packageManager: string
   previewCommand: string | null
+  type?: RepoType
 }): Promise<RepoDependencyState> {
   const normalizedPackageManager = options.packageManager.split('@')[0] ?? ''
   const hasPackageJson = options.names.includes('package.json')
   const hasComposerJson = options.names.includes('composer.json')
+  const hasPythonProject =
+    options.names.includes('pyproject.toml') ||
+    options.names.includes('requirements.txt') ||
+    options.names.includes('Pipfile') ||
+    options.names.includes('setup.py') ||
+    options.names.includes('uv.lock')
   const isNodeStyleRepo =
     hasPackageJson ||
     normalizedPackageManager === 'npm' ||
@@ -1403,6 +1410,38 @@ async function readDependencyState(options: {
       installPath,
       reason: 'Composer usage is inferred, but dependency readiness is still uncertain.',
       state: 'unknown',
+    } satisfies RepoDependencyState
+  }
+
+  if (hasPythonProject) {
+    const virtualEnvPaths = ['.venv', 'venv'].map((directoryName) =>
+      path.join(options.fullPath, directoryName),
+    )
+
+    for (const installPath of virtualEnvPaths) {
+      if (await fileExists(installPath)) {
+        return {
+          installPath,
+          reason: `${path.basename(installPath)}/ is present for this Python-style repo.`,
+          state: 'ready',
+        } satisfies RepoDependencyState
+      }
+    }
+
+    return {
+      installPath: virtualEnvPaths[0] ?? null,
+      reason:
+        'Python project markers were found, but no local virtual environment was detected. Confirm whether this repo expects .venv/, venv/, or a global interpreter workflow.',
+      state: options.installCommand ? 'missing' : 'unknown',
+    } satisfies RepoDependencyState
+  }
+
+  if (options.type === 'wordpress' && !options.installCommand && !hasComposerJson) {
+    return {
+      installPath: null,
+      reason:
+        'This WordPress repo usually relies on an external runtime, so repo-local dependency readiness is not treated as a blocker.',
+      state: 'not-applicable',
     } satisfies RepoDependencyState
   }
 
@@ -1785,6 +1824,15 @@ function isRepoCandidate(names: string[], collection: string | null) {
   }
 
   if (
+    names.includes('pyproject.toml') ||
+    names.includes('requirements.txt') ||
+    names.includes('Pipfile') ||
+    names.includes('setup.py')
+  ) {
+    return true
+  }
+
+  if (
     names.includes('index.html') ||
     names.includes('wp-config.php') ||
     names.includes('wp-content')
@@ -1920,6 +1968,7 @@ async function buildRepoRecord(
         names,
         packageManager,
         previewCommand,
+        type,
       }),
     ])
 

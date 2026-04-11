@@ -14,6 +14,8 @@ type RepoFilterValue =
   | RepoType
   | 'all'
   | 'external'
+  | 'pinned'
+  | 'recent'
   | 'runnable'
 
 type RepoSnapshotProps = {
@@ -338,6 +340,8 @@ export function RepoSnapshot({
             <option value="all">All items</option>
             <option value="runnable">Runnable repos</option>
             <option value="external">External repos</option>
+            <option value="pinned">Pinned repos</option>
+            <option value="recent">Recently active</option>
             {availableTypes.map((type) => (
               <option key={type} value={type}>
                 {type}

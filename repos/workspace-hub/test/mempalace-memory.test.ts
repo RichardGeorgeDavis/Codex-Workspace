@@ -8,6 +8,7 @@ import { promisify } from 'node:util'
 
 type CoreServicesModule = typeof import('../server/core-services.ts')
 type CoreServiceRuntimeModule = typeof import('../server/core-service-runtime.ts')
+type MempalaceGraphModule = typeof import('../server/mempalace-graph.ts')
 
 const execFileAsync = promisify(execFile)
 const workspaceRoot = path.resolve(import.meta.dirname, '..', '..', '..')
@@ -110,6 +111,16 @@ async function importCoreServiceModules(root: string) {
     coreServiceRuntime: coreServiceRuntime as CoreServiceRuntimeModule,
     coreServices: coreServices as CoreServicesModule,
   }
+}
+
+async function importMempalaceGraphModule(root: string) {
+  process.env.WORKSPACE_HUB_WORKSPACE_ROOT = root
+  process.env.CODEX_WORKSPACE_USER = 'test-user'
+  const cacheBuster = `${Date.now()}-${Math.random().toString(16).slice(2)}`
+
+  return (await import(
+    new URL(`../server/mempalace-graph.ts?test=${cacheBuster}`, import.meta.url).href
+  )) as MempalaceGraphModule
 }
 
 async function createGraphWorkspaceFixture(root: string) {
@@ -230,4 +241,15 @@ test('workspace-memory build-graph emits target-scoped graph artifacts', async (
   assert.ok(graph.edges.some((edge) => edge.type === 'contains'))
   assert.match(await readFile(graphHtmlPath, 'utf8'), /MemPalace Graph/)
   assert.match(await readFile(graphReportPath, 'utf8'), /MemPalace Graph Report/)
+
+  const mempalaceGraph = await importMempalaceGraphModule(root)
+  const snapshot = await mempalaceGraph.readMempalaceGraphSnapshot({
+    cacheRoot: path.join(root, 'cache', 'mempalace', 'test-user'),
+  } as Parameters<typeof mempalaceGraph.readMempalaceGraphSnapshot>[0], {
+    available: true,
+  })
+
+  assert.ok(snapshot.nodeTypeCounts.room)
+  assert.ok(snapshot.derivedEdgeCount !== null)
+  assert.ok(snapshot.reportExcerpt.length > 0)
 })

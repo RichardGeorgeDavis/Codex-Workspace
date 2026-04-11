@@ -171,9 +171,11 @@ Status: implemented
 
 ### Phase 2
 
-- enrich the adapter with conversation exports and wake-up summaries
-- add bridge-node and centrality summaries
-- support basic filtering by node type and confidence
+Status: partially implemented
+
+- graph snapshots now surface derived-edge counts and node-type breakdown in Workspace Hub
+- the Workspace memory page now shows an in-app preview of `graph-report.md` for the selected target
+- later work can still enrich the adapter with conversation exports, bridge-node or centrality summaries, and interactive filtering by node type or confidence
 
 ### Phase 3
 

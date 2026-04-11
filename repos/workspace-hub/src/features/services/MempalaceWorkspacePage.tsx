@@ -400,6 +400,10 @@ export function MempalaceWorkspacePage({
                   <dt>Edge count</dt>
                   <dd>{context.graph.edgeCount ?? 'Not recorded'}</dd>
                 </div>
+                <div className="details-row">
+                  <dt>Derived edges</dt>
+                  <dd>{context.graph.derivedEdgeCount ?? 'Not recorded'}</dd>
+                </div>
                 <div className="details-row stacked">
                   <dt>Output directory</dt>
                   <dd>{context.graph.outputDirectory ?? 'Select an available target to build a graph.'}</dd>
@@ -413,6 +417,26 @@ export function MempalaceWorkspacePage({
                   <dd>{context.graph.artifacts.reportPath ?? 'Build the graph to create graph-report.md.'}</dd>
                 </div>
               </dl>
+
+              {Object.keys(context.graph.nodeTypeCounts).length ? (
+                <div className="memory-graph-breakdown">
+                  <strong>Node type breakdown</strong>
+                  <div className="repo-card-tags">
+                    {Object.entries(context.graph.nodeTypeCounts).map(([type, count]) => (
+                      <span key={type} className="tag">
+                        {type} · {count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {context.graph.reportExcerpt.length ? (
+                <div className="memory-command-output memory-graph-report-preview">
+                  <strong>Report preview</strong>
+                  <pre>{context.graph.reportExcerpt.join('\n')}</pre>
+                </div>
+              ) : null}
 
               <div className="service-actions">
                 <button

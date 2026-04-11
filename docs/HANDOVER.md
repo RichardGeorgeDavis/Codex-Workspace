@@ -201,10 +201,9 @@ Status: complete and validated
 
 Current likely pickup:
 
-- apply the managed MCP v1 profiles on the machines that need them and use `safe-readonly` versus `default-full` intentionally rather than treating MCP as an always-on hidden dependency
-- `repos/workspace-hub` memory-graph Phase 2 only if operators need richer relationship extraction, filtering, or in-app embedding beyond the current file-open flow
-- `repos/workspace-hub` capability drill-down if operators need deeper per-capability install/update health than the current snapshot
-- `repos/workspace-hub` repo-intake polish if new repos still need clearer first-run notes, optional ability guidance, or tighter starter docs
+- apply the managed MCP v1 profiles on the machines that need them and keep `safe-readonly` versus `default-full` intentional rather than hidden defaults
+- extend cross-stack dependency detection beyond the current Node, Composer, and Python-local-environment heuristics if operators need deeper readiness checks
+- deepen Memory Graph beyond the current in-app report preview and node-type breakdown only if operators need richer relationship extraction or graph interaction
 - keep future batches end-to-end and update this file when a batch becomes the new practical pickup point
 
 ## Acceptance closeout (2026-04-10)
@@ -295,11 +294,9 @@ What appears complete or substantially complete:
 
 What still reads as open or incomplete in the docs:
 
-- deeper repo diagnostics and drill-down polish
-- favourites and last-opened polish
-- clearer dependency-readiness feedback
-- clearer mapped-host and proxy preview polish where operators use that workflow
-- additional runtime troubleshooting documentation
+- broader cross-stack dependency-readiness heuristics beyond the current Node, Composer, and Python-local-environment checks
+- deeper mapped-host preview generation and operator-specific routing automation beyond the current routing status and guidance
+- richer in-app graph exploration if operators need more than the current report preview and node-type breakdown
 
 ## Core memory decision (2026-04-08)
 

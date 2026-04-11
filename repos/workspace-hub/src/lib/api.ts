@@ -1,4 +1,5 @@
 import type {
+  RepoIntakeResult,
   WorkspaceCapabilitiesSnapshot,
   WorkspaceCapabilityActionId,
   WorkspaceCoreServiceTargetContext,
@@ -318,6 +319,11 @@ export async function runRepoIntake(relativePath: string) {
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
+  }
+
+  return (await response.json()) as {
+    ok: boolean
+    result: RepoIntakeResult
   }
 }
 

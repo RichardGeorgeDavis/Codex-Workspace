@@ -128,6 +128,13 @@ export function SettingsPanel({
             <p className="section-copy">
               {summary?.agentEnvironment.referencePolicy}
             </p>
+            <p className="section-copy">
+              Use managed MCP profiles intentionally: keep machines that only need browsing and docs on{' '}
+              <code>safe-readonly</code>
+              {' '}and reserve{' '}
+              <code>default-full</code>
+              {' '}for machines where broader local automation is actually needed.
+            </p>
             <ul className="settings-list">
               <li className="settings-item">
                 <span>Codex</span>
@@ -156,6 +163,14 @@ export function SettingsPanel({
               <li className="settings-item">
                 <span>Codex config</span>
                 <code>{summary?.agentEnvironment.userCodexConfigPath ?? 'Not detected'}</code>
+              </li>
+              <li className="settings-item">
+                <span>MCP guide</span>
+                <code>docs/15-mcp-profiles-and-trust-levels.md</code>
+              </li>
+              <li className="settings-item">
+                <span>MCP installer</span>
+                <code>tools/scripts/install-mcp-profile.sh</code>
               </li>
               <li className="settings-item">
                 <span>OpenCode config</span>
