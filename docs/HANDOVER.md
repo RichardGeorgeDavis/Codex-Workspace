@@ -28,15 +28,15 @@ Suggested instruction for a fresh chat:
 
 Current release baseline:
 
-- workspace release tag: `v1.2.1`
-- `repos/workspace-hub` version: `1.2.1`
+- workspace release tag: `v1.2.2`
+- `repos/workspace-hub` version: `1.2.2`
 - stable release gate passed on `2026-04-10`
 
 Current published release record:
 
-- release ref: `v1.2.1`
+- release ref: `v1.2.2`
 - previous stable release tag: `v1.2.0`
-- release URL: `https://github.com/RichardGeorgeDavis/Codex-Workspace/releases/tag/v1.2.1`
+- release URL: `https://github.com/RichardGeorgeDavis/Codex-Workspace/releases/tag/v1.2.2`
 
 ## Canonical doc location
 
@@ -208,7 +208,7 @@ Current likely pickup:
 
 ## Acceptance closeout (2026-04-10)
 
-This released `v1.2.1` baseline now has a complete verification snapshot:
+This released `v1.2.2` baseline now has a complete verification snapshot:
 
 - `tools/scripts/install-mcp-profile.sh default-full`
 - `tools/scripts/check-mcp-health.sh --profile default-full`

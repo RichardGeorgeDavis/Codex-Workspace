@@ -4,7 +4,7 @@ Tracked copy of the implementation plan (for Codex or future sessions). Executed
 
 ## Summary
 
-1. **Handover:** Batches 1–4 complete; v1.2.1 baseline. Optional follow-ons: MCP profiles, Hub memory-graph Phase 2, capability drill-down, repo-intake polish. Completion review open themes: diagnostics, favourites, dependency feedback, mapped-host preview polish, runtime troubleshooting docs.
+1. **Handover:** Batches 1–4 complete; v1.2.2 baseline. Optional follow-ons: MCP profiles, Hub memory-graph Phase 2, capability drill-down, repo-intake polish. Completion review open themes: diagnostics, favourites, dependency feedback, mapped-host preview polish, runtime troubleshooting docs.
 2. **Docs/wiki review:** Align `docs/` and `docs/wiki/` with HANDOVER/CHANGELOG; reduce duplicate prose; keep wiki navigational.
 3. **Remove ServBay product naming** from docs and user-facing surfaces; use neutral language (optional reverse proxy, mapped host). Stable JSON keys `servbay`, `servbayPath`, `servbaySubdomain` remain documented as stable manifest values.
 4. **README:** Multi-agent intro, Workspace Hub section + cover placement, **What's included (and why)** table.

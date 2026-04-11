@@ -2,6 +2,7 @@
 
 ## 2026-04-11
 
+- Bumped the workspace baseline release to `v1.2.2` and updated `repos/workspace-hub` to `1.2.2` to capture the side-load `entry.md` packet flow, manifest `entryDocs` support, and thin-versus-deep indexed search as the new published baseline.
 - Refreshed the root [README](../README.md) with tool-agnostic positioning (Codex, Cursor, Claude), a **Workspace Hub** subsection with the cover image, and a **What's included (and why)** table; shifted public docs to neutral language for optional reverse-proxy and mapped-host previews while keeping compatibility manifest keys documented where needed.
 - Updated [HANDOVER](HANDOVER.md) completion review, the project review addendum pointer to [CHANGELOG](CHANGELOG.md) for resolved Hub items, and aligned [docs/README](README.md), wiki stubs, contributor templates, and [AGENTS.md](../AGENTS.md) with the same stance.
 - Rewrote [00-overview](00-overview.md) and [02-local-runtime-handover](02-local-runtime-handover.md) so runtime guidance uses generic mapped-host terminology while keeping stable manifest enum and field names (`servbay`, `servbayPath`, `servbaySubdomain`) documented in [repos/workspace-hub/docs/manifest.md](../repos/workspace-hub/docs/manifest.md).
