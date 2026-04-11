@@ -122,7 +122,7 @@ test('generate-context-cache.sh writes workspace and repo side-load files with p
   assert.ok(workspaceSources.inputs.every((entry) => entry.bytes >= 0 && entry.mtimeMs > 0 && entry.sha256.length > 0))
   assert.deepEqual(
     workspaceSources.outputs.map((entry) => entry.role),
-    ['abstract', 'overview', 'sources'],
+    ['abstract', 'entry', 'overview', 'sources'],
   )
 
   assert.equal(repoSources.scope, 'repo')
@@ -135,6 +135,7 @@ test('generate-context-cache.sh writes workspace and repo side-load files with p
     repoSources.outputs.map((entry) => entry.path),
     [
       'cache/context/repos/workspace-hub/abstract.md',
+      'cache/context/repos/workspace-hub/entry.md',
       'cache/context/repos/workspace-hub/overview.md',
       'cache/context/repos/workspace-hub/sources.json',
     ],

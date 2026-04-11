@@ -4,11 +4,11 @@ import type {
   WorkspaceCapabilityActionId,
   WorkspaceCoreServiceTargetContext,
   WorkspaceRepo,
+  WorkspaceSearchResponse,
   RepoAgentPresetId,
   RepoAgentPresetResult,
   SummaryRequestReason,
   WorkspaceEvent,
-  WorkspaceSearchResponse,
   WorkspaceSummary,
 } from '../types/workspace.ts'
 
@@ -240,8 +240,12 @@ export async function runCoreServiceCommand(
   }
 }
 
-export async function searchWorkspace(query: string, signal?: AbortSignal) {
-  const params = new URLSearchParams({ q: query })
+export async function searchWorkspace(
+  query: string,
+  mode: WorkspaceSearchResponse['mode'] = 'thin',
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams({ mode, q: query })
   const response = await fetch(`/api/search?${params.toString()}`, { signal })
 
   if (!response.ok) {
@@ -363,6 +367,7 @@ export async function writeRepoManifest(
   manifest: {
     buildCommand?: string
     devCommand?: string
+    entryDocs?: string[]
     externalUrl?: string
     healthcheckUrl?: string
     installCommand?: string

@@ -10,6 +10,7 @@ import type {
 export type RepoManifestInput = {
   buildCommand?: unknown
   devCommand?: unknown
+  entryDocs?: unknown
   externalUrl?: unknown
   healthcheckUrl?: unknown
   installCommand?: unknown
@@ -51,6 +52,7 @@ const orderedManifestKeys = [
   'healthcheckUrl',
   'servbayPath',
   'servbaySubdomain',
+  'entryDocs',
   'tags',
   'notes',
 ] as const
@@ -68,6 +70,17 @@ function normalizeOptionalString(value: unknown) {
 }
 
 function normalizeTags(value: unknown) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+}
+
+function normalizeEntryDocs(value: unknown) {
   if (!Array.isArray(value)) {
     return []
   }
@@ -129,11 +142,13 @@ export function normalizeManifestInput(input: RepoManifestInput) {
   }
 
   const normalizedTags = normalizeTags(input.tags)
+  const normalizedEntryDocs = normalizeEntryDocs(input.entryDocs)
   const notes = normalizeOptionalString(input.notes)
 
   return {
     buildCommand: normalizeOptionalString(input.buildCommand),
     devCommand: normalizeOptionalString(input.devCommand),
+    entryDocs: normalizedEntryDocs.length ? normalizedEntryDocs : undefined,
     externalUrl: normalizeOptionalString(input.externalUrl),
     healthcheckUrl: normalizeOptionalString(input.healthcheckUrl),
     installCommand: normalizeOptionalString(input.installCommand),

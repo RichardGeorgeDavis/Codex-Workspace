@@ -155,7 +155,7 @@ export type RepoSideLoadStatus = 'fresh' | 'missing' | 'stale'
 export type RepoSideLoadArtifact = {
   path: string
   relativePath: string
-  role: 'abstract' | 'overview' | 'sources'
+  role: 'abstract' | 'entry' | 'overview' | 'sources'
 }
 
 export type RepoSideLoad = {
@@ -179,6 +179,7 @@ export type RepoFailureReportSummary = {
 export type WorkspaceManifestRecord = {
   buildCommand?: string
   devCommand?: string
+  entryDocs?: string[]
   externalUrl?: string
   healthcheckUrl?: string
   installCommand?: string
@@ -281,6 +282,7 @@ export type WorkspaceSearchResult = {
   filePath: string | null
   id: string
   matchSource: string
+  mode: 'deep' | 'thin'
   repoRelativePath: string | null
   score: number
   serviceId: string | null
@@ -291,6 +293,7 @@ export type WorkspaceSearchResult = {
 }
 
 export type WorkspaceSearchResponse = {
+  mode: 'deep' | 'thin'
   query: string
   results: WorkspaceSearchResult[]
 }

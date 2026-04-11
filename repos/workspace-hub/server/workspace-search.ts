@@ -11,6 +11,8 @@ import type {
 } from '../src/types/workspace.ts'
 import { readFailureReports } from './failure-reports.ts'
 
+type WorkspaceSearchMode = WorkspaceSearchResponse['mode']
+
 type SearchDocument = {
   category: WorkspaceSearchResult['category']
   filePath: string | null
@@ -25,6 +27,12 @@ type SearchDocument = {
   subtitle: string
   title: string
   workspaceRelativePath: string | null
+}
+
+type RepoSideLoadSummary = {
+  abstract: string
+  entry: string
+  overview: string
 }
 
 const serverFile = fileURLToPath(import.meta.url)
@@ -43,12 +51,13 @@ const includeArtifactSearch = (() => {
   return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on'
 })()
 
-let cachedDocuments:
-  | {
-      docs: SearchDocument[]
-      expiresAt: number
-    }
-  | null = null
+const cachedDocuments = new Map<
+  WorkspaceSearchMode,
+  {
+    docs: SearchDocument[]
+    expiresAt: number
+  }
+>()
 
 function normalizeValue(value: string) {
   return value.toLowerCase()
@@ -65,6 +74,18 @@ async function readTextSnippet(targetPath: string) {
   } catch {
     return ''
   }
+}
+
+async function readRepoSideLoadSummary(repoRelativePath: string): Promise<RepoSideLoadSummary> {
+  const repoName = path.basename(repoRelativePath)
+  const sideLoadRoot = path.join(workspaceRoot, 'cache', 'context', 'repos', repoName)
+  const [abstract, entry, overview] = await Promise.all([
+    readTextSnippet(path.join(sideLoadRoot, 'abstract.md')),
+    readTextSnippet(path.join(sideLoadRoot, 'entry.md')),
+    readTextSnippet(path.join(sideLoadRoot, 'overview.md')),
+  ])
+
+  return { abstract, entry, overview }
 }
 
 async function walkArtifactFiles(rootPath: string, maxDepth: number) {
@@ -224,10 +245,34 @@ function scoreDocument(
   }
 }
 
-async function buildRepoDocuments(repos: WorkspaceRepo[]) {
+async function buildRepoDocuments(repos: WorkspaceRepo[], mode: WorkspaceSearchMode) {
   return await Promise.all(
     repos.map(async (repo) => {
-      const manifestText = repo.manifestPath ? await readTextSnippet(repo.manifestPath) : ''
+      const [manifestText, readmeText, sideLoad] = await Promise.all([
+        repo.manifestPath ? readTextSnippet(repo.manifestPath) : Promise.resolve(''),
+        repo.readmePath ? readTextSnippet(repo.readmePath) : Promise.resolve(''),
+        readRepoSideLoadSummary(repo.relativePath),
+      ])
+      const thinSources = [
+        { label: 'notes', text: repo.notes },
+        { label: 'tags', text: repo.tags.join(' ') },
+        {
+          label: 'routing',
+          text: [repo.relativePath, repo.type, repo.packageManager || 'manual', repo.preferredMode].join(' '),
+        },
+        { label: 'dependencies', text: `${repo.dependencies.state} ${repo.dependencies.reason}` },
+        { label: 'context abstract', text: sideLoad.abstract },
+        { label: 'context entry', text: sideLoad.entry },
+        { label: 'context overview', text: sideLoad.overview },
+        { label: 'manifest', text: manifestText },
+      ]
+      const deepSources = [
+        ...thinSources,
+        { label: 'git', text: [repo.git.branch ?? '', repo.git.summary, repo.git.remoteUrl ?? ''].join(' ') },
+        { label: 'install log', text: repo.install.logTail.join('\n') },
+        { label: 'runtime log', text: repo.runtime.logTail.join('\n') },
+        { label: 'readme', text: readmeText },
+      ]
 
       return {
         category: 'repo',
@@ -236,15 +281,7 @@ async function buildRepoDocuments(repos: WorkspaceRepo[]) {
         id: `repo:${repo.relativePath}`,
         repoRelativePath: repo.relativePath,
         serviceId: null,
-        sources: [
-          { label: 'notes', text: repo.notes },
-          { label: 'tags', text: repo.tags.join(' ') },
-          { label: 'git', text: [repo.git.branch ?? '', repo.git.summary, repo.git.remoteUrl ?? ''].join(' ') },
-          { label: 'dependencies', text: `${repo.dependencies.state} ${repo.dependencies.reason}` },
-          { label: 'install log', text: repo.install.logTail.join('\n') },
-          { label: 'runtime log', text: repo.runtime.logTail.join('\n') },
-          { label: 'manifest', text: manifestText },
-        ],
+        sources: mode === 'deep' ? deepSources : thinSources,
         subtitle: [repo.relativePath, repo.type, repo.packageManager || 'manual', repo.preferredMode]
           .filter(Boolean)
           .join(' • '),
@@ -259,7 +296,10 @@ async function buildRepoDocuments(repos: WorkspaceRepo[]) {
   )
 }
 
-async function buildCoreServiceDocuments(services: WorkspaceCoreService[]) {
+async function buildCoreServiceDocuments(
+  services: WorkspaceCoreService[],
+  mode: WorkspaceSearchMode,
+) {
   return await Promise.all(
     services.map(async (service) => {
       const readmeText = service.readmePath ? await readTextSnippet(service.readmePath) : ''
@@ -277,8 +317,12 @@ async function buildCoreServiceDocuments(services: WorkspaceCoreService[]) {
           { label: 'notes', text: service.notes },
           { label: 'commands', text: [service.installCommand, service.runtimeCommand, service.syncCommand].join(' ') },
           { label: 'storage', text: [service.sharedRoot, service.cacheRoot, service.configPath].join(' ') },
-          { label: 'readme', text: readmeText },
-          { label: 'docs', text: docsText },
+          ...(mode === 'deep'
+            ? [
+                { label: 'readme', text: readmeText },
+                { label: 'docs', text: docsText },
+              ]
+            : []),
         ],
         subtitle: [service.repoRelativePath, service.category, service.user, service.version ?? 'unversioned']
           .filter(Boolean)
@@ -293,7 +337,10 @@ async function buildCoreServiceDocuments(services: WorkspaceCoreService[]) {
   )
 }
 
-async function buildCapabilityDocuments(capabilities: WorkspaceCapability[]) {
+async function buildCapabilityDocuments(
+  capabilities: WorkspaceCapability[],
+  mode: WorkspaceSearchMode,
+) {
   return await Promise.all(
     capabilities
       .filter(
@@ -328,8 +375,12 @@ async function buildCapabilityDocuments(capabilities: WorkspaceCapability[]) {
                 capability.installed ? 'installed' : 'not installed',
               ].join(' '),
             },
-            { label: 'readme', text: readmeText },
-            { label: 'docs', text: docsText },
+            ...(mode === 'deep'
+              ? [
+                  { label: 'readme', text: readmeText },
+                  { label: 'docs', text: docsText },
+                ]
+              : []),
           ],
           subtitle: [
             capability.classification,
@@ -348,7 +399,7 @@ async function buildCapabilityDocuments(capabilities: WorkspaceCapability[]) {
   )
 }
 
-async function buildFailureDocuments() {
+async function buildFailureDocuments(mode: WorkspaceSearchMode) {
   const reports = await readFailureReports()
 
   return reports.map((report) => ({
@@ -362,7 +413,9 @@ async function buildFailureDocuments() {
       { label: 'message', text: report.snapshot.message ?? '' },
       { label: 'command', text: report.snapshot.command ?? '' },
       { label: 'git', text: [report.git.branch ?? '', report.git.summary, report.git.remoteUrl ?? ''].join(' ') },
-      { label: 'log tail', text: report.snapshot.logTail.join('\n') },
+      ...(mode === 'deep'
+        ? [{ label: 'log tail', text: report.snapshot.logTail.join('\n') }]
+        : []),
     ],
     subtitle: [
       report.repo.relativePath,
@@ -374,8 +427,8 @@ async function buildFailureDocuments() {
   }) satisfies SearchDocument)
 }
 
-async function buildArtifactDocuments() {
-  if (!includeArtifactSearch) {
+async function buildArtifactDocuments(mode: WorkspaceSearchMode) {
+  if (!includeArtifactSearch || mode !== 'deep') {
     return []
   }
 
@@ -408,23 +461,25 @@ async function getSearchDocuments(
   repos: WorkspaceRepo[],
   services: WorkspaceCoreService[],
   capabilities: WorkspaceCapability[],
+  mode: WorkspaceSearchMode,
 ) {
-  if (cachedDocuments && cachedDocuments.expiresAt > Date.now()) {
-    return cachedDocuments.docs
+  const cached = cachedDocuments.get(mode)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.docs
   }
 
   const docs = [
-    ...(await buildRepoDocuments(repos)),
-    ...(await buildCoreServiceDocuments(services)),
-    ...(await buildCapabilityDocuments(capabilities)),
-    ...(await buildFailureDocuments()),
-    ...(await buildArtifactDocuments()),
+    ...(await buildRepoDocuments(repos, mode)),
+    ...(await buildCoreServiceDocuments(services, mode)),
+    ...(await buildCapabilityDocuments(capabilities, mode)),
+    ...(await buildFailureDocuments(mode)),
+    ...(await buildArtifactDocuments(mode)),
   ]
 
-  cachedDocuments = {
+  cachedDocuments.set(mode, {
     docs,
     expiresAt: Date.now() + searchIndexTtlMs,
-  }
+  })
 
   return docs
 }
@@ -434,18 +489,20 @@ export async function searchWorkspace(
   repos: WorkspaceRepo[],
   services: WorkspaceCoreService[] = [],
   capabilities: WorkspaceCapability[] = [],
+  mode: WorkspaceSearchMode = 'thin',
 ): Promise<WorkspaceSearchResponse> {
   const normalizedQuery = compactWhitespace(query).toLowerCase()
 
   if (!normalizedQuery) {
     return {
+      mode,
       query,
       results: [],
     }
   }
 
   const terms = normalizedQuery.split(/\s+/).filter(Boolean)
-  const docs = await getSearchDocuments(repos, services, capabilities)
+  const docs = await getSearchDocuments(repos, services, capabilities, mode)
 
   const results = docs
     .map((doc) => {
@@ -460,6 +517,7 @@ export async function searchWorkspace(
         filePath: doc.filePath,
         id: doc.id,
         matchSource: scored.matchSource,
+        mode,
         repoRelativePath: doc.repoRelativePath,
         score: scored.score,
         serviceId: doc.serviceId,
@@ -480,6 +538,7 @@ export async function searchWorkspace(
     .slice(0, 12)
 
   return {
+    mode,
     query,
     results,
   }
