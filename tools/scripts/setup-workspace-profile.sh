@@ -238,13 +238,13 @@ case "$profile" in
   wordpress)
     printf 'Purpose: support WordPress repos without making WordPress tooling mandatory for the whole workspace.\n\n'
     printf 'Checks\n'
-    check_app_path "ServBay" recommended "/Applications/ServBay.app" "$HOME/Applications/ServBay.app"
+    check_app_path "Optional proxy (ServBay.app)" recommended "/Applications/ServBay.app" "$HOME/Applications/ServBay.app"
     check_app_path "Local" recommended "/Applications/Local.app" "$HOME/Applications/Local.app"
     check_cmd "composer" composer recommended
     check_cmd "wp" wp recommended
     printf '\nNext steps\n'
     printf -- '- Prefer Local for WordPress projects already managed there\n'
-    printf -- '- Use ServBay only when a shared local front door or proxy actually helps\n'
+    printf -- '- Use a reverse-proxy or mapped host only when a shared local front door actually helps\n'
     printf -- '- Keep WordPress handling repo-native or external rather than forcing it through Workspace Hub\n'
     ;;
   agent-enhanced)

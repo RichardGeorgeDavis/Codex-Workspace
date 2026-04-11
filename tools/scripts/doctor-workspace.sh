@@ -342,7 +342,7 @@ if [ -e "/Applications/Local.app" ] || [ -e "$HOME/Applications/Local.app" ]; th
   local_present=1
 fi
 
-check_app_paths "ServBay" recommended wp_missing "/Applications/ServBay.app" "$HOME/Applications/ServBay.app"
+check_app_paths "Optional proxy (ServBay.app)" recommended wp_missing "/Applications/ServBay.app" "$HOME/Applications/ServBay.app"
 check_app_paths "Local" recommended wp_missing "/Applications/Local.app" "$HOME/Applications/Local.app"
 
 printf '\nAgent environment\n'
@@ -418,7 +418,7 @@ mixed_status=$(profile_status "$mixed_missing")
 if [ "$servbay_present" -eq 1 ] || [ "$local_present" -eq 1 ]; then
   wordpress_status="ready if you need WordPress support"
 else
-  wordpress_status="optional, install ServBay or Local only if you manage WordPress here"
+  wordpress_status="optional, install Local or another WordPress stack only if you manage WordPress here"
 fi
 
 if [ "$root_repo_skills" -eq 0 ] && [ "$root_codex_skills" -eq 0 ] && [ "$repo_codex_skills" -eq 0 ] && [ "$repo_official_codex_skills" -eq 0 ] && [ "$repo_codex_configs" -eq 0 ] && [ "$shared_skills" -eq 0 ] && [ "$repo_neutral_skills" -eq 0 ]; then

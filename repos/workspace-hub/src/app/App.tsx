@@ -1422,7 +1422,7 @@ export function App({ initialThemePreference }: AppProps) {
                   <li>Repos remain independently runnable and keep their own installs.</li>
                   <li>Frontend-style projects default to direct local previews.</li>
                   <li>WordPress repos usually stay external unless a repo says otherwise.</li>
-                  <li>ServBay remains optional convenience, not a hard dependency.</li>
+                  <li>Optional reverse-proxy or mapped-host previews stay optional, not a hard dependency.</li>
                 </ul>
               </SectionCard>
             </div>
