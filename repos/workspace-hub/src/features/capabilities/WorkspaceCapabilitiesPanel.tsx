@@ -1,3 +1,5 @@
+import { useDeferredValue, useState } from 'react'
+
 import { SectionCard } from '../../components/SectionCard.tsx'
 import type {
   WorkspaceCapabilitiesSnapshot,
@@ -15,6 +17,8 @@ type WorkspaceCapabilitiesPanelProps = {
     capabilityId: string,
     target: 'docs' | 'readme' | 'repo',
   ) => Promise<void>
+  onSelectCapability: (capabilityId: string) => void
+  selectedCapabilityId: string | null
 }
 
 function formatGeneratedAt(value: string) {
@@ -32,6 +36,8 @@ type CapabilityCardProps = {
     capabilityId: string,
     target: 'docs' | 'readme' | 'repo',
   ) => Promise<void>
+  onSelectCapability: (capabilityId: string) => void
+  selected: boolean
 }
 
 function CapabilityCard({
@@ -39,11 +45,13 @@ function CapabilityCard({
   capability,
   onAction,
   onOpenAction,
+  onSelectCapability,
+  selected,
 }: CapabilityCardProps) {
   const pendingPrefix = `capability:${capability.id}:`
 
   return (
-    <article className="service-card capability-card">
+    <article className={`service-card capability-card ${selected ? 'active' : ''}`}>
       <div className="service-card-header">
         <div>
           <strong>{capability.name}</strong>
@@ -100,6 +108,15 @@ function CapabilityCard({
       ) : null}
 
       <div className="service-actions">
+        <button
+          className="action-button"
+          onClick={() => {
+            onSelectCapability(capability.id)
+          }}
+          type="button"
+        >
+          {selected ? 'Selected' : 'Inspect'}
+        </button>
         <button
           className="action-button"
           disabled={actionPendingKey === `${pendingPrefix}install`}
@@ -192,14 +209,57 @@ export function WorkspaceCapabilitiesPanel({
   loading,
   onAction,
   onOpenAction,
+  onSelectCapability,
+  selectedCapabilityId,
 }: WorkspaceCapabilitiesPanelProps) {
+  const [classificationFilter, setClassificationFilter] = useState<
+    'all' | 'ability' | 'core-service' | 'reference-only' | 'repo-level-adoption'
+  >('all')
+  const [searchTerm, setSearchTerm] = useState('')
+  const deferredSearchTerm = useDeferredValue(searchTerm)
   const installableCapabilities = capabilities.filter((capability) => capability.exposeInHub)
-  const coreServiceCapabilities = installableCapabilities.filter(
+  const normalizedSearch = deferredSearchTerm.trim().toLowerCase()
+  const filteredCapabilities = installableCapabilities.filter((capability) => {
+    if (
+      classificationFilter !== 'all' &&
+      capability.classification !== classificationFilter
+    ) {
+      return false
+    }
+
+    if (!normalizedSearch) {
+      return true
+    }
+
+    const haystack = [
+      capability.name,
+      capability.description,
+      capability.category,
+      capability.classification,
+      capability.id,
+      capability.installTarget,
+      capability.notes,
+      capability.repoUsageNotes,
+      capability.sourceUrl,
+      capability.updateStrategy,
+    ]
+      .join(' ')
+      .toLowerCase()
+
+    return haystack.includes(normalizedSearch)
+  })
+  const coreServiceCapabilities = filteredCapabilities.filter(
     (capability) => capability.classification === 'core-service',
   )
-  const abilityCapabilities = installableCapabilities.filter(
+  const abilityCapabilities = filteredCapabilities.filter(
     (capability) => capability.classification === 'ability',
   )
+  const selectedCapability =
+    filteredCapabilities.find((capability) => capability.id === selectedCapabilityId)
+    ?? installableCapabilities.find((capability) => capability.id === selectedCapabilityId)
+    ?? filteredCapabilities[0]
+    ?? installableCapabilities[0]
+    ?? null
   const snapshotStats = snapshot?.stats ?? null
 
   return (
@@ -238,9 +298,107 @@ export function WorkspaceCapabilitiesPanel({
         </p>
       ) : null}
 
+      {installableCapabilities.length ? (
+        <>
+          <div className="repo-toolbar capability-toolbar">
+            <label className="field">
+              <span>Search capabilities</span>
+              <input
+                onChange={(event) => {
+                  setSearchTerm(event.target.value)
+                }}
+                placeholder="name, source, notes, install target"
+                type="search"
+                value={searchTerm}
+              />
+            </label>
+
+            <label className="field compact">
+              <span>Classification</span>
+              <select
+                onChange={(event) => {
+                  setClassificationFilter(
+                    event.target.value as
+                      | 'all'
+                      | 'ability'
+                      | 'core-service'
+                      | 'reference-only'
+                      | 'repo-level-adoption',
+                  )
+                }}
+                value={classificationFilter}
+              >
+                <option value="all">All installable</option>
+                <option value="core-service">Core services</option>
+                <option value="ability">Abilities</option>
+              </select>
+            </label>
+          </div>
+
+          {selectedCapability ? (
+            <article className="service-card capability-featured-card">
+              <div className="service-card-header">
+                <div>
+                  <strong>{selectedCapability.name}</strong>
+                  <p className="service-card-copy">{selectedCapability.description}</p>
+                </div>
+
+                <span className="repo-card-tags">
+                  <span className="tag">{selectedCapability.id}</span>
+                  <span className="tag">{selectedCapability.classification}</span>
+                  <span
+                    className={`status-pill ${selectedCapability.enabled ? 'ready' : 'stopped'}`}
+                  >
+                    {selectedCapability.enabled ? 'enabled' : 'disabled'}
+                  </span>
+                  <span
+                    className={`status-pill ${selectedCapability.installed ? 'ready' : 'unknown'}`}
+                  >
+                    {selectedCapability.installed ? 'installed' : 'not installed'}
+                  </span>
+                </span>
+              </div>
+
+              <div className="service-grid">
+                <div>
+                  <span className="service-label">Install target</span>
+                  <code>{selectedCapability.installTarget}</code>
+                </div>
+                <div>
+                  <span className="service-label">Category</span>
+                  <code>{selectedCapability.category}</code>
+                </div>
+                <div>
+                  <span className="service-label">Source</span>
+                  <code>{selectedCapability.sourceUrl}</code>
+                </div>
+                <div>
+                  <span className="service-label">Last state change</span>
+                  <code>
+                    {selectedCapability.updatedAt
+                      ? formatGeneratedAt(selectedCapability.updatedAt)
+                      : 'default state'}
+                  </code>
+                </div>
+              </div>
+
+              {selectedCapability.repoUsageNotes ? (
+                <p className="section-copy capability-copy">
+                  {selectedCapability.repoUsageNotes}
+                </p>
+              ) : null}
+
+              {selectedCapability.notes ? (
+                <p className="section-copy capability-copy">{selectedCapability.notes}</p>
+              ) : null}
+            </article>
+          ) : null}
+        </>
+      ) : null}
+
       {loading && !installableCapabilities.length ? (
         <p className="loading-copy">Loading capability lifecycle state...</p>
-      ) : installableCapabilities.length ? (
+      ) : filteredCapabilities.length ? (
         <div className="capability-groups">
           {coreServiceCapabilities.length ? (
             <div className="discovery-group">
@@ -256,6 +414,8 @@ export function WorkspaceCapabilitiesPanel({
                     capability={capability}
                     onAction={onAction}
                     onOpenAction={onOpenAction}
+                    onSelectCapability={onSelectCapability}
+                    selected={selectedCapability?.id === capability.id}
                   />
                 ))}
               </div>
@@ -276,6 +436,8 @@ export function WorkspaceCapabilitiesPanel({
                     capability={capability}
                     onAction={onAction}
                     onOpenAction={onOpenAction}
+                    onSelectCapability={onSelectCapability}
+                    selected={selectedCapability?.id === capability.id}
                   />
                 ))}
               </div>
@@ -284,8 +446,16 @@ export function WorkspaceCapabilitiesPanel({
         </div>
       ) : (
         <div className="empty-state">
-          <strong>No installable capabilities are configured.</strong>
-          <p>Add installable entries to `tools/manifests/workspace-capabilities.json` to surface them here.</p>
+          <strong>
+            {installableCapabilities.length
+              ? 'No capabilities match the current filter.'
+              : 'No installable capabilities are configured.'}
+          </strong>
+          <p>
+            {installableCapabilities.length
+              ? 'Try clearing the capability search or switching classification.'
+              : 'Add installable entries to `tools/manifests/workspace-capabilities.json` to surface them here.'}
+          </p>
         </div>
       )}
     </SectionCard>

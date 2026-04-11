@@ -5,7 +5,7 @@ import * as React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { RepoDetails } from '../src/features/repos/RepoDetails.tsx'
-import type { WorkspaceRepo } from '../src/types/workspace.ts'
+import type { RepoIntakeResult, WorkspaceRepo } from '../src/types/workspace.ts'
 
 ;(globalThis as typeof globalThis & { React: typeof React }).React = React
 
@@ -119,12 +119,13 @@ function buildRepo(sideLoad: WorkspaceRepo['sideLoad']): WorkspaceRepo {
   }
 }
 
-function renderRepoDetails(repo: WorkspaceRepo) {
+function renderRepoDetails(repo: WorkspaceRepo, intakeResult: RepoIntakeResult | null = null) {
   return renderToStaticMarkup(
     React.createElement(RepoDetails, {
       actionError: null,
       actionPendingKey: null,
       embedded: true,
+      intakeResult,
       loading: false,
       onApplyAgentPreset: async () => {},
       onCopyError: () => {},
@@ -176,4 +177,24 @@ test('RepoDetails renders the context cache block when side-load metadata is pre
 test('RepoDetails omits the context cache block when side-load metadata has not been hydrated yet', () => {
   const markup = renderRepoDetails(buildRepo(undefined))
   assert.doesNotMatch(markup, /Context cache/)
+})
+
+test('RepoDetails renders the latest repo intake notes and mapped-host warning when relevant', () => {
+  const repo = buildRepo(undefined)
+  repo.preferredMode = 'servbay'
+
+  const markup = renderRepoDetails(repo, {
+    coverCreated: true,
+    coverImagePath: '/tmp/workspace/repos/workspace-hub/docs/cover.png',
+    manifestCreated: true,
+    manifestPath: '/tmp/workspace/repos/workspace-hub/.workspace/project.json',
+    notes: ['Manifest created because this repo benefits from explicit runtime metadata.'],
+    readmeCreated: false,
+    readmePath: '/tmp/workspace/repos/workspace-hub/README.md',
+    readmeUpdated: true,
+  })
+
+  assert.match(markup, /Latest repo intake/)
+  assert.match(markup, /Manifest created because this repo benefits from explicit runtime metadata\./)
+  assert.match(markup, /Mapped-host mode is selected, but no path or subdomain is configured yet\./)
 })

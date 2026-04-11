@@ -20,6 +20,12 @@ If the repo has no inferred install command:
 2. Add `installCommand` to `.workspace/project.json` if the repo needs one.
 3. Re-run the install from Workspace Hub.
 
+If the repo looks like a Python-style project:
+
+1. Confirm whether it expects a local `.venv/` or `venv/`.
+2. If it does, create or refresh that environment before retrying the runtime.
+3. If it intentionally uses a global interpreter or another workflow, capture that in repo docs so the next operator does not misread the Hub warning.
+
 If the missing piece is not a repo dependency but an optional workspace ability:
 
 1. Do not hide that requirement in the repo manifest.
@@ -52,6 +58,12 @@ If Workspace Hub shows the repo as `running` but health is `unreachable`:
 2. Check whether the dev server chose a different port.
 3. Review the runtime log for the actual local URL.
 4. Save a `previewUrl` or `healthcheckUrl` override when the repo uses a fixed non-default address.
+
+If the repo prefers mapped-host routing:
+
+1. Confirm the repo has a stable mapped-host path or subdomain in the manifest.
+2. Save an explicit `previewUrl` once the routed hostname is known, instead of relying on transient runtime-log URLs.
+3. Check the operator’s reverse-proxy or local-host mapping outside Workspace Hub if the route is configured but still unreachable.
 
 If `Open preview` attempted to start the repo but still failed to open a working preview:
 
@@ -89,3 +101,11 @@ Practical response:
 Update `.workspace/project.json` when Workspace Hub keeps inferring the wrong command, package manager, preview URL, or preferred mode. Use saved overrides for temporary local corrections and the manifest for repo-native behaviour that should stay with the repo.
 
 Do not use the manifest to imply that an optional workspace ability is present. If a workflow depends on one, document that explicitly in repo docs and keep the install path visible to the next contributor.
+
+## Repo intake follow-up
+
+After running repo intake:
+
+1. Read the intake notes in the details panel before assuming the repo is fully ready.
+2. Check whether intake created a manifest or intentionally skipped it.
+3. Fill in any repo-specific install, dev, preview, or mapped-host details that conservative intake could not infer safely.

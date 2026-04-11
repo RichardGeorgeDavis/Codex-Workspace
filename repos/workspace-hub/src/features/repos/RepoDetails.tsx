@@ -6,6 +6,7 @@ import {
   formatOpenAgentConfigLabel,
 } from './agentTooling.ts'
 import type {
+  RepoIntakeResult,
   RepoAgentPresetId,
   PreviewMode,
   RepoType,
@@ -25,6 +26,7 @@ type RepoDetailsProps = {
   onCopyError: (message: string | null) => void
   onIntakeAction: (relativePath: string) => Promise<void>
   onInstallAction: (relativePath: string) => Promise<void>
+  intakeResult?: RepoIntakeResult | null
   loading: boolean
   onOpenAction: (
     relativePath: string,
@@ -349,6 +351,14 @@ function buildTroubleshootingTips(repo: WorkspaceRepo) {
     )
   }
 
+  if (
+    repo.dependencies.state !== 'ready' &&
+    repo.dependencies.installPath &&
+    (repo.dependencies.installPath.endsWith('/.venv') || repo.dependencies.installPath.endsWith('\\.venv'))
+  ) {
+    tips.push('If this Python-style repo expects a local environment, create or refresh `.venv/` before retrying the runtime.')
+  }
+
   if (repo.install.status === 'error') {
     tips.push('The last install failed. Review the install log below before retrying.')
   }
@@ -367,6 +377,14 @@ function buildTroubleshootingTips(repo: WorkspaceRepo) {
     )
   }
 
+  if (repo.preferredMode === 'servbay' && !repo.servbayPath && !repo.servbaySubdomain) {
+    tips.push('Mapped-host mode is selected, but no path or subdomain is configured yet. Add one before treating routed preview links as stable.')
+  }
+
+  if (repo.preferredMode === 'servbay' && repo.previewUrlSource === 'runtime') {
+    tips.push('The current preview URL came from runtime logs. Save an explicit preview URL once the mapped-host route is stable so the Hub does not fall back to transient ports.')
+  }
+
   if (!tips.length) {
     tips.push('No active troubleshooting warnings are present for this repo.')
   }
@@ -383,6 +401,7 @@ export function RepoDetails({
   onCopyError,
   onIntakeAction,
   onInstallAction,
+  intakeResult,
   loading,
   onOpenAction,
   onOpenWorkspacePath,
@@ -413,6 +432,7 @@ export function RepoDetails({
           onCopyError={onCopyError}
           onIntakeAction={onIntakeAction}
           onInstallAction={onInstallAction}
+          intakeResult={intakeResult}
           onOpenAction={onOpenAction}
           onOpenWorkspacePath={onOpenWorkspacePath}
           onResetMetadata={onResetMetadata}
@@ -444,6 +464,7 @@ export function RepoDetails({
           onCopyError={onCopyError}
           onIntakeAction={onIntakeAction}
           onInstallAction={onInstallAction}
+          intakeResult={intakeResult}
           onOpenAction={onOpenAction}
           onOpenWorkspacePath={onOpenWorkspacePath}
           onResetMetadata={onResetMetadata}
@@ -471,6 +492,7 @@ function RepoDetailsContent({
   onCopyError,
   onIntakeAction,
   onInstallAction,
+  intakeResult,
   onOpenAction,
   onOpenWorkspacePath,
   onResetMetadata,
@@ -497,6 +519,25 @@ function RepoDetailsContent({
     repo.runtime.status === 'error'
   const sideLoad = repo.sideLoad
   const sideLoadStatus = sideLoad ? formatSideLoadStatus(sideLoad.status) : null
+  const hasMappedHostRouting = Boolean(repo.servbayPath || repo.servbaySubdomain)
+  const mappedHostStatus =
+    repo.preferredMode !== 'servbay'
+      ? 'not using mapped-host mode'
+      : hasMappedHostRouting
+        ? 'configured'
+        : 'needs route'
+  const dependencyBadgeTone =
+    repo.dependencies.state === 'ready'
+      ? 'ready'
+      : repo.dependencies.state === 'not-applicable'
+        ? 'unknown'
+        : repo.dependencies.state
+  const mappedHostBadgeTone =
+    repo.preferredMode !== 'servbay'
+      ? 'unknown'
+      : hasMappedHostRouting
+        ? 'ready'
+        : 'error'
 
   async function handleCopy(value: string | null, label: string) {
     if (!value) {
@@ -715,10 +756,21 @@ function RepoDetailsContent({
           <div className="details-row">
             <dt>Dependencies</dt>
             <dd>
-              <span className={`status-pill ${repo.dependencies.state}`}>
+              <span className={`status-pill ${dependencyBadgeTone}`}>
                 {formatDependencyStateLabel(repo.dependencies.state)}
               </span>
               {` ${repo.dependencies.reason}`}
+            </dd>
+          </div>
+          <div className="details-row">
+            <dt>Mapped-host routing</dt>
+            <dd>
+              <span className={`status-pill ${mappedHostBadgeTone}`}>{mappedHostStatus}</span>
+              {repo.preferredMode === 'servbay'
+                ? hasMappedHostRouting
+                  ? ` ${repo.servbaySubdomain ? `${repo.servbaySubdomain} subdomain` : repo.servbayPath}`
+                  : ' Add a mapped-host path or subdomain before relying on this mode.'
+                : ' Direct or external preview is currently preferred.'}
             </dd>
           </div>
           <div className="details-row">
@@ -878,6 +930,54 @@ function RepoDetailsContent({
               Open sources
             </button>
           </div>
+        </AccordionSection>
+      ) : null}
+
+      {intakeResult ? (
+        <AccordionSection
+          badge={<span className="status-pill ready">latest run</span>}
+          title="Latest repo intake"
+        >
+          <p className="section-copy">
+            Repo intake stays conservative: it scaffolds docs and explicit runtime metadata without auto-installing dependencies or starting runtimes.
+          </p>
+
+          <dl className="details-list">
+            <div className="details-row">
+              <dt>README</dt>
+              <dd>
+                {intakeResult.readmeCreated
+                  ? 'Created'
+                  : intakeResult.readmeUpdated
+                    ? 'Updated'
+                    : 'Kept in place'}
+                {` • ${intakeResult.readmePath}`}
+              </dd>
+            </div>
+            <div className="details-row">
+              <dt>Cover image</dt>
+              <dd>
+                {intakeResult.coverCreated ? 'Created placeholder' : 'Kept in place'}
+                {` • ${intakeResult.coverImagePath}`}
+              </dd>
+            </div>
+            <div className="details-row">
+              <dt>Manifest</dt>
+              <dd>
+                {intakeResult.manifestCreated
+                  ? `Created • ${intakeResult.manifestPath}`
+                  : intakeResult.manifestPath
+                    ? `Kept in place • ${intakeResult.manifestPath}`
+                    : 'Skipped because the runtime looked clear without one'}
+              </dd>
+            </div>
+          </dl>
+
+          <ul className="troubleshooting-list">
+            {intakeResult.notes.map((note) => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
         </AccordionSection>
       ) : null}
 
@@ -1521,6 +1621,12 @@ function RepoDetailsContent({
             <li key={tip}>{tip}</li>
           ))}
         </ul>
+
+        {repo.preferredMode === 'servbay' ? (
+          <p className="section-copy troubleshooting-followup">
+            Mapped-host previews are only reliable when the repo has a tested path or subdomain and the saved preview URL matches the operator&apos;s local routing setup.
+          </p>
+        ) : null}
       </AccordionSection>
 
       {actionError ? (

@@ -30,6 +30,13 @@ async function createNodeRepo(root: string, relativePath: string) {
   )
 }
 
+async function createPythonRepo(root: string, relativePath: string) {
+  await writeTextFile(
+    path.join(root, 'repos', relativePath, 'pyproject.toml'),
+    '[project]\nname = "fixture-python"\nversion = "0.1.0"\n',
+  )
+}
+
 async function initGitRepo(root: string, relativePath: string) {
   const repoPath = path.join(root, 'repos', relativePath)
   await execFileAsync('git', ['init'], { cwd: repoPath })
@@ -284,6 +291,23 @@ test('repo details can eagerly hydrate diagnostics without rebuilding full works
   assert.equal(observability.observabilityVersion, 2)
   assert.equal(observability.repoDetails.requests >= 1, true)
   assert.equal(typeof observability.repoDetails.lastDurationMs, 'number')
+})
+
+test('python-style repos report clearer dependency readiness when no local venv is present', async () => {
+  await createPythonRepo(tempWorkspaceRoot, 'repo-python')
+  const workspaceModule = await importWorkspaceModule(tempWorkspaceRoot, '60000')
+  workspaceModule.invalidateWorkspaceSummaryCache()
+
+  const pythonRepo = await workspaceModule.buildWorkspaceRepoDetails(
+    'repos/repo-python',
+    new Map(),
+    new Map(),
+  )
+
+  assert.ok(pythonRepo)
+  assert.equal(pythonRepo.dependencies.state, 'unknown')
+  assert.match(pythonRepo.dependencies.reason, /python project markers/i)
+  assert.match(pythonRepo.dependencies.reason, /\.venv/i)
 })
 
 test('repo details hydrate side-load freshness without adding side-load data to base summary', async () => {

@@ -82,6 +82,17 @@ export type RepoSavedMetadata = {
   tags?: string[]
 }
 
+export type RepoIntakeResult = {
+  coverCreated: boolean
+  coverImagePath: string
+  manifestCreated: boolean
+  manifestPath: string | null
+  notes: string[]
+  readmeCreated: boolean
+  readmePath: string
+  readmeUpdated: boolean
+}
+
 export type RepoAgentTooling = {
   agentsPath: string | null
   agentStackPath: string | null
@@ -383,11 +394,14 @@ export type WorkspaceCoreServiceGraph = {
     reportPath: string | null
   }
   available: boolean
+  derivedEdgeCount: number | null
   edgeCount: number | null
   lastBuiltAt: string | null
   nodeCount: number | null
+  nodeTypeCounts: Partial<Record<string, number>>
   outputDirectory: string | null
   outputDirectoryExists: boolean
+  reportExcerpt: string[]
 }
 
 export type WorkspaceCoreServiceTargetContext = {

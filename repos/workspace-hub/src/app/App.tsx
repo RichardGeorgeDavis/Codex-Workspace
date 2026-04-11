@@ -55,6 +55,7 @@ import {
   mergeWorkspaceSummaryDiagnostics,
 } from '../lib/mergeWorkspaceSummary.ts'
 import type {
+  RepoIntakeResult,
   RepoAgentPresetId,
   RepoType,
   SummaryRequestReason,
@@ -75,6 +76,8 @@ type RepoFilterValue =
   | RepoType
   | 'all'
   | 'external'
+  | 'pinned'
+  | 'recent'
   | 'runnable'
 type AppProps = {
   initialThemePreference: ThemePreference
@@ -141,6 +144,14 @@ function filterRepos(
       if (repo.preferredMode !== 'external') {
         return false
       }
+    } else if (selectedFilter === 'pinned') {
+      if (!repo.isPinned) {
+        return false
+      }
+    } else if (selectedFilter === 'recent') {
+      if (!getRepoRecentScore(repo)) {
+        return false
+      }
     } else if (selectedFilter === 'runnable') {
       if (!repo.devCommand) {
         return false
@@ -179,6 +190,25 @@ function filterRepos(
   })
 }
 
+function sortReposForDisplay(repos: WorkspaceRepo[]) {
+  return [...repos].sort((left, right) => {
+    if (left.isPinned !== right.isPinned) {
+      return left.isPinned ? -1 : 1
+    }
+
+    const recentDifference = getRepoRecentScore(right) - getRepoRecentScore(left)
+    if (recentDifference !== 0) {
+      return recentDifference
+    }
+
+    if (left.collection === right.collection) {
+      return left.name.localeCompare(right.name)
+    }
+
+    return left.collection.localeCompare(right.collection)
+  })
+}
+
 function filterArchives(
   archives: WorkspaceArchive[],
   normalizedSearch: string,
@@ -204,11 +234,15 @@ export function App({ initialThemePreference }: AppProps) {
   const [indexedSearchError, setIndexedSearchError] = useState<string | null>(null)
   const [indexedSearchLoading, setIndexedSearchLoading] = useState(false)
   const [indexedSearchResults, setIndexedSearchResults] = useState<WorkspaceSearchResult[]>([])
+  const [intakeResultsByPath, setIntakeResultsByPath] = useState<Record<string, RepoIntakeResult>>(
+    {},
+  )
   const [liveEventLabel, setLiveEventLabel] = useState('Waiting for live updates')
   const [liveStatus, setLiveStatus] = useState<'connected' | 'connecting' | 'disconnected'>(
     'connecting',
   )
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedCapabilityId, setSelectedCapabilityId] = useState<string | null>(null)
   const [repoLayoutMode, setRepoLayoutMode] = useState(() => loadStoredRepoLayoutMode())
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
@@ -633,7 +667,13 @@ export function App({ initialThemePreference }: AppProps) {
     setActionError(null)
 
     try {
-      await runRepoIntake(relativePath)
+      const payload = await runRepoIntake(relativePath)
+      startTransition(() => {
+        setIntakeResultsByPath((currentValue) => ({
+          ...currentValue,
+          [relativePath]: payload.result,
+        }))
+      })
       await refreshSummarySoft(undefined, 'action')
     } catch (caughtError) {
       setActionError(
@@ -888,7 +928,7 @@ export function App({ initialThemePreference }: AppProps) {
     : []
   const normalizedSearch = deferredSearchTerm.trim().toLowerCase()
   const filteredRepos = summary
-    ? filterRepos(summary.repos, normalizedSearch, selectedFilter)
+    ? sortReposForDisplay(filterRepos(summary.repos, normalizedSearch, selectedFilter))
     : []
   const filteredArchives = summary
     ? filterArchives(summary.archives, normalizedSearch)
@@ -1110,19 +1150,10 @@ export function App({ initialThemePreference }: AppProps) {
     }
 
     setWorkspaceView('dashboard')
+    setSelectedCapabilityId(capabilityId)
 
     if (capability.installed) {
-      void handleOpenWorkspaceCapabilityAction(capabilityId, 'repo')
       return
-    }
-
-    if (capability.docsPath) {
-      void handleOpenWorkspaceCapabilityAction(capabilityId, 'docs')
-      return
-    }
-
-    if (capability.readmePath) {
-      void handleOpenWorkspaceCapabilityAction(capabilityId, 'readme')
     }
   }
 
@@ -1305,11 +1336,12 @@ export function App({ initialThemePreference }: AppProps) {
                       onOpenAction={handleOpenAction}
                       onOpenWorkspacePath={handleOpenWorkspacePath}
                       onResetMetadata={handleResetMetadata}
-                      onRuntimeAction={handleRuntimeAction}
-                      onSaveMetadata={handleSaveMetadata}
-                      onWriteManifest={handleWriteManifest}
-                      repo={selectedRepo}
-                    />
+                    onRuntimeAction={handleRuntimeAction}
+                    onSaveMetadata={handleSaveMetadata}
+                    intakeResult={intakeResultsByPath[selectedRepo.relativePath] ?? null}
+                    onWriteManifest={handleWriteManifest}
+                    repo={selectedRepo}
+                  />
                   ) : null
                 }
                 selectedPath={selectedPath}
@@ -1335,6 +1367,7 @@ export function App({ initialThemePreference }: AppProps) {
                   onResetMetadata={handleResetMetadata}
                   onRuntimeAction={handleRuntimeAction}
                   onSaveMetadata={handleSaveMetadata}
+                  intakeResult={selectedRepo ? intakeResultsByPath[selectedRepo.relativePath] ?? null : null}
                   onWriteManifest={handleWriteManifest}
                   repo={selectedRepo}
                 />
@@ -1363,6 +1396,8 @@ export function App({ initialThemePreference }: AppProps) {
                 loading={loading}
                 onAction={handleWorkspaceCapabilityAction}
                 onOpenAction={handleOpenWorkspaceCapabilityAction}
+                onSelectCapability={setSelectedCapabilityId}
+                selectedCapabilityId={selectedCapabilityId}
               />
               {selectedService && selectedService.id !== 'mempalace' ? (
                 <CoreServiceDetails

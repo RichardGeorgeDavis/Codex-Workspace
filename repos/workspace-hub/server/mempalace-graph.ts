@@ -37,7 +37,15 @@ export type MempalaceGraphArtifactPaths = {
 }
 
 type MempalaceGraphDocument = {
+  edges?: Array<{
+    confidence?: number
+    derived?: boolean
+    type?: string
+  }>
   generatedAt?: string
+  nodes?: Array<{
+    type?: string
+  }>
   summary?: {
     edgeCount?: number
     nodeCount?: number
@@ -47,11 +55,14 @@ type MempalaceGraphDocument = {
 export type MempalaceGraphSnapshot = {
   artifacts: MempalaceGraphArtifactPaths
   available: boolean
+  derivedEdgeCount: number | null
   edgeCount: number | null
   lastBuiltAt: string | null
   nodeCount: number | null
+  nodeTypeCounts: Partial<Record<string, number>>
   outputDirectory: string | null
   outputDirectoryExists: boolean
+  reportExcerpt: string[]
 }
 
 async function fileExists(targetPath: string) {
@@ -75,11 +86,14 @@ export async function readMempalaceGraphSnapshot(
         reportPath: null,
       },
       available: false,
+      derivedEdgeCount: null,
       edgeCount: null,
       lastBuiltAt: null,
       nodeCount: null,
+      nodeTypeCounts: {},
       outputDirectory: null,
       outputDirectoryExists: false,
+      reportExcerpt: [],
     }
   }
 
@@ -101,6 +115,32 @@ export async function readMempalaceGraphSnapshot(
     }
   }
 
+  let reportExcerpt: string[] = []
+  if (reportExists) {
+    try {
+      reportExcerpt = (await readFile(reportPath, 'utf8'))
+        .split(/\r?\n/u)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .slice(0, 8)
+    } catch {
+      reportExcerpt = []
+    }
+  }
+
+  const nodeTypeCounts = Object.fromEntries(
+    Object.entries(
+      (document?.nodes ?? []).reduce<Record<string, number>>((counts, node) => {
+        const type = typeof node.type === 'string' && node.type.trim() ? node.type.trim() : 'unknown'
+        counts[type] = (counts[type] ?? 0) + 1
+        return counts
+      }, {}),
+    ).sort(([left], [right]) => left.localeCompare(right)),
+  )
+  const derivedEdgeCount = document
+    ? (document.edges ?? []).filter((edge) => edge.derived).length
+    : null
+
   return {
     artifacts: {
       htmlPath: htmlExists ? htmlPath : null,
@@ -108,10 +148,13 @@ export async function readMempalaceGraphSnapshot(
       reportPath: reportExists ? reportPath : null,
     },
     available: true,
+    derivedEdgeCount,
     edgeCount: typeof document?.summary?.edgeCount === 'number' ? document.summary.edgeCount : null,
     lastBuiltAt: document?.generatedAt ?? null,
     nodeCount: typeof document?.summary?.nodeCount === 'number' ? document.summary.nodeCount : null,
+    nodeTypeCounts,
     outputDirectory,
     outputDirectoryExists,
+    reportExcerpt,
   }
 }

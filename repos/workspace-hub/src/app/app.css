@@ -1333,6 +1333,14 @@
   gap: 1.1rem;
 }
 
+.capability-toolbar {
+  margin-bottom: 0.9rem;
+}
+
+.capability-featured-card {
+  margin-bottom: 1rem;
+}
+
 .discovery-group {
   display: grid;
   gap: 0.75rem;
@@ -1715,6 +1723,10 @@
   margin-top: 0.5rem;
 }
 
+.troubleshooting-followup {
+  margin-top: 0.9rem;
+}
+
 .editor-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1894,6 +1906,16 @@
   border-radius: var(--radius-card);
   background: var(--surface-muted);
   color: var(--text-strong);
+}
+
+.memory-graph-breakdown {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.memory-graph-report-preview pre {
+  max-height: 16rem;
 }
 
 .details-row {
