@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-04-12
+
+- Added runtime payload validation bounds to `repos/workspace-hub/src/lib/api.ts` so `runRepoIntake`, `runWorkspaceCapabilityAction`, and `applyRepoAgentPreset` execute strict schema-shape verification before asserting TypeScript types, preventing downstream React faults on malformed payloads.
+
 ## 2026-04-11
 
 - Bumped the workspace baseline release to `v1.2.2` and updated `repos/workspace-hub` to `1.2.2` to capture the side-load `entry.md` packet flow, manifest `entryDocs` support, and thin-versus-deep indexed search as the new published baseline.

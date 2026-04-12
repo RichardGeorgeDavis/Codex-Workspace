@@ -896,3 +896,15 @@ Verification status for this local slice:
 Pickup note:
 
 - if this slice lands, update `docs/CHANGELOG.md`, `docs/README.md`, and any relevant `workspace-hub` docs summary so the public side-load contract reflects `entry.md` and the new indexed-search modes
+
+### Implementation update (2026-04-12, runtime payload safety)
+
+Completed in `repos/workspace-hub`:
+
+1. Added strict validation constraints around core API calls fetching structured payloads (`runRepoIntake`, `runWorkspaceCapabilityAction`, and `applyRepoAgentPreset`) inside `src/lib/api.ts`.
+2. Verified manual object validation throws clean Errors rather than silently returning structurally corrupt data to the React UI, establishing stricter type boundaries given the environment lacks `zod`.
+
+Verification status for this local slice:
+
+- `pnpm --dir "repos/workspace-hub" typecheck`
+- `pnpm --dir "repos/workspace-hub" test`

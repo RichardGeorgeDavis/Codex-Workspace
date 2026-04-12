@@ -174,7 +174,12 @@ export async function runWorkspaceCapabilityAction(
     throw new Error(await readErrorMessage(response))
   }
 
-  return (await response.json()) as {
+  const data = await response.json()
+  if (!data || typeof data !== 'object' || !('ok' in data) || !('output' in data)) {
+    throw new Error('Malformed response received from capability action endpoint')
+  }
+
+  return data as {
     ok: boolean
     output: string
   }
@@ -325,7 +330,12 @@ export async function runRepoIntake(relativePath: string) {
     throw new Error(await readErrorMessage(response))
   }
 
-  return (await response.json()) as {
+  const data = await response.json()
+  if (!data || typeof data !== 'object' || !('ok' in data) || !('result' in data)) {
+    throw new Error('Malformed response received from intake endpoint')
+  }
+
+  return data as {
     ok: boolean
     result: RepoIntakeResult
   }
@@ -413,7 +423,12 @@ export async function applyRepoAgentPreset(
     throw new Error(await readErrorMessage(response))
   }
 
-  return (await response.json()) as {
+  const data = await response.json()
+  if (!data || typeof data !== 'object' || !('ok' in data) || !('result' in data)) {
+    throw new Error('Malformed response received from agent preset endpoint')
+  }
+
+  return data as {
     ok: true
     result: RepoAgentPresetResult
   }
