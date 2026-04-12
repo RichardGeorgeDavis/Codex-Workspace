@@ -118,6 +118,12 @@ Current UI limits:
 - Add provenance views across source, segment, claim, workflow, and card.
 - Improve normalization and distillation quality before expanding beyond events.
 
+Recommended unattended batch order:
+- Batch 1: UI create/upload flows (`high`)
+- Batch 2: manifest-aware editors (`medium`)
+- Batch 3: provenance explorer (`medium`)
+- Batch 4: normalization/distillation quality (`medium`)
+
 ## Current status
 This repo is now a **working v1 event pipeline** built from the original Phase 1 scaffold generated on 2026-04-12. It includes:
 - a repo-native Python CLI
