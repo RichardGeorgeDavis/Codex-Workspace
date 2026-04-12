@@ -1,0 +1,22 @@
+id: manifest_design-indaba-2025
+slug: design-indaba-2025
+collection_type: events
+title: Design Indaba 2025 example pack
+generated_on: "2026-04-12"
+sources:
+  - id: src_briefing
+    title: Design Indaba 2025 Briefing
+    slug: briefing
+    source_type: transcript
+    collection_type: events
+    collection_slug: design-indaba-2025
+    creator_or_author: unknown
+    date_created_or_published: null
+    date_ingested: "2026-04-12"
+    language: en
+    rights_note: Example source for validation and pipeline tests.
+    origin: examples/event-pack/briefing.md
+    file_path: examples/event-pack/briefing.md
+    checksum: 31426fa80c2a5769e0c22394d239fd0147632f43e7c895065d76ad0b2a926ce5
+    source_url: null
+    status: unreviewed

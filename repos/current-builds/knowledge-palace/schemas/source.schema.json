@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Source Asset",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "slug",
+    "source_type",
+    "file_path",
+    "checksum",
+    "rights_note",
+    "date_ingested",
+    "status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^src_[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "title": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "transcript",
+        "slide_deck",
+        "document"
+      ]
+    },
+    "collection_type": {
+      "type": "string",
+      "const": "events"
+    },
+    "collection_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "creator_or_author": {
+      "type": "string"
+    },
+    "date_created_or_published": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "date_ingested": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string"
+    },
+    "rights_note": {
+      "type": "string"
+    },
+    "origin": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "file_path": {
+      "type": "string",
+      "pattern": "^(raw|examples)/.+"
+    },
+    "checksum": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "source_url": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "unreviewed",
+        "reviewed",
+        "verified",
+        "deprecated"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

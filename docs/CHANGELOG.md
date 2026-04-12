@@ -2,6 +2,7 @@
 
 ## 2026-04-12
 
+- Added `tools/local/commands/Run Knowledge Palace UI.command` as a workspace-level launcher for the Knowledge Palace local web UI, and aligned the workspace docs index plus repo docs so the command, current state, and next UI batches are documented together.
 - Added runtime payload validation bounds to `repos/workspace-hub/src/lib/api.ts` so `runRepoIntake`, `runWorkspaceCapabilityAction`, and `applyRepoAgentPreset` execute strict schema-shape verification before asserting TypeScript types, preventing downstream React faults on malformed payloads.
 
 ## 2026-04-11

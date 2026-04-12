@@ -57,6 +57,7 @@ Read these in order:
 
 - `tools/bin/` holds small wrappers or launch helpers.
 - `tools/scripts/` holds reusable workspace scripts.
+- `tools/local/commands/` holds Finder-friendly local launch commands for specific workspace tools or repos.
 - `tools/templates/` holds starter metadata templates.
 - `tools/manifests/` holds source lists and supporting manifests for scripts.
 - `tools/github-rulesets/` holds importable repository ruleset JSON for GitHub.
@@ -90,6 +91,11 @@ Useful maintenance scripts:
 - `tools/scripts/sync-codex-skills.sh` previews or syncs tracked workspace skill sources into repo `.codex/skills/` folders plus optional `.agents/skills/` compatibility mirrors, with dry-run mode by default.
 - `tools/scripts/trim-git-repos.sh` performs safe Git maintenance across `repos/` by cleaning `.git` sync noise, expiring older reflog entries, and running `git gc` with a conservative prune window.
 - `tools/scripts/update-all.sh` can now fast-forward all repos or only a named repo group from a JSON manifest via `--group`.
+
+Local launch examples:
+
+- `tools/local/commands/Run Workspace Hub.command` starts the Hub and opens the browser once it responds.
+- `tools/local/commands/Run Knowledge Palace UI.command` starts the Knowledge Palace web UI and opens it once the local API is ready.
 
 Useful template locations:
 

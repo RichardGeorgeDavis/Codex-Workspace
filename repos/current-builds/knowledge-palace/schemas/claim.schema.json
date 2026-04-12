@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Claim",
+  "type": "object",
+  "required": [
+    "id",
+    "claim_text",
+    "claim_type",
+    "speaker_or_source",
+    "topic",
+    "evidence_strength",
+    "source_refs",
+    "verification_state"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^clm_[a-z0-9]+(?:-[a-z0-9]+)*-\\d{3}$"
+    },
+    "claim_text": {
+      "type": "string"
+    },
+    "claim_type": {
+      "type": "string",
+      "enum": [
+        "direct_statement"
+      ]
+    },
+    "speaker_or_source": {
+      "type": "string"
+    },
+    "topic": {
+      "type": "string"
+    },
+    "evidence_strength": {
+      "type": "string",
+      "enum": [
+        "direct",
+        "derived",
+        "speculative"
+      ]
+    },
+    "source_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "verification_state": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "unreviewed",
+        "reviewed",
+        "verified",
+        "deprecated"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

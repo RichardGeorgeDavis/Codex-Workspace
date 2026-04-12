@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Source Segment",
+  "type": "object",
+  "required": [
+    "id",
+    "source_id",
+    "title",
+    "segment_type",
+    "segment_ref",
+    "body",
+    "status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^seg_[a-z0-9]+(?:-[a-z0-9]+)*-\\d{3}$"
+    },
+    "source_id": {
+      "type": "string",
+      "pattern": "^src_[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "title": {
+      "type": "string"
+    },
+    "segment_type": {
+      "type": "string",
+      "enum": [
+        "section"
+      ]
+    },
+    "segment_ref": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string"
+    },
+    "topics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "unreviewed",
+        "reviewed",
+        "verified",
+        "deprecated"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

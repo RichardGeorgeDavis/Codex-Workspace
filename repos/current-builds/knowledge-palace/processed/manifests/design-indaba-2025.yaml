@@ -1,0 +1,13 @@
+id: processed_design-indaba-2025
+slug: design-indaba-2025
+collection_type: events
+raw_manifest_path: raw/events/design-indaba-2025/source-manifest.yaml
+generated_on: '2026-04-12T18:08:33Z'
+normalized_sources:
+- source_id: src_briefing
+  source_slug: briefing
+  cleaned_text_path: processed/cleaned-text/design-indaba-2025/briefing.md
+  cleaned_checksum: ffe80139f0a2d091964f23e7a21a8ee163e0cd21b53f42f5c906a4520592562a
+  status: unreviewed
+  segment_path: processed/segments/design-indaba-2025/briefing.json
+  segment_count: 3

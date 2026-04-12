@@ -89,6 +89,8 @@ If you want the fuller workspace path after that:
 - Use [docs/20-ai-context-side-load.md](docs/20-ai-context-side-load.md) for the generated AI side-load contract and the `generate-context-cache.sh` workflow.
 - Use [docs/09-new-repo-baseline.md](docs/09-new-repo-baseline.md) when adding or onboarding a repo.
 
+Repo-specific launchers can also live under `tools/local/commands/`. For example, `tools/local/commands/Run Knowledge Palace UI.command` starts the Knowledge Palace local web UI from the workspace root.
+
 ## How To Contribute
 
 - Start with [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md).

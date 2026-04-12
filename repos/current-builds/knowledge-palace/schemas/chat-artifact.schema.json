@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Chat Artifact",
+  "type": "object",
+  "required": [
+    "id",
+    "tool_name",
+    "session_title",
+    "date_created",
+    "user_prompt",
+    "assistant_output",
+    "grounding_context",
+    "project_context",
+    "status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^chat_[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "tool_name": {
+      "type": "string",
+      "enum": [
+        "chatgpt",
+        "codex",
+        "cursor",
+        "gemini",
+        "antigravity",
+        "notebooklm"
+      ]
+    },
+    "session_title": {
+      "type": "string"
+    },
+    "date_created": {
+      "type": "string"
+    },
+    "user_prompt": {
+      "type": "string"
+    },
+    "assistant_output": {
+      "type": "string"
+    },
+    "grounding_context": {
+      "type": "string"
+    },
+    "project_context": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "unreviewed",
+        "reviewed",
+        "verified",
+        "deprecated"
+      ]
+    }
+  },
+  "additionalProperties": false
+}
