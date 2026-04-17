@@ -19,14 +19,29 @@ if [ -n "$(git -C "$mempalace_repo" status --porcelain)" ]; then
 fi
 
 current_branch=$(git -C "$mempalace_repo" symbolic-ref --quiet --short HEAD 2>/dev/null || printf 'main')
+upstream_url=""
+origin_url=""
+push_remote="${MEMPALACE_PUSH_REMOTE:-}"
 
 if git -C "$mempalace_repo" remote get-url upstream >/dev/null 2>&1; then
+  upstream_url=$(git -C "$mempalace_repo" remote get-url upstream)
+fi
+
+if git -C "$mempalace_repo" remote get-url origin >/dev/null 2>&1; then
+  origin_url=$(git -C "$mempalace_repo" remote get-url origin)
+fi
+
+if [ -z "$push_remote" ]; then
+  push_remote=$(git -C "$mempalace_repo" config --get mempalace.pushRemote 2>/dev/null || true)
+fi
+
+if [ -n "$upstream_url" ]; then
   printf 'Fetching upstream...\n'
   git -C "$mempalace_repo" fetch upstream --prune
   printf 'Fast-forwarding %s from upstream/main...\n' "$current_branch"
   git -C "$mempalace_repo" checkout "$current_branch"
   git -C "$mempalace_repo" merge --ff-only upstream/main
-elif git -C "$mempalace_repo" remote get-url origin >/dev/null 2>&1; then
+elif [ -n "$origin_url" ]; then
   printf 'Fetching origin...\n'
   git -C "$mempalace_repo" fetch origin --prune
   printf 'Fast-forwarding %s from origin/%s...\n' "$current_branch" "$current_branch"
@@ -37,9 +52,23 @@ else
   exit 1
 fi
 
-if git -C "$mempalace_repo" remote get-url origin >/dev/null 2>&1; then
-  printf 'Pushing %s to origin...\n' "$current_branch"
-  git -C "$mempalace_repo" push origin "$current_branch"
+if [ -n "$push_remote" ]; then
+  if ! git -C "$mempalace_repo" remote get-url "$push_remote" >/dev/null 2>&1; then
+    printf 'Configured push remote does not exist: %s\n' "$push_remote" >&2
+    exit 1
+  fi
+
+  push_url=$(git -C "$mempalace_repo" remote get-url "$push_remote")
+
+  if [ -n "$upstream_url" ] && [ "$push_url" = "$upstream_url" ]; then
+    printf 'Refusing to push to upstream remote %s (%s)\n' "$push_remote" "$push_url" >&2
+    exit 1
+  fi
+
+  printf 'Pushing %s to %s...\n' "$current_branch" "$push_remote"
+  git -C "$mempalace_repo" push "$push_remote" "$current_branch"
+else
+  printf 'Skipping push: no project push remote is configured.\n'
 fi
 
 record_mempalace_event "sync"

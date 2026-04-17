@@ -99,8 +99,6 @@ export_mempalace_runtime_env() {
   export HOME="$mempalace_home"
   export MEMPALACE_CACHE_DIR="$mempalace_cache_root"
   export ANONYMIZED_TELEMETRY="FALSE"
-  export CHROMA_PRODUCT_TELEMETRY_IMPL="mempalace.chroma_telemetry.NoOpProductTelemetryClient"
-  export CHROMA_TELEMETRY_IMPL="mempalace.chroma_telemetry.NoOpProductTelemetryClient"
 }
 
 mempalace_timestamp() {
