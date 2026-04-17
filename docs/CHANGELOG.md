@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-04-18
+
+- Installed the managed MemPalace checkout into `tools/mempalace` for the active workspace so capability sweeps and direct wrapper commands can operate on a real local core-service repo instead of only on shared durable state under `shared/mempalace/<user>/`.
+- Hardened `tools/bin/mempalace-sync` so it only pushes when a project-owned push remote is configured explicitly through `MEMPALACE_PUSH_REMOTE` or git config `mempalace.pushRemote`, and it now refuses to push to the upstream `milla-jovovich/mempalace` URL.
+- Updated `tools/bin/workspace-memory` to detect whether the installed MemPalace CLI supports `mine --exclude` before passing filtered-ingest flags, improving compatibility with current upstream CLI builds.
+- Removed the workspace-level `mempalace.chroma_telemetry.*` environment override from `tools/scripts/mempalace-env.sh` because the installed MemPalace build does not ship that module.
+- Documented the current operator behavior in [HANDOVER](HANDOVER.md) and the docs index so future handover and dependency-sweep runs treat MemPalace as an installed core service with explicit, project-owned push configuration.
+
 ## 2026-04-17
 
 - Added `tools/scripts/workspace-port-allocator.sh` and rewired the workspace-level launchers under `tools/local/commands/` to reserve ports through `cache/runtime/ports/`, reducing same-time launcher collisions while keeping hosts fixed on `127.0.0.1` and falling forward to the next open port in each repo's range.

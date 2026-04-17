@@ -159,6 +159,25 @@ The workspace launcher baseline is now:
 
 This is intended to reduce same-time launcher collisions without making local URLs unpredictable.
 
+## MemPalace operator note (2026-04-18)
+
+The active workspace now has a managed MemPalace checkout installed under `tools/mempalace`.
+
+Operational notes:
+
+- treat `shared/mempalace/<user>/` as durable state and `tools/mempalace` as the managed code checkout
+- use `tools/bin/workspace-memory install` to install or refresh the managed checkout and local runtime
+- `tools/bin/mempalace-sync` now fast-forwards locally and only pushes when a project-owned push remote is configured explicitly
+- the sync wrapper refuses to push to the upstream MemPalace repository URL
+- `tools/bin/workspace-memory` now detects whether the installed MemPalace CLI supports `mine --exclude` before passing exclude flags
+- the workspace MemPalace environment no longer injects a missing `mempalace.chroma_telemetry.*` override for builds that do not ship that module
+- the first `save-workspace`, `save-repo`, or other write-heavy ingest after a fresh install can take noticeably longer because Chroma may download its local embedding model on first use
+
+Current safe remote rule:
+
+- set `MEMPALACE_PUSH_REMOTE=<your-remote>` or git config `mempalace.pushRemote=<your-remote>` only when the checkout should push to a project-owned remote
+- if no explicit push remote is configured, `mempalace-sync` is fetch-and-fast-forward only
+
 ## Release verification status
 
 The stable release gate has already been exercised successfully:

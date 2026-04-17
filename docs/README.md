@@ -69,9 +69,9 @@ Read these in order:
 Useful maintenance scripts:
 
 - `tools/scripts/bootstrap-workspace.sh` prepares safe cache/context folders and can install `workspace-hub` dependencies without touching sibling repos.
-- `tools/bin/workspace-memory` manages the MemPalace workspace service lifecycle, local install, and user-scoped paths.
+- `tools/bin/workspace-memory` manages the MemPalace workspace service lifecycle, local install, user-scoped paths, and CLI-version-compatible ingest behavior.
 - `tools/bin/mempalace-start` runs the MemPalace MCP server with the workspace-scoped home.
-- `tools/bin/mempalace-sync` fast-forwards the MemPalace repo when its working tree is clean.
+- `tools/bin/mempalace-sync` fast-forwards the MemPalace repo when its working tree is clean and only pushes when a project-owned push remote is configured explicitly.
 - `tools/scripts/bootstrap-repo.sh` previews or runs repo-native install/setup using manifest `installCommand` first, then package-manager precedence such as env override, manifest `packageManager`, `package.json`, and lockfiles.
 - `tools/scripts/doctor-workspace.sh` runs a non-destructive environment and readiness check for the workspace, Workspace Hub, mixed-stack tooling, and Codex-related setup.
 - `tools/scripts/cleanup-sync-noise.sh` removes macOS and sync-client noise files such as `Icon\r` and `._*`, including the broken-ref cases when they leak into `.git/`.
