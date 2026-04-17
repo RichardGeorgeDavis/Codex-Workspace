@@ -26,9 +26,16 @@ Local reference copy of a publicly accessible site or experience.
 - Entry path: `{{ENTRY_PATH}}`
 - Works fully offline: `unknown`
 
+## Launcher
+
+- If you keep a one-click launcher for the reference copy, record its path here.
+- Prefer a repo-local `local/commands/run-<repo>` file when the repo is intended to be portable.
+- A workspace-level `tools/local/commands/Run <repo>.command` is fine when the launcher is shared from the workspace root.
+
 ## Acquisition
 
 1. Fetch method: `{{FETCH_METHOD}}`
+   Optional workspace helper: `tools/scripts/capture-site-reference.sh --run {{SOURCE_URL}} /absolute/path/to/this/repo`
 2. Local serve command: `{{SERVE_COMMAND}}`
 3. If automatic download fails for specific files, give the direct URLs to the user and place the manually downloaded copies in `ref/`
 4. Extra notes:

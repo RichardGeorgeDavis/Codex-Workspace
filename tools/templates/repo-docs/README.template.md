@@ -25,6 +25,13 @@ Short description of what this repo is for.
 {{DEV_COMMAND}}
 ```
 
+## Launcher
+
+- Add a runnable command file for the repo so it can be started without retyping the shell command.
+- Prefer a repo-local `local/commands/run-<repo>` file when the repo should stay portable on its own.
+- Use a workspace-level `tools/local/commands/Run <repo>.command` when a Finder-friendly launcher is the better fit.
+- Link to the chosen command file here once it exists.
+
 ## Preview
 
 - URL: {{PREVIEW_URL}}
