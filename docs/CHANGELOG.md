@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-04-17
+
+- Installed `httrack` for this workspace environment and added `tools/scripts/capture-site-reference.sh` as the repo-intake wrapper for public-site reference copies, with dry-run-by-default behavior, conservative same-domain defaults, and repo-local capture notes under `ref/httrack/`.
+- Updated the public repo-intake surfaces in [README](../README.md), [docs/README](README.md), [09-new-repo-baseline](09-new-repo-baseline.md), and [tools/templates/repo-docs/README.site-reference.template.md](../tools/templates/repo-docs/README.site-reference.template.md) so site-reference repos have one documented `httrack` path.
+
 ## 2026-04-12
 
 - Added `tools/local/commands/Run Knowledge Palace UI.command` as a workspace-level launcher for the Knowledge Palace local web UI, and aligned the workspace docs index plus repo docs so the command, current state, and next UI batches are documented together.

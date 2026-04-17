@@ -123,6 +123,7 @@ The current repo intake flow in `workspace-hub` is intentionally conservative.
 - it writes `.workspace/project.json` only when the repo appears to need explicit runtime metadata
 - it keeps an existing manifest if one is already present
 - it does not auto-install dependencies or auto-start runtimes as part of intake
+- it now attempts a `tools/bin/workspace-memory save-repo <repo-path-or-name>` closeout after repo intake so the current Codex thread captures the new repo setup
 
 This keeps intake focused on first-pass repo clarity rather than hidden setup side effects.
 
@@ -135,12 +136,14 @@ Current stance:
 - treat the result as one of: deployed mirror, working local reference copy, or clean rebuild
 - do not describe a public-site mirror as the original source project
 - record source URL, capture date, and acquisition method in `README.md` or `HANDOVER.md`
+- when `httrack` is available, prefer `tools/scripts/capture-site-reference.sh --run <url> <target-dir>` so the capture stays conservative by default and records a repo-local note under `ref/httrack/`
 - if automated capture misses files because of permissions or other blockers, provide the direct asset URLs to the user in chat
 - store any user-downloaded fallback files in a repo-local `ref/` folder with source notes
 - create a separate rebuild repo if maintainable editing is the real goal
 
-The tracked template for this flow now lives at:
+The tracked helper surfaces for this flow now live at:
 
+- `tools/scripts/capture-site-reference.sh`
 - `tools/templates/repo-docs/README.site-reference.template.md`
 
 ## Release verification status
@@ -908,3 +911,17 @@ Verification status for this local slice:
 
 - `pnpm --dir "repos/workspace-hub" typecheck`
 - `pnpm --dir "repos/workspace-hub" test`
+
+### Implementation update (2026-04-17, HTTrack site-reference intake wrapper)
+
+Completed in the workspace root:
+
+1. Installed `httrack` for the active workspace environment and verified it is available on `PATH`.
+2. Added `tools/scripts/capture-site-reference.sh` as the dry-run-by-default wrapper for public-site reference captures, with conservative same-domain defaults, optional passthrough HTTrack args, and repo-local capture notes under `ref/httrack/`.
+3. Updated the public repo-intake docs and the site-reference README template so the workspace now has one documented `httrack` path instead of leaving site capture as an ad hoc command.
+
+Verification status for this local slice:
+
+- `sh -n tools/scripts/capture-site-reference.sh`
+- `tools/scripts/capture-site-reference.sh https://example.com /Users/richard/Local\\ Sites/Codex\\ Workspace/cache/httrack-smoke-test`
+- `tools/scripts/capture-site-reference.sh --run https://example.com /Users/richard/Local\\ Sites/Codex\\ Workspace/cache/httrack-smoke-test-run`

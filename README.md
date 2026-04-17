@@ -288,6 +288,7 @@ External skill catalogs such as [`openai/skills`](https://github.com/openai/skil
 - for repo-level Codex discoverability, prefer tracked `.codex/skills/` and keep `.agents/skills/` only when repo-local compatibility mirroring helps
 - keep workspace-wide reusable skill sources in `shared/skills/` and starter templates in `tools/templates/skills/`
 - keep the managed VoltAgent `DESIGN.md` catalog as an optional ability under `repos/abilities/voltagent-awesome-design-md` and copy only the specific `DESIGN.md` files a repo actually needs
+- use `tools/scripts/capture-site-reference.sh` when a repo needs a conservative `httrack`-based public-site reference capture plus a repo-local acquisition note under `ref/httrack/`
 - use `tools/scripts/use-design-md.sh` when you want a stable local mirror under `cache/design-md/catalog/` or need to copy one `DESIGN.md` into a repo root quickly
 - keep third-party orchestration layers and generated agent setup local-only unless there is a strong reason to publish them
 - do not add the whole upstream skill catalog to `repos/`, `tools/`, or as a submodule unless there is a very specific maintenance reason

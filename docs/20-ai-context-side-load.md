@@ -85,6 +85,7 @@ Recommended sequence:
 3. let the chat use generated `entry.md`, `abstract.md`, and `overview.md` as the fast entry layer
 4. fall back to tracked docs, manifests, and repo files for any real decision or ambiguity
 5. regenerate or ignore the cache if Workspace Hub reports the side-load state as `stale` or `missing`
+6. if a repo intake just created or updated setup docs, close the repo into the current Codex thread with `tools/bin/workspace-memory save-repo <repo-path-or-name>` before continuing
 
 Practical operator flow:
 
@@ -98,6 +99,13 @@ Then start the chat with a handover instruction such as:
 > Read `docs/HANDOVER.md` first for the current workspace state. Use generated side-load files under `cache/context/` only as a compact entry layer, and treat tracked docs and repo files as canonical.
 
 For repo-specific work, point the chat at the repo `entry.md` first, then the repo README or handover note only when the side-load packet is insufficient.
+
+When a new repo folder was just added under `repos/`, use this order:
+
+1. run repo intake in Workspace Hub or the equivalent repo-doc setup flow
+2. make sure the repo has a runnable launcher command file
+3. close the repo into memory with `tools/bin/workspace-memory save-repo <repo-path-or-name>`
+4. reopen the generated repo `entry.md` if you want the compact chat packet before deeper docs
 
 ## Source set
 

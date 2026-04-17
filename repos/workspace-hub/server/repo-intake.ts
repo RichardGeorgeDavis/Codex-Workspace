@@ -1,9 +1,12 @@
+import { execFile } from 'node:child_process'
 import { access, copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { promisify } from 'node:util'
 
 import type { WorkspaceRepo } from '../src/types/workspace.ts'
 import { writeRepoManifest } from './repo-manifest.ts'
 
+const execFileAsync = promisify(execFile)
 const coverBlockStart = '<!-- workspace-hub:cover:start -->'
 const coverBlockEnd = '<!-- workspace-hub:cover:end -->'
 const readmeTemplateRelativePath = path.join(
@@ -37,6 +40,26 @@ async function fileExists(targetPath: string) {
     return true
   } catch {
     return false
+  }
+}
+
+async function saveRepoCloseout(workspaceRoot: string, repoPath: string) {
+  const workspaceMemoryPath = path.join(workspaceRoot, 'tools', 'bin', 'workspace-memory')
+
+  if (!(await fileExists(workspaceMemoryPath))) {
+    return 'Workspace memory wrapper not found, so the Codex-thread closeout was skipped.'
+  }
+
+  try {
+    await execFileAsync(workspaceMemoryPath, ['save-repo', repoPath], {
+      cwd: workspaceRoot,
+      env: process.env,
+      maxBuffer: 1024 * 1024 * 16,
+    })
+    return 'Repo closeout was saved to workspace memory for the current Codex thread.'
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown error'
+    return `Workspace memory closeout failed: ${message}`
   }
 }
 
@@ -317,6 +340,8 @@ export async function runRepoIntake(
   } else {
     notes.push('Manifest skipped because runtime behavior looks clear from the repo files.')
   }
+
+  notes.push(await saveRepoCloseout(workspaceRoot, repo.relativePath))
 
   return {
     coverCreated,

@@ -39,6 +39,7 @@ When useful, add small explicit metadata instead of hidden assumptions:
 - `.workspace/agent-stack.json` when the repo intentionally supports tracked multi-tool agent hints such as OMX-ready or OpenCode-ready setup
 - `README.md` for repo purpose, setup, run instructions, preview notes, and cover block
 - `docs/cover.png` as the default repo-local cover path, even if it starts as a placeholder
+- a runnable launcher command file, preferably `local/commands/run-<repo>` inside the repo or `tools/local/commands/Run <repo>.command` in the workspace
 - `HANDOVER.md` when the repo needs a resumable state document
 - repo-level `AGENTS.md` only when the repo genuinely needs rules beyond the workspace baseline
 - `.codex/skills/` and optional `.codex/config.toml` when the repo should expose official Codex repo-local surfaces
@@ -72,10 +73,11 @@ Recommended intake order:
 2. Read existing setup sources such as `README.md`, `package.json`, `composer.json`, lockfiles, shell scripts, Local notes, or repo-local instruction files.
 3. Classify the repo conservatively and choose a runtime mode only after checking the files.
 4. Create `README.md` if it is missing, or tighten the current one if it exists but does not explain setup and preview.
-5. Add a repo-local cover image reference in the README, even if the image is a placeholder at first.
-6. Add `.workspace/project.json` only when runtime behavior is not obvious from the repo files.
-7. Add repo-level `AGENTS.md`, `HANDOVER.md`, or repo-local skills only when they solve a real repo-specific need.
-8. If README, HANDOVER, or durable setup docs were created or materially updated, run `tools/bin/workspace-memory save-repo <repo-name>` so the shared memory layer captures the repo state, related workspace docs, and the current Codex thread in one closeout step.
+5. Add a runnable launcher command file so the repo can be started without remembering the shell incantation.
+6. Add a repo-local cover image reference in the README, even if the image is a placeholder at first.
+7. Add `.workspace/project.json` only when runtime behavior is not obvious from the repo files.
+8. Add repo-level `AGENTS.md`, `HANDOVER.md`, or repo-local skills only when they solve a real repo-specific need.
+9. If README, HANDOVER, or durable setup docs were created or materially updated, run `tools/bin/workspace-memory save-repo <repo-path-or-name>` so the shared memory layer captures the repo state, related workspace docs, and the current Codex thread in one closeout step.
 
 For MemPalace target metadata, prefer `.workspace/mempalace/` inside the repo rather than dropping `mempalace.yaml` or `entities.json` at the repo root.
 
@@ -131,6 +133,7 @@ Do not present a public-site mirror as if it were the original source project.
 
 1. Record the public source URL and the capture date in `README.md` or `HANDOVER.md`.
 2. State the acquisition method clearly, such as `wget`, `httrack`, or manual asset capture.
+   If `httrack` is available, prefer the workspace wrapper `tools/scripts/capture-site-reference.sh --run <url> <target-dir>` so the repo gets a consistent capture note under `ref/httrack/`.
 3. Document what the repo is: deployed mirror, working local reference copy, or rebuild.
 4. Document what is not present: original source files, build tooling, history, server-side code, private APIs, and environment variables unless they were actually supplied.
 5. Serve the repo through a lightweight local server for testing; do not treat `file://` opening as the default verification path.
@@ -183,11 +186,12 @@ Keep the manifest lightweight. It should clarify runtime behaviour, not become a
 
 For a repo to feel workspace-ready, it should ideally have:
 
-1. a clear way to run or preview it
+1. a clear way to run or preview it, ideally via a tracked launcher command file
 2. a known runtime mode: `direct`, `external`, or explicit repo-native server mode
 3. a `README.md` that captures setup, run, and preview expectations
 4. a repo-local cover image path in the README, even if it begins as a placeholder
-5. enough docs that another person can resume work without guessing
+5. a Codex-friendly closeout path such as `tools/bin/workspace-memory save-repo <repo-path-or-name>`
+6. enough docs that another person can resume work without guessing
 
 For GitHub-backed repos, that usually means enough repo-local docs to explain setup plus a readable issue and PR path. For local-only or git-only repos, it means the tracked local docs carry the same resumable context without pretending GitHub is required.
 

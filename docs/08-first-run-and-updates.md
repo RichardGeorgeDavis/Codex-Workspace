@@ -50,8 +50,9 @@ If you are starting a fresh repo-aware chat and want a cheaper wake-up path, use
    `tools/scripts/generate-context-cache.sh --workspace --run`
 3. for `workspace-hub` work, also run:
    `tools/scripts/generate-context-cache.sh --repo workspace-hub --run`
-4. treat generated files under `cache/context/` as compact `L0` and `L1` summaries only
-5. trust tracked docs, manifests, and repo files over generated summaries whenever they differ
+4. if a repo was just added or its setup changed, close it into the current Codex thread with `tools/bin/workspace-memory save-repo <repo-path-or-name>`
+5. treat generated files under `cache/context/` as compact `L0` and `L1` summaries only
+6. trust tracked docs, manifests, and repo files over generated summaries whenever they differ
 
 Suggested instruction for a fresh chat:
 
