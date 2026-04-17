@@ -172,6 +172,14 @@ pnpm build
 pnpm preview
 ```
 
+Workspace-level local launcher:
+
+```bash
+tools/local/commands/Run\ Workspace\ Hub.command
+```
+
+That launcher keeps the host on `127.0.0.1`, chooses the next free web and API port pair in the configured range, and opens the browser once the app responds.
+
 To generate the workspace-side AI summaries that the repo-details panel can inspect, run from the workspace root:
 
 ```bash
