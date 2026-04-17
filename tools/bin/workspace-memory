@@ -15,6 +15,11 @@ Commands:
   status         Print a short local status summary
   paths          Print key MemPalace workspace paths
   json           Emit a small JSON summary for tooling
+  compress       Compress filed MemPalace drawers into the compact collection
+  archive-codex-exports
+                 Gzip older raw Codex export files after they have been mined
+  prune-codex-exports
+                 Delete old raw Codex export files after they have been mined
   export-codex   Export a Codex session into a readable per-user transcript bundle
   mine-docs      Mine the workspace docs or a docs subdirectory into MemPalace
   mine-repo      Mine a repo under repos/ into MemPalace
@@ -840,6 +845,249 @@ export_codex_session() {
   printf '%s\n' "$export_dir"
 }
 
+compress_memory() {
+  with_mempalace_write_lock compress_memory_locked "$@"
+}
+
+compress_memory_locked() {
+  invoke_mempalace_module mempalace compress "$@"
+  record_mempalace_event "compress" "${*:-}"
+}
+
+archive_codex_exports() {
+  keep_count=1
+  dry_run=0
+  sessions_root="$mempalace_codex_exports_root/sessions"
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --sessions-root)
+        if [ $# -lt 2 ]; then
+          printf 'archive-codex-exports requires a value for --sessions-root\n' >&2
+          exit 1
+        fi
+        sessions_root=$2
+        shift 2
+        ;;
+      --keep)
+        if [ $# -lt 2 ]; then
+          printf 'archive-codex-exports requires a value for --keep\n' >&2
+          exit 1
+        fi
+        keep_count=$2
+        shift 2
+        ;;
+      --dry-run)
+        dry_run=1
+        shift
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *)
+        printf 'Unknown archive-codex-exports argument: %s\n' "$1" >&2
+        exit 1
+        ;;
+    esac
+  done
+
+  case "$keep_count" in
+    ''|*[!0-9]*)
+      printf 'archive-codex-exports --keep must be a non-negative integer\n' >&2
+      exit 1
+      ;;
+  esac
+
+  sessions_root=$(resolve_existing_dir "$sessions_root")
+  with_mempalace_write_lock archive_codex_exports_locked "$sessions_root" "$keep_count" "$dry_run"
+}
+
+archive_codex_exports_locked() {
+  sessions_root=$1
+  keep_count=$2
+  dry_run=$3
+
+  if [ ! -d "$sessions_root" ]; then
+    printf 'No Codex export sessions were found under %s\n' "$sessions_root"
+    return 0
+  fi
+
+  sessions_list=$(mktemp)
+  find "$sessions_root" -mindepth 1 -maxdepth 1 -type d | sort >"$sessions_list"
+  session_count=$(wc -l <"$sessions_list" | tr -d ' ')
+
+  if [ "$session_count" -le "$keep_count" ]; then
+    printf 'Nothing to archive: keeping %s newest export session(s), found %s.\n' "$keep_count" "$session_count"
+    rm -f "$sessions_list"
+    return 0
+  fi
+
+  archive_count=$((session_count - keep_count))
+  archived_files=0
+
+  while IFS= read -r session_dir; do
+    [ -n "$session_dir" ] || continue
+    archive_count=$((archive_count - 1))
+    raw_dir="$session_dir/raw"
+
+    if [ ! -d "$raw_dir" ]; then
+      if [ "$archive_count" -le 0 ]; then
+        break
+      fi
+      continue
+    fi
+
+    raw_list=$(mktemp)
+    find "$raw_dir" -maxdepth 1 -type f -name '*.jsonl' | sort >"$raw_list"
+
+    while IFS= read -r raw_file; do
+      [ -n "$raw_file" ] || continue
+
+      if [ "$dry_run" -eq 1 ]; then
+        printf 'Would gzip %s\n' "$raw_file"
+      else
+        gzip -n "$raw_file"
+        printf 'Gzipped %s\n' "$raw_file"
+      fi
+      archived_files=$((archived_files + 1))
+    done <"$raw_list"
+
+    rm -f "$raw_list"
+
+    if [ "$archive_count" -le 0 ]; then
+      break
+    fi
+  done <"$sessions_list"
+
+  rm -f "$sessions_list"
+
+  if [ "$dry_run" -eq 1 ]; then
+    printf 'Dry run complete: %s raw Codex export file(s) would be archived.\n' "$archived_files"
+  else
+    printf 'Archived %s raw Codex export file(s).\n' "$archived_files"
+  fi
+
+  record_mempalace_event "archive-codex-exports" "$sessions_root"
+}
+
+prune_codex_exports() {
+  keep_count=1
+  dry_run=0
+  sessions_root="$mempalace_codex_exports_root/sessions"
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --sessions-root)
+        if [ $# -lt 2 ]; then
+          printf 'prune-codex-exports requires a value for --sessions-root\n' >&2
+          exit 1
+        fi
+        sessions_root=$2
+        shift 2
+        ;;
+      --keep)
+        if [ $# -lt 2 ]; then
+          printf 'prune-codex-exports requires a value for --keep\n' >&2
+          exit 1
+        fi
+        keep_count=$2
+        shift 2
+        ;;
+      --dry-run)
+        dry_run=1
+        shift
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *)
+        printf 'Unknown prune-codex-exports argument: %s\n' "$1" >&2
+        exit 1
+        ;;
+    esac
+  done
+
+  case "$keep_count" in
+    ''|*[!0-9]*)
+      printf 'prune-codex-exports --keep must be a non-negative integer\n' >&2
+      exit 1
+      ;;
+  esac
+
+  sessions_root=$(resolve_existing_dir "$sessions_root")
+  with_mempalace_write_lock prune_codex_exports_locked "$sessions_root" "$keep_count" "$dry_run"
+}
+
+prune_codex_exports_locked() {
+  sessions_root=$1
+  keep_count=$2
+  dry_run=$3
+
+  if [ ! -d "$sessions_root" ]; then
+    printf 'No Codex export sessions were found under %s\n' "$sessions_root"
+    return 0
+  fi
+
+  sessions_list=$(mktemp)
+  find "$sessions_root" -mindepth 1 -maxdepth 1 -type d | sort >"$sessions_list"
+  session_count=$(wc -l <"$sessions_list" | tr -d ' ')
+
+  if [ "$session_count" -le "$keep_count" ]; then
+    printf 'Nothing to prune: keeping %s newest export session(s), found %s.\n' "$keep_count" "$session_count"
+    rm -f "$sessions_list"
+    return 0
+  fi
+
+  prune_count=$((session_count - keep_count))
+  pruned_files=0
+
+  while IFS= read -r session_dir; do
+    [ -n "$session_dir" ] || continue
+    prune_count=$((prune_count - 1))
+    raw_dir="$session_dir/raw"
+
+    if [ ! -d "$raw_dir" ]; then
+      if [ "$prune_count" -le 0 ]; then
+        break
+      fi
+      continue
+    fi
+
+    raw_list=$(mktemp)
+    find "$raw_dir" -maxdepth 1 -type f \( -name '*.jsonl' -o -name '*.jsonl.gz' \) | sort >"$raw_list"
+
+    while IFS= read -r raw_file; do
+      [ -n "$raw_file" ] || continue
+
+      if [ "$dry_run" -eq 1 ]; then
+        printf 'Would delete %s\n' "$raw_file"
+      else
+        rm -f "$raw_file"
+        printf 'Deleted %s\n' "$raw_file"
+      fi
+      pruned_files=$((pruned_files + 1))
+    done <"$raw_list"
+
+    rm -f "$raw_list"
+
+    if [ "$prune_count" -le 0 ]; then
+      break
+    fi
+  done <"$sessions_list"
+
+  rm -f "$sessions_list"
+
+  if [ "$dry_run" -eq 1 ]; then
+    printf 'Dry run complete: %s raw Codex export file(s) would be pruned.\n' "$pruned_files"
+  else
+    printf 'Pruned %s raw Codex export file(s).\n' "$pruned_files"
+  fi
+
+  record_mempalace_event "prune-codex-exports" "$sessions_root"
+}
+
 mine_codex_current() {
   if [ $# -gt 0 ] && [ "${1#-}" = "$1" ]; then
     requested_session=$1
@@ -864,6 +1112,8 @@ save_repo_memory() {
   include_docs=1
   include_codex=1
   include_wake_up=1
+  archive_codex_exports_after_save=0
+  archive_keep_count=1
 
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -878,6 +1128,18 @@ save_repo_memory() {
       --no-wake-up)
         include_wake_up=0
         shift
+        ;;
+      --archive-codex-exports)
+        archive_codex_exports_after_save=1
+        shift
+        ;;
+      --archive-keep)
+        if [ $# -lt 2 ]; then
+          printf 'save-repo requires a value for --archive-keep\n' >&2
+          exit 1
+        fi
+        archive_keep_count=$2
+        shift 2
         ;;
       --)
         shift
@@ -901,6 +1163,8 @@ save_repo_memory() {
     "$include_docs" \
     "$include_codex" \
     "$include_wake_up" \
+    "$archive_codex_exports_after_save" \
+    "$archive_keep_count" \
     "$repo_target" \
     "$@"
 }
@@ -909,8 +1173,10 @@ save_repo_memory_locked() {
   include_docs=$1
   include_codex=$2
   include_wake_up=$3
-  repo_target=$4
-  shift 4
+  archive_codex_exports_after_save=$4
+  archive_keep_count=$5
+  repo_target=$6
+  shift 6
 
   repo_path=$(resolve_workspace_repo_target "$repo_target")
 
@@ -922,6 +1188,10 @@ save_repo_memory_locked() {
 
   if [ "$include_codex" -eq 1 ]; then
     mine_codex_current "$@"
+
+    if [ "$archive_codex_exports_after_save" -eq 1 ]; then
+      archive_codex_exports_locked "$archive_keep_count" 0
+    fi
   fi
 
   if [ "$include_wake_up" -eq 1 ]; then
@@ -934,6 +1204,8 @@ save_repo_memory_locked() {
 save_workspace_memory() {
   include_codex=1
   include_wake_up=1
+  archive_codex_exports_after_save=0
+  archive_keep_count=1
 
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -944,6 +1216,18 @@ save_workspace_memory() {
       --no-wake-up)
         include_wake_up=0
         shift
+        ;;
+      --archive-codex-exports)
+        archive_codex_exports_after_save=1
+        shift
+        ;;
+      --archive-keep)
+        if [ $# -lt 2 ]; then
+          printf 'save-workspace requires a value for --archive-keep\n' >&2
+          exit 1
+        fi
+        archive_keep_count=$2
+        shift 2
         ;;
       --)
         shift
@@ -965,6 +1249,8 @@ save_workspace_memory() {
   with_mempalace_write_lock save_workspace_memory_locked \
     "$include_codex" \
     "$include_wake_up" \
+    "$archive_codex_exports_after_save" \
+    "$archive_keep_count" \
     "$docs_target" \
     "$@"
 }
@@ -972,14 +1258,20 @@ save_workspace_memory() {
 save_workspace_memory_locked() {
   include_codex=$1
   include_wake_up=$2
-  docs_target=$3
-  shift 3
+  archive_codex_exports_after_save=$3
+  archive_keep_count=$4
+  docs_target=$5
+  shift 5
 
   docs_path=$(resolve_workspace_docs_target "$docs_target")
   mine_docs "$docs_path" "$@"
 
   if [ "$include_codex" -eq 1 ]; then
     mine_codex_current "$@"
+
+    if [ "$archive_codex_exports_after_save" -eq 1 ]; then
+      archive_codex_exports_locked "$archive_keep_count" 0
+    fi
   fi
 
   if [ "$include_wake_up" -eq 1 ]; then
@@ -1016,6 +1308,15 @@ case "$command_name" in
     ;;
   json)
     print_json
+    ;;
+  compress)
+    compress_memory "$@"
+    ;;
+  archive-codex-exports)
+    archive_codex_exports "$@"
+    ;;
+  prune-codex-exports)
+    prune_codex_exports "$@"
     ;;
   export-codex)
     export_codex_session "${1:-current}"
