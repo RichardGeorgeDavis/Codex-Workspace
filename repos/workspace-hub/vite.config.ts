@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const apiPort = Number(process.env.WORKSPACE_HUB_API_PORT ?? '4101')
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
@@ -9,7 +11,7 @@ export default defineConfig({
     port: 4100,
     strictPort: true,
     proxy: {
-      '/api': 'http://127.0.0.1:4101',
+      '/api': `http://127.0.0.1:${apiPort}`,
     },
   },
   preview: {

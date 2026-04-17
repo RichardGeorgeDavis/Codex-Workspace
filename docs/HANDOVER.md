@@ -65,6 +65,7 @@ The workspace foundation is in place and released as a stable baseline:
 - MemPalace is now integrated as the first core workspace service under `tools/mempalace` with user-scoped durable state under `shared/mempalace/<user>/`
 - installable abilities and core services are now tracked in `tools/manifests/workspace-capabilities.json`
 - optional abilities live under `repos/abilities/` rather than the normal repo-group update path
+- workspace-level launchers under `tools/local/commands/` now coordinate port reservations through `cache/runtime/ports/`, so concurrent launches keep `127.0.0.1` stable and step forward inside each repo's local port range instead of racing on the same candidate port
 
 ## Current source taxonomy
 
@@ -145,6 +146,18 @@ The tracked helper surfaces for this flow now live at:
 
 - `tools/scripts/capture-site-reference.sh`
 - `tools/templates/repo-docs/README.site-reference.template.md`
+
+## Launcher port allocation note (2026-04-17)
+
+The workspace launcher baseline is now:
+
+- keep local launcher hosts on `127.0.0.1`
+- prefer a repo-specific port range over a random address
+- reserve ports through `tools/scripts/workspace-port-allocator.sh`
+- store transient reservations under `cache/runtime/ports/`
+- let launchers move to the next open port, or the next open web/api pair for Workspace Hub
+
+This is intended to reduce same-time launcher collisions without making local URLs unpredictable.
 
 ## Release verification status
 

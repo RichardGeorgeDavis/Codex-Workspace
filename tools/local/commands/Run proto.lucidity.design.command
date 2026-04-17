@@ -4,13 +4,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 WORKSPACE_ROOT="$(cd -- "$SCRIPT_DIR/../../.." && pwd)"
-PROJECT_DIR="$WORKSPACE_ROOT/repos/current-builds/knowledge-palace"
+PROJECT_DIR="$WORKSPACE_ROOT/repos/landing-pages/proto.lucidity.design"
 HOST="127.0.0.1"
-START_PORT="${KNOWLEDGE_PALACE_UI_PORT:-8765}"
-MAX_PORT="${KNOWLEDGE_PALACE_UI_MAX_PORT:-8799}"
+START_PORT="${PROTO_LUCIDITY_DESIGN_PORT:-4180}"
+MAX_PORT="${PROTO_LUCIDITY_DESIGN_MAX_PORT:-4299}"
 
 if [[ ! -d "$PROJECT_DIR" ]]; then
-  echo "Knowledge Palace repo not found:"
+  echo "Project not found:"
   echo "  $PROJECT_DIR"
   echo
   read '?Press Return to close this window...'
@@ -20,19 +20,6 @@ fi
 cd "$PROJECT_DIR"
 source "$WORKSPACE_ROOT/tools/scripts/workspace-port-allocator.sh"
 
-if ! python3 - <<'PY' >/dev/null 2>&1
-import importlib
-import sys
-
-for module_name in ("yaml", "jsonschema"):
-    importlib.import_module(module_name)
-PY
-then
-  echo "Installing Knowledge Palace UI dependencies..."
-  python3 -m pip install -e .
-  echo
-fi
-
 PORT="$(workspace_reserve_port "$START_PORT" "$MAX_PORT")" || {
   echo "No free port found between $START_PORT and $MAX_PORT."
   exit 1
@@ -40,12 +27,7 @@ PORT="$(workspace_reserve_port "$START_PORT" "$MAX_PORT")" || {
 
 URL="http://${HOST}:${PORT}/"
 
-echo "Starting Knowledge Palace UI"
-echo "Project dir: $PROJECT_DIR"
-echo "URL: $URL"
-echo
-
-python3 -m knowledge_palace.cli serve-ui --host "$HOST" --port "$PORT" &
+python3 -m http.server "$PORT" --bind "$HOST" &
 SERVER_PID=$!
 
 cleanup() {
@@ -55,7 +37,7 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
-until curl -sSf "$URL/api/tree" >/dev/null 2>&1; do
+until curl -sSf "$URL" >/dev/null 2>&1; do
   if ! kill -0 "$SERVER_PID" >/dev/null 2>&1; then
     wait "$SERVER_PID"
     exit $?

@@ -11,6 +11,7 @@ This is not meant to force every repo into one shape. The goal is to keep each r
 - Use shared caches under workspace `cache/` where that helps, but keep installs local to the repo.
 - Do not make a reverse-proxy or mapped-host layer mandatory unless the repo genuinely needs that behaviour.
 - Prefer the repo's native runtime and package manager.
+- For workspace launchers, keep the host stable on `127.0.0.1` and prefer a repo-specific port range that can step to the next open port instead of randomizing addresses.
 
 ## Default runtime expectations
 

@@ -2,6 +2,7 @@
 
 ## 2026-04-17
 
+- Added `tools/scripts/workspace-port-allocator.sh` and rewired the workspace-level launchers under `tools/local/commands/` to reserve ports through `cache/runtime/ports/`, reducing same-time launcher collisions while keeping hosts fixed on `127.0.0.1` and falling forward to the next open port in each repo's range.
 - Installed `httrack` for this workspace environment and added `tools/scripts/capture-site-reference.sh` as the repo-intake wrapper for public-site reference copies, with dry-run-by-default behavior, conservative same-domain defaults, and repo-local capture notes under `ref/httrack/`.
 - Updated the public repo-intake surfaces in [README](../README.md), [docs/README](README.md), [09-new-repo-baseline](09-new-repo-baseline.md), and [tools/templates/repo-docs/README.site-reference.template.md](../tools/templates/repo-docs/README.site-reference.template.md) so site-reference repos have one documented `httrack` path.
 

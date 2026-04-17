@@ -87,6 +87,7 @@ Useful maintenance scripts:
 - `tools/scripts/manage-workspace-capabilities.sh` lists, installs, updates, enables, disables, or uninstalls tracked workspace abilities and core services, with dry-run mode by default.
 - `tools/scripts/update-github-refs.sh` remains the compatibility wrapper for update-only reviewed GitHub-ref flows and delegates to the capability lifecycle command.
 - `tools/scripts/capture-site-reference.sh` previews or runs an `httrack` capture for a public-site reference repo, using conservative same-domain defaults and writing capture notes under repo-local `ref/httrack/`.
+- `tools/scripts/workspace-port-allocator.sh` centralizes workspace launcher port reservations under `cache/runtime/ports/`, so concurrent launchers can keep `127.0.0.1` stable and step to the next open port without colliding.
 - `tools/scripts/use-design-md.sh` mirrors the managed VoltAgent `DESIGN.md` catalog ability into `cache/design-md/catalog/`, lists available site ids, and can copy a selected `DESIGN.md` into a repo root.
 - `tools/scripts/sync-reference-snapshots.sh` previews or refreshes ignored upstream reference snapshots under `tools/ref/`, with dry-run mode by default.
 - `tools/scripts/sync-codex-skills.sh` previews or syncs tracked workspace skill sources into repo `.codex/skills/` folders plus optional `.agents/skills/` compatibility mirrors, with dry-run mode by default.
