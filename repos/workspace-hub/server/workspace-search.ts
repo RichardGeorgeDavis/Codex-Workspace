@@ -567,7 +567,8 @@ export function storeWorkspaceSearchResponse(response: WorkspaceSearchResponse) 
   })
 }
 
-export function invalidateWorkspaceSearchIndex(_reason = 'event') {
+export function invalidateWorkspaceSearchIndex(reason = 'event') {
+  void reason
   searchIndexRevision += 1
   searchIndexInvalidations += 1
   searchLastInvalidatedAt = new Date().toISOString()

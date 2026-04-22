@@ -2,6 +2,10 @@
 
 ## 2026-04-22
 
+- Hardened the Workspace Hub capability/core-service lifecycle so manifest-derived paths are confined to the workspace root, manifest commands are structured argv arrays instead of shell strings, and `tools/manifests/workspace-capabilities.json` is now the single canonical lifecycle manifest.
+- Tightened Workspace Hub indexed-search behavior with server-side response caching, explicit search-index invalidation, prefix-only file reads, and refresh decoupling so active search no longer re-runs on every live summary refresh.
+- Added operator-facing visibility for rejected capability/core-service manifest entries plus a non-mutating `/api/workspace/healthcheck` route, and locked the new surfaces in with focused UI, observability, and spawned-server tests.
+
 - Added `tools/scripts/design-md.sh` as the canonical repo-level `DESIGN.md` wrapper for starter-template init, `@google/design.md` lint/diff, and optional delegation to the VoltAgent example catalog.
 - Added `tools/templates/design-md/` with a Google-spec-aligned starter `DESIGN.md` template so UI-heavy repos can adopt repo-root design context without inventing a shared workspace-wide design file.
 - Registered `google-labs-code/design.md` as the canonical optional workspace ability, while explicitly retaining `VoltAgent/awesome-design-md` as the optional example catalog path.

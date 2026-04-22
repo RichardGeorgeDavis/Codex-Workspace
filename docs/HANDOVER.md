@@ -203,6 +203,55 @@ Public docs now aligned for this feature:
 
 Repo-local `repos/workspace-hub/README.md` did not need a matching public-doc update for this slice because the change there is limited to lightweight repo-details detection rather than a new end-user Hub workflow surface.
 
+## Workspace Hub security and performance hardening note (2026-04-22)
+
+The Workspace Hub security/performance review slice is now implemented and locked in.
+
+Completed in this slice:
+
+- confined manifest-derived capability and core-service paths to the workspace root before install, open, sync, or uninstall flows can use them
+- removed shell-string execution from manifest-driven capability/core-service commands in favor of workspace-local argv arrays
+- moved core-service lifecycle metadata onto `tools/manifests/workspace-capabilities.json` as the single canonical manifest and deleted the legacy `tools/manifests/core-services.json`
+- decoupled active indexed search from routine live-summary churn, added server-side search response caching and explicit indexed-content invalidation, and kept capability refresh off the default soft-refresh path
+- preserved prefix-only search reads for large files and extended search observability with cache counters plus index revision data
+- added operator-facing manifest rejection visibility for both capabilities and core services, plus `/api/workspace/healthcheck` as a non-mutating validation and observability check
+
+Tracked surfaces changed in this hardening pass:
+
+- `tools/scripts/manage-workspace-capabilities.sh`
+- `tools/manifests/workspace-capabilities.json`
+- `tools/manifests/README.md`
+- `repos/workspace-hub/server/workspace-manifest-utils.ts`
+- `repos/workspace-hub/server/workspace-capabilities.ts`
+- `repos/workspace-hub/server/core-services.ts`
+- `repos/workspace-hub/server/core-service-runtime.ts`
+- `repos/workspace-hub/server/runtime-manager.ts`
+- `repos/workspace-hub/server/workspace-search.ts`
+- `repos/workspace-hub/server/workspace.ts`
+- `repos/workspace-hub/server/index.ts`
+- `repos/workspace-hub/src/app/App.tsx`
+- `repos/workspace-hub/src/features/services/CoreServicesPanel.tsx`
+- `repos/workspace-hub/src/types/workspace.ts`
+
+New regression coverage added in this hardening pass:
+
+- `repos/workspace-hub/test/workspace-capabilities.test.ts`
+- `repos/workspace-hub/test/mempalace-memory.test.ts`
+- `repos/workspace-hub/test/workspace-cache-search.test.ts`
+- `repos/workspace-hub/test/core-services-panel.test.tsx`
+- `repos/workspace-hub/test/workspace-healthcheck.test.ts`
+
+Verification completed in this slice:
+
+- `sh -n tools/scripts/manage-workspace-capabilities.sh`
+- `pnpm --dir "repos/workspace-hub" test`
+- `pnpm --dir "repos/workspace-hub" build`
+
+Public docs alignment for this slice:
+
+- `docs/CHANGELOG.md` updated
+- root `README.md`, `docs/README.md`, and `repos/workspace-hub/README.md` did not need user-facing copy changes because this slice tightens existing behavior rather than adding a new public workflow
+
 ## Release verification status
 
 The stable release gate has already been exercised successfully:
