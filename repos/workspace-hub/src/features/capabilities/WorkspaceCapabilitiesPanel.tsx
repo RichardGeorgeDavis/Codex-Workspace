@@ -254,6 +254,7 @@ export function WorkspaceCapabilitiesPanel({
   const abilityCapabilities = filteredCapabilities.filter(
     (capability) => capability.classification === 'ability',
   )
+  const manifestIssues = snapshot?.manifestIssues ?? []
   const selectedCapability =
     filteredCapabilities.find((capability) => capability.id === selectedCapabilityId)
     ?? installableCapabilities.find((capability) => capability.id === selectedCapabilityId)
@@ -400,6 +401,31 @@ export function WorkspaceCapabilitiesPanel({
         <p className="loading-copy">Loading capability lifecycle state...</p>
       ) : filteredCapabilities.length ? (
         <div className="capability-groups">
+          {manifestIssues.length ? (
+            <div className="discovery-group">
+              <div className="discovery-section-heading">
+                <span className="discovery-section-title">Skipped manifest entries</span>
+                <span className="tag">{manifestIssues.length}</span>
+              </div>
+              <p className="section-copy capability-copy">
+                Some capability entries were rejected while loading
+                <code> tools/manifests/workspace-capabilities.json </code>
+                because their config is incomplete or points outside the workspace root.
+              </p>
+              <ul className="settings-list service-paths">
+                {manifestIssues.slice(0, 5).map((issue) => (
+                  <li
+                    key={`${issue.capabilityId ?? issue.capabilityName ?? 'unknown'}:${issue.reason}`}
+                    className="settings-item"
+                  >
+                    <span>{issue.capabilityName ?? issue.capabilityId ?? 'Unnamed entry'}</span>
+                    <code>{issue.reason}</code>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           {coreServiceCapabilities.length ? (
             <div className="discovery-group">
               <div className="discovery-section-heading">

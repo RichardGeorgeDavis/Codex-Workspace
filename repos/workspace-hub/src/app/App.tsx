@@ -257,22 +257,48 @@ export function App({ initialThemePreference }: AppProps) {
     useState<WorkspaceCoreServiceTargetContext | null>(null)
   const [mempalaceCommandOutput, setMempalaceCommandOutput] = useState<string | null>(null)
   const [themePreference, setThemePreference] = useState(initialThemePreference)
+  const [indexedSearchRevision, setIndexedSearchRevision] = useState(0)
   const deferredSearchTerm = useDeferredValue(searchTerm)
+  const indexedSearchCacheRef = useRef(new Map<string, WorkspaceSearchResult[]>())
   const lastRecordedSelectionRef = useRef<string | null>(null)
   const liveRefreshTimeoutRef = useRef<number | null>(null)
   const repoDetailsInFlightRef = useRef<string | null>(null)
   const repoDetailsHydrationCountRef = useRef(0)
+  const pendingCapabilityRefreshRef = useRef(false)
   const summaryRef = useRef<WorkspaceSummary | null>(null)
   const softRefreshInFlightRef = useRef<Promise<void> | null>(null)
+  const softRefreshNeedsCapabilityRefreshRef = useRef(false)
   const softRefreshQueuedRef = useRef(false)
   const softRefreshCoalescedCountRef = useRef(0)
-  const triggerSoftRefresh = useEffectEvent((reason: SummaryRequestReason = 'event') => {
-    void refreshSummarySoft(undefined, reason)
+  const triggerSoftRefresh = useEffectEvent((
+    reason: SummaryRequestReason = 'event',
+    refreshCapabilitiesSnapshot = false,
+  ) => {
+    void refreshSummarySoft(undefined, reason, refreshCapabilitiesSnapshot)
   })
 
   useEffect(() => {
     summaryRef.current = summary
   }, [summary])
+
+  async function refreshCapabilities(signal?: AbortSignal) {
+    try {
+      const nextCapabilitySnapshot = await fetchWorkspaceCapabilitiesSnapshot(signal)
+
+      if (!signal?.aborted) {
+        startTransition(() => {
+          setCapabilitySnapshot(nextCapabilitySnapshot)
+        })
+      }
+    } catch {
+      // Keep the last capability snapshot when a refresh fails.
+    }
+  }
+
+  function invalidateIndexedSearch() {
+    indexedSearchCacheRef.current.clear()
+    setIndexedSearchRevision((currentValue) => currentValue + 1)
+  }
 
   async function loadInitialSummary(signal?: AbortSignal) {
     setLoading(true)
@@ -311,14 +337,12 @@ export function App({ initialThemePreference }: AppProps) {
   async function performSoftRefresh(
     signal?: AbortSignal,
     reason: SummaryRequestReason = 'event',
+    refreshCapabilitiesSnapshot = false,
   ) {
     setError(null)
 
     try {
-      const [base, nextCapabilitySnapshot] = await Promise.all([
-        fetchWorkspaceSummaryBase(signal, reason),
-        fetchWorkspaceCapabilitiesSnapshot(signal).catch(() => null),
-      ])
+      const base = await fetchWorkspaceSummaryBase(signal, reason)
       if (signal?.aborted) {
         return
       }
@@ -328,10 +352,11 @@ export function App({ initialThemePreference }: AppProps) {
 
       startTransition(() => {
         setSummary(merged)
-        if (nextCapabilitySnapshot) {
-          setCapabilitySnapshot(nextCapabilitySnapshot)
-        }
       })
+
+      if (refreshCapabilitiesSnapshot) {
+        await refreshCapabilities(signal)
+      }
     } catch (caughtError) {
       if (signal?.aborted) {
         return
@@ -348,7 +373,12 @@ export function App({ initialThemePreference }: AppProps) {
   async function refreshSummarySoft(
     signal?: AbortSignal,
     reason: SummaryRequestReason = 'event',
+    refreshCapabilitiesSnapshot = false,
   ) {
+    if (refreshCapabilitiesSnapshot) {
+      softRefreshNeedsCapabilityRefreshRef.current = true
+    }
+
     if (softRefreshInFlightRef.current) {
       softRefreshQueuedRef.current = true
       softRefreshCoalescedCountRef.current += 1
@@ -357,11 +387,15 @@ export function App({ initialThemePreference }: AppProps) {
 
     const run = (async () => {
       do {
+        const nextRefreshCapabilitiesSnapshot =
+          softRefreshNeedsCapabilityRefreshRef.current
+        softRefreshNeedsCapabilityRefreshRef.current = false
         softRefreshQueuedRef.current = false
-        await performSoftRefresh(signal, reason)
+        await performSoftRefresh(signal, reason, nextRefreshCapabilitiesSnapshot)
       } while (softRefreshQueuedRef.current && !signal?.aborted)
     })().finally(() => {
       softRefreshInFlightRef.current = null
+      softRefreshNeedsCapabilityRefreshRef.current = false
       softRefreshQueuedRef.current = false
     })
 
@@ -388,6 +422,7 @@ export function App({ initialThemePreference }: AppProps) {
           setCapabilitySnapshot(nextCapabilitySnapshot)
         }
       })
+      invalidateIndexedSearch()
     } catch (caughtError) {
       if (signal?.aborted) {
         return
@@ -493,6 +528,7 @@ export function App({ initialThemePreference }: AppProps) {
     try {
       await runRepoRuntimeAction(relativePath, action)
       await refreshSummarySoft(undefined, 'action')
+      invalidateIndexedSearch()
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -512,6 +548,7 @@ export function App({ initialThemePreference }: AppProps) {
     try {
       await runRepoInstall(relativePath)
       await refreshSummarySoft(undefined, 'action')
+      invalidateIndexedSearch()
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -531,6 +568,7 @@ export function App({ initialThemePreference }: AppProps) {
     try {
       await runCoreServiceInstall(serviceId)
       await refreshSummarySoft(undefined, 'action')
+      invalidateIndexedSearch()
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -553,6 +591,7 @@ export function App({ initialThemePreference }: AppProps) {
     try {
       await runCoreServiceRuntimeAction(serviceId, action)
       await refreshSummarySoft(undefined, 'action')
+      invalidateIndexedSearch()
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -572,6 +611,7 @@ export function App({ initialThemePreference }: AppProps) {
     try {
       await syncCoreService(serviceId)
       await refreshSummarySoft(undefined, 'action')
+      invalidateIndexedSearch()
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -593,7 +633,8 @@ export function App({ initialThemePreference }: AppProps) {
 
     try {
       await runWorkspaceCapabilityAction(capabilityId, action)
-      await refreshSummarySoft(undefined, 'action')
+      await refreshSummarySoft(undefined, 'action', true)
+      invalidateIndexedSearch()
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -651,6 +692,7 @@ export function App({ initialThemePreference }: AppProps) {
         result.output.trim().length > 0 ? `$ ${result.command}\n${result.output}` : `$ ${result.command}`,
       )
       await refreshSummarySoft(undefined, 'action')
+      invalidateIndexedSearch()
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -676,6 +718,7 @@ export function App({ initialThemePreference }: AppProps) {
         }))
       })
       await refreshSummarySoft(undefined, 'action')
+      invalidateIndexedSearch()
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -746,6 +789,7 @@ export function App({ initialThemePreference }: AppProps) {
     try {
       await saveRepoMetadata(relativePath, metadata)
       await refreshSummarySoft(undefined, 'action')
+      invalidateIndexedSearch()
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -765,6 +809,7 @@ export function App({ initialThemePreference }: AppProps) {
     try {
       await resetRepoMetadata(relativePath)
       await refreshSummarySoft(undefined, 'action')
+      invalidateIndexedSearch()
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -804,6 +849,7 @@ export function App({ initialThemePreference }: AppProps) {
     try {
       await writeRepoManifest(relativePath, manifest)
       await refreshSummarySoft(undefined, 'action')
+      invalidateIndexedSearch()
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -866,12 +912,22 @@ export function App({ initialThemePreference }: AppProps) {
       return
     }
 
+    const cacheKey = `${indexedSearchRevision}:${indexedSearchMode}:${query.toLowerCase()}`
+    const cachedResults = indexedSearchCacheRef.current.get(cacheKey)
+    if (cachedResults) {
+      setIndexedSearchError(null)
+      setIndexedSearchLoading(false)
+      setIndexedSearchResults(cachedResults)
+      return
+    }
+
     const controller = new AbortController()
     setIndexedSearchLoading(true)
     setIndexedSearchError(null)
 
     void searchWorkspace(query, indexedSearchMode, controller.signal)
       .then((payload) => {
+        indexedSearchCacheRef.current.set(cacheKey, payload.results)
         setIndexedSearchResults(payload.results)
       })
       .catch((caughtError) => {
@@ -894,12 +950,29 @@ export function App({ initialThemePreference }: AppProps) {
     return () => {
       controller.abort()
     }
-  }, [deferredSearchTerm, indexedSearchMode, summary?.generatedAt])
+  }, [deferredSearchTerm, indexedSearchMode, indexedSearchRevision])
 
   useEffect(() => {
     const unsubscribe = subscribeWorkspaceEvents(
       (event) => {
         setLiveEventLabel(formatLiveEvent(event))
+
+        const shouldRefreshCapabilities = event.type === 'capability'
+        const shouldRefreshIndexedSearch =
+          event.type === 'capability' ||
+          event.type === 'failure-report' ||
+          event.type === 'install' ||
+          event.type === 'manifest' ||
+          event.type === 'metadata' ||
+          event.type === 'runtime'
+
+        if (shouldRefreshIndexedSearch) {
+          invalidateIndexedSearch()
+        }
+
+        if (shouldRefreshCapabilities) {
+          pendingCapabilityRefreshRef.current = true
+        }
 
         if (liveRefreshTimeoutRef.current !== null) {
           return
@@ -908,7 +981,9 @@ export function App({ initialThemePreference }: AppProps) {
         const delay = event.type.endsWith('log') ? 500 : 120
         liveRefreshTimeoutRef.current = window.setTimeout(() => {
           liveRefreshTimeoutRef.current = null
-          triggerSoftRefresh('event')
+          const refreshCapabilitiesSnapshot = pendingCapabilityRefreshRef.current
+          pendingCapabilityRefreshRef.current = false
+          triggerSoftRefresh('event', refreshCapabilitiesSnapshot)
         }, delay)
       },
       setLiveStatus,
@@ -921,6 +996,8 @@ export function App({ initialThemePreference }: AppProps) {
         window.clearTimeout(liveRefreshTimeoutRef.current)
         liveRefreshTimeoutRef.current = null
       }
+
+      pendingCapabilityRefreshRef.current = false
     }
   }, [])
 
@@ -936,6 +1013,7 @@ export function App({ initialThemePreference }: AppProps) {
     : []
   const capabilities = capabilitySnapshot?.capabilities ?? summary?.capabilities ?? []
   const coreServices = summary?.coreServices ?? []
+  const coreServiceIssues = summary?.coreServiceIssues ?? []
 
   useEffect(() => {
     const nextFilteredRepos = summary
@@ -1378,6 +1456,7 @@ export function App({ initialThemePreference }: AppProps) {
               <CoreServicesPanel
                 actionPendingKey={actionPendingKey}
                 loading={loading}
+                manifestIssues={coreServiceIssues}
                 onInstallAction={handleCoreServiceInstallAction}
                 onOpenAction={handleOpenCoreServiceAction}
                 onOpenServiceWorkspace={(serviceId) => {

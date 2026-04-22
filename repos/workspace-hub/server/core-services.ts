@@ -5,7 +5,16 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
-import type { RepoInstall, RepoRuntime, WorkspaceCoreService } from '../src/types/workspace.ts'
+import type {
+  RepoInstall,
+  RepoRuntime,
+  WorkspaceCoreService,
+  WorkspaceCoreServiceManifestIssue,
+} from '../src/types/workspace.ts'
+import {
+  resolveWorkspaceCommand,
+  resolveWorkspacePath,
+} from './workspace-manifest-utils.ts'
 
 type CoreServiceManifest = {
   capabilities?: Array<{
@@ -16,18 +25,20 @@ type CoreServiceManifest = {
     enabledByDefault?: boolean
     exposeInHub?: boolean
     id?: string
-    installCommand?: string
+    installCommand?: unknown
     installMethod?: string
     installTarget?: string
     name?: string
     notes?: string
-    runtimeCommand?: string
+    runtimeCommand?: unknown
     sharedRoot?: string
     sourceUrl?: string
-    syncCommand?: string
+    syncCommand?: unknown
     updateStrategy?: string
   }>
 }
+
+type CoreServiceManifestEntry = NonNullable<CoreServiceManifest['capabilities']>[number]
 
 const execFileAsync = promisify(execFile)
 const serverFile = fileURLToPath(import.meta.url)
@@ -38,6 +49,10 @@ const workspaceRoot = configuredWorkspaceRoot
   ? path.resolve(configuredWorkspaceRoot)
   : path.resolve(appRoot, '..', '..')
 const manifestPath = path.join(workspaceRoot, 'tools', 'manifests', 'workspace-capabilities.json')
+const loggedManifestIssueKeys = new Set<string>()
+let lastCoreServiceManifestValidationAt: string | null = null
+let lastCoreServiceManifestIssues: WorkspaceCoreServiceManifestIssue[] = []
+let coreServiceManifestLoggedWarnings = 0
 
 async function fileExists(targetPath: string) {
   try {
@@ -169,104 +184,270 @@ async function readVersion(repoPath: string) {
   }
 }
 
+function buildCoreServiceManifestIssue(
+  serviceConfig: CoreServiceManifestEntry | undefined,
+  reason: string,
+  remediation: string,
+): WorkspaceCoreServiceManifestIssue {
+  return {
+    remediation,
+    reason,
+    serviceId: serviceConfig?.id?.trim() ?? null,
+    serviceName: serviceConfig?.name?.trim() ?? null,
+  }
+}
+
+function logCoreServiceManifestIssue(issue: WorkspaceCoreServiceManifestIssue) {
+  const issueKey = `${issue.serviceId ?? 'unknown-id'}|${issue.serviceName ?? 'unknown-name'}|${issue.reason}`
+
+  if (loggedManifestIssueKeys.has(issueKey)) {
+    return
+  }
+
+  loggedManifestIssueKeys.add(issueKey)
+  coreServiceManifestLoggedWarnings += 1
+  console.warn(
+    `[core-services] Skipping manifest entry${issue.serviceId ? ` ${issue.serviceId}` : ''}: ${issue.reason}`,
+  )
+}
+
 export async function readCoreServices(
   installSnapshots: Map<string, RepoInstall>,
   runtimeSnapshots: Map<string, RepoRuntime>,
 ) {
   const manifest = await readManifest()
   const user = detectWorkspaceUser()
+  const services: WorkspaceCoreService[] = []
+  const manifestIssues: WorkspaceCoreServiceManifestIssue[] = []
 
-  return await Promise.all(
-    (manifest.capabilities ?? []).map(async (serviceConfig) => {
-      const id = serviceConfig.id?.trim()
-      const name = serviceConfig.name?.trim()
-      const repoRelativePath = serviceConfig.installTarget?.trim()
-      const installCommand = serviceConfig.installCommand?.trim()
-      const runtimeCommand = serviceConfig.runtimeCommand?.trim()
-      const syncCommand = serviceConfig.syncCommand?.trim()
+  for (const serviceConfig of manifest.capabilities ?? []) {
+    if (serviceConfig.classification !== 'core-service') {
+      continue
+    }
 
-      if (
-        serviceConfig.classification !== 'core-service' ||
-        !id ||
-        !name ||
-        !repoRelativePath ||
-        !installCommand ||
-        !runtimeCommand ||
-        !syncCommand
-      ) {
-        return null
-      }
+    const id = serviceConfig.id?.trim()
+    const name = serviceConfig.name?.trim()
+    const repoPath = resolveWorkspacePath(workspaceRoot, serviceConfig.installTarget)
+    const installCommand = resolveWorkspaceCommand(workspaceRoot, serviceConfig.installCommand)
+    const runtimeCommand = resolveWorkspaceCommand(workspaceRoot, serviceConfig.runtimeCommand)
+    const syncCommand = resolveWorkspaceCommand(workspaceRoot, serviceConfig.syncCommand)
+    const sharedRootBase = resolveWorkspacePath(
+      workspaceRoot,
+      serviceConfig.sharedRoot?.trim() ?? (id ? path.join('shared', id) : null),
+    )
+    const cacheRootBase = resolveWorkspacePath(
+      workspaceRoot,
+      serviceConfig.cacheRoot?.trim() ?? (id ? path.join('cache', id) : null),
+    )
+    const docsPath = resolveWorkspacePath(workspaceRoot, serviceConfig.docsPath?.trim())
 
-      const repoPath = path.join(workspaceRoot, repoRelativePath)
-      const sharedRoot = path.join(workspaceRoot, serviceConfig.sharedRoot ?? path.join('shared', id), user)
-	      const cacheRoot = path.join(workspaceRoot, serviceConfig.cacheRoot ?? path.join('cache', id), user)
-	      const exportsRoot = path.join(sharedRoot, 'exports')
-	      const homePath = path.join(sharedRoot, 'home')
-	      const configPath = path.join(homePath, '.mempalace', 'config.json')
-	      const identityPath = path.join(homePath, '.mempalace', 'identity.txt')
-	      const statePath = path.join(sharedRoot, 'service-state.json')
-	      const docsPath = serviceConfig.docsPath
-	        ? path.join(workspaceRoot, serviceConfig.docsPath)
-	        : null
-      const readmePath = path.join(repoPath, 'README.md')
-      const repoPresent = await fileExists(repoPath)
-      const venvPath = path.join(repoPath, '.venv', 'bin', 'python')
-      const venvReady = await fileExists(venvPath)
-	      const branch = repoPresent ? await readGitValue(repoPath, ['branch', '--show-current']) : null
-	      const originUrl = repoPresent ? await readGitValue(repoPath, ['remote', 'get-url', 'origin']) : null
-	      const upstreamUrl = repoPresent ? await readGitValue(repoPath, ['remote', 'get-url', 'upstream']) : null
-	      const version = repoPresent ? await readVersion(repoPath) : null
-	      const state = await readState(statePath)
+    if (!id) {
+      manifestIssues.push(
+        buildCoreServiceManifestIssue(
+          serviceConfig,
+          'Missing required service id.',
+          'Add a unique `id` string to the core-service manifest entry.',
+        ),
+      )
+      continue
+    }
 
-	      return {
-	        branch,
-	        cacheRoot,
-        category: 'memory',
-        configPath,
-	        description: 'Local long-term memory and retrieval service for Codex Workspace.',
-        docsPath: docsPath && (await fileExists(docsPath)) ? docsPath : null,
-	        exportsRoot,
-        homePath,
-        id,
-	        identityPath,
-	        install: installSnapshots.get(id) ?? buildIdleInstall(installCommand),
-	        installCommand: path.join(workspaceRoot, installCommand),
-	        lastCommandAt: state?.lastCommandAt ?? null,
-	        lastCommandKind: state?.lastCommandKind ?? null,
-	        lastCommandTarget: state?.lastCommandTarget ?? null,
-	        lastCodexExportAt: state?.lastCodexExportAt ?? null,
-	        lastCodexExportTarget: state?.lastCodexExportTarget ?? null,
-	        lastIngestAt: state?.lastIngestAt ?? null,
-	        lastIngestTarget: state?.lastIngestTarget ?? null,
-	        lastInstallAt: state?.lastInstallAt ?? null,
-	        lastRuntimeStartAt: state?.lastRuntimeStartAt ?? null,
-	        lastSaveAt: state?.lastSaveAt ?? null,
-	        lastSaveTarget: state?.lastSaveTarget ?? null,
-	        lastSearchAt: state?.lastSearchAt ?? null,
-	        lastSearchQuery: state?.lastSearchQuery ?? null,
-	        lastSyncAt: state?.lastSyncAt ?? null,
-	        lastWakeUpAt: state?.lastWakeUpAt ?? null,
-	        name,
-	        notes: serviceConfig.notes?.trim() ?? '',
-	        originUrl,
-	        readmePath: await fileExists(readmePath) ? readmePath : null,
-        repoPath,
-        repoPresent,
-        repoRelativePath,
-        runtime: runtimeSnapshots.get(id) ?? buildIdleRuntime(path.join(workspaceRoot, runtimeCommand)),
-	        runtimeCommand: path.join(workspaceRoot, runtimeCommand),
-	        sharedRoot,
-	        statePath,
-	        syncCommand: path.join(workspaceRoot, syncCommand),
-	        upstreamUrl,
-	        updatedAt: state?.updatedAt ?? null,
-	        user,
-	        venvPath,
-	        venvReady,
-        version,
-      } satisfies WorkspaceCoreService
-    }),
-  ).then((services) => services.filter((service): service is WorkspaceCoreService => Boolean(service)))
+    if (!name) {
+      manifestIssues.push(
+        buildCoreServiceManifestIssue(
+          serviceConfig,
+          'Missing required service name.',
+          'Add a display `name` for the core-service entry.',
+        ),
+      )
+      continue
+    }
+
+    if (!serviceConfig.installTarget?.trim()) {
+      manifestIssues.push(
+        buildCoreServiceManifestIssue(
+          serviceConfig,
+          'Missing required install target.',
+          'Set `installTarget` to a workspace-relative service repo path.',
+        ),
+      )
+      continue
+    }
+
+    if (!repoPath) {
+      manifestIssues.push(
+        buildCoreServiceManifestIssue(
+          serviceConfig,
+          'Install target resolves outside the workspace root and was rejected.',
+          'Use a workspace-relative `installTarget` under the workspace root.',
+        ),
+      )
+      continue
+    }
+
+    if (serviceConfig.docsPath?.trim() && !docsPath) {
+      manifestIssues.push(
+        buildCoreServiceManifestIssue(
+          serviceConfig,
+          'Docs path resolves outside the workspace root and was rejected.',
+          'Use a workspace-relative `docsPath` that stays inside the workspace.',
+        ),
+      )
+      continue
+    }
+
+    if (!installCommand) {
+      manifestIssues.push(
+        buildCoreServiceManifestIssue(
+          serviceConfig,
+          'Install command must be a non-empty workspace-local argv array.',
+          'Convert `installCommand` to a JSON string array such as `["tools/bin/workspace-memory", "install"]`.',
+        ),
+      )
+      continue
+    }
+
+    if (!runtimeCommand) {
+      manifestIssues.push(
+        buildCoreServiceManifestIssue(
+          serviceConfig,
+          'Runtime command must be a non-empty workspace-local argv array.',
+          'Convert `runtimeCommand` to a JSON string array rooted in the workspace.',
+        ),
+      )
+      continue
+    }
+
+    if (!syncCommand) {
+      manifestIssues.push(
+        buildCoreServiceManifestIssue(
+          serviceConfig,
+          'Sync command must be a non-empty workspace-local argv array.',
+          'Convert `syncCommand` to a JSON string array rooted in the workspace.',
+        ),
+      )
+      continue
+    }
+
+    if (!sharedRootBase) {
+      manifestIssues.push(
+        buildCoreServiceManifestIssue(
+          serviceConfig,
+          'Shared root resolves outside the workspace root and was rejected.',
+          'Use a workspace-relative `sharedRoot` under `shared/`.',
+        ),
+      )
+      continue
+    }
+
+    if (!cacheRootBase) {
+      manifestIssues.push(
+        buildCoreServiceManifestIssue(
+          serviceConfig,
+          'Cache root resolves outside the workspace root and was rejected.',
+          'Use a workspace-relative `cacheRoot` under `cache/`.',
+        ),
+      )
+      continue
+    }
+
+    const normalizedRepoRelativePath = path.relative(workspaceRoot, repoPath).split(path.sep).join('/')
+    const sharedRoot = path.join(sharedRootBase, user)
+    const cacheRoot = path.join(cacheRootBase, user)
+    const exportsRoot = path.join(sharedRoot, 'exports')
+    const homePath = path.join(sharedRoot, 'home')
+    const configPath = path.join(homePath, '.mempalace', 'config.json')
+    const identityPath = path.join(homePath, '.mempalace', 'identity.txt')
+    const statePath = path.join(sharedRoot, 'service-state.json')
+    const readmePath = path.join(repoPath, 'README.md')
+    const repoPresent = await fileExists(repoPath)
+    const venvPath = path.join(repoPath, '.venv', 'bin', 'python')
+    const venvReady = await fileExists(venvPath)
+    const branch = repoPresent ? await readGitValue(repoPath, ['branch', '--show-current']) : null
+    const originUrl = repoPresent ? await readGitValue(repoPath, ['remote', 'get-url', 'origin']) : null
+    const upstreamUrl = repoPresent ? await readGitValue(repoPath, ['remote', 'get-url', 'upstream']) : null
+    const version = repoPresent ? await readVersion(repoPath) : null
+    const state = await readState(statePath)
+
+    services.push({
+      branch,
+      cacheRoot,
+      category: 'memory',
+      configPath,
+      description: 'Local long-term memory and retrieval service for Codex Workspace.',
+      docsPath: docsPath && (await fileExists(docsPath)) ? docsPath : null,
+      exportsRoot,
+      homePath,
+      id,
+      identityPath,
+      install: installSnapshots.get(id) ?? buildIdleInstall(installCommand.display),
+      installCommand: installCommand.display,
+      installCommandArgs: installCommand.args,
+      lastCommandAt: state?.lastCommandAt ?? null,
+      lastCommandKind: state?.lastCommandKind ?? null,
+      lastCommandTarget: state?.lastCommandTarget ?? null,
+      lastCodexExportAt: state?.lastCodexExportAt ?? null,
+      lastCodexExportTarget: state?.lastCodexExportTarget ?? null,
+      lastIngestAt: state?.lastIngestAt ?? null,
+      lastIngestTarget: state?.lastIngestTarget ?? null,
+      lastInstallAt: state?.lastInstallAt ?? null,
+      lastRuntimeStartAt: state?.lastRuntimeStartAt ?? null,
+      lastSaveAt: state?.lastSaveAt ?? null,
+      lastSaveTarget: state?.lastSaveTarget ?? null,
+      lastSearchAt: state?.lastSearchAt ?? null,
+      lastSearchQuery: state?.lastSearchQuery ?? null,
+      lastSyncAt: state?.lastSyncAt ?? null,
+      lastWakeUpAt: state?.lastWakeUpAt ?? null,
+      name,
+      notes: serviceConfig.notes?.trim() ?? '',
+      originUrl,
+      readmePath: await fileExists(readmePath) ? readmePath : null,
+      repoPath,
+      repoPresent,
+      repoRelativePath: normalizedRepoRelativePath,
+      runtime: runtimeSnapshots.get(id) ?? buildIdleRuntime(runtimeCommand.display),
+      runtimeCommand: runtimeCommand.display,
+      runtimeCommandArgs: runtimeCommand.args,
+      sharedRoot,
+      statePath,
+      syncCommand: syncCommand.display,
+      syncCommandArgs: syncCommand.args,
+      upstreamUrl,
+      updatedAt: state?.updatedAt ?? null,
+      user,
+      venvPath,
+      venvReady,
+      version,
+    } satisfies WorkspaceCoreService)
+  }
+
+  lastCoreServiceManifestValidationAt = new Date().toISOString()
+  lastCoreServiceManifestIssues = manifestIssues
+
+  for (const issue of manifestIssues) {
+    logCoreServiceManifestIssue(issue)
+  }
+
+  return {
+    manifestIssues,
+    services,
+  }
+}
+
+export function getWorkspaceCoreServicesObservability() {
+  const manifestIssueReasons = Object.entries(
+    lastCoreServiceManifestIssues.reduce<Record<string, number>>((counts, issue) => {
+      counts[issue.reason] = (counts[issue.reason] ?? 0) + 1
+      return counts
+    }, {}),
+  ).sort(([left], [right]) => left.localeCompare(right))
+
+  return {
+    lastValidatedAt: lastCoreServiceManifestValidationAt,
+    loggedWarnings: coreServiceManifestLoggedWarnings,
+    manifestIssueReasons: Object.fromEntries(manifestIssueReasons),
+    rejectedEntries: lastCoreServiceManifestIssues.length,
+  }
 }
 
 export async function findCoreService(
@@ -274,6 +455,6 @@ export async function findCoreService(
   installSnapshots: Map<string, RepoInstall>,
   runtimeSnapshots: Map<string, RepoRuntime>,
 ) {
-  const services = await readCoreServices(installSnapshots, runtimeSnapshots)
+  const { services } = await readCoreServices(installSnapshots, runtimeSnapshots)
   return services.find((service) => service.id === serviceId) ?? null
 }

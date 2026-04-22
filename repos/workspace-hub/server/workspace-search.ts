@@ -1,4 +1,4 @@
-import { readFile, readdir } from 'node:fs/promises'
+import { open, readdir } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -44,6 +44,7 @@ const workspaceRoot = configuredWorkspaceRoot
   : path.resolve(appRoot, '..', '..')
 const artifactRoot = path.join(workspaceRoot, 'cache', 'context', 'agents', 'jobs')
 const searchIndexTtlMs = 5000
+const searchResponseCacheTtlMs = 3000
 const maxIndexedFileBytes = 24 * 1024
 const maxArtifactFiles = 150
 const includeArtifactSearch = (() => {
@@ -58,6 +59,29 @@ const cachedDocuments = new Map<
     expiresAt: number
   }
 >()
+const cachedResponses = new Map<
+  string,
+  {
+    expiresAt: number
+    response: WorkspaceSearchResponse
+  }
+>()
+let searchRequests = 0
+let searchLastDurationMs: number | null = null
+let searchMaxDurationMs = 0
+let searchTotalDurationMs = 0
+let searchResultCountTotal = 0
+let searchDocumentCacheHits = 0
+let searchDocumentCacheMisses = 0
+let searchResponseCacheHits = 0
+let searchResponseCacheMisses = 0
+let searchIndexRevision = 0
+let searchIndexInvalidations = 0
+let searchLastInvalidatedAt: string | null = null
+
+function buildSearchResponseCacheKey(query: string, mode: WorkspaceSearchMode) {
+  return `${searchIndexRevision}:${mode}:${compactWhitespace(query).toLowerCase()}`
+}
 
 function normalizeValue(value: string) {
   return value.toLowerCase()
@@ -69,8 +93,15 @@ function compactWhitespace(value: string) {
 
 async function readTextSnippet(targetPath: string) {
   try {
-    const content = await readFile(targetPath, 'utf8')
-    return content.slice(0, maxIndexedFileBytes)
+    const handle = await open(targetPath, 'r')
+
+    try {
+      const buffer = Buffer.alloc(maxIndexedFileBytes)
+      const { bytesRead } = await handle.read(buffer, 0, maxIndexedFileBytes, 0)
+      return buffer.toString('utf8', 0, bytesRead)
+    } finally {
+      await handle.close()
+    }
   } catch {
     return ''
   }
@@ -465,8 +496,11 @@ async function getSearchDocuments(
 ) {
   const cached = cachedDocuments.get(mode)
   if (cached && cached.expiresAt > Date.now()) {
+    searchDocumentCacheHits += 1
     return cached.docs
   }
+
+  searchDocumentCacheMisses += 1
 
   const docs = [
     ...(await buildRepoDocuments(repos, mode)),
@@ -484,6 +518,63 @@ async function getSearchDocuments(
   return docs
 }
 
+export function getWorkspaceSearchObservability() {
+  return {
+    avgDurationMs:
+      searchRequests > 0
+        ? Number((searchTotalDurationMs / searchRequests).toFixed(2))
+        : null,
+    documentCacheHits: searchDocumentCacheHits,
+    documentCacheMisses: searchDocumentCacheMisses,
+    documentCacheSize: cachedDocuments.size,
+    documentCacheTtlMs: searchIndexTtlMs,
+    indexRevision: searchIndexRevision,
+    invalidations: searchIndexInvalidations,
+    lastDurationMs: searchLastDurationMs,
+    lastInvalidatedAt: searchLastInvalidatedAt,
+    maxDurationMs: searchRequests > 0 ? searchMaxDurationMs : null,
+    responseCacheHits: searchResponseCacheHits,
+    responseCacheMisses: searchResponseCacheMisses,
+    responseCacheSize: cachedResponses.size,
+    responseCacheTtlMs: searchResponseCacheTtlMs,
+    requests: searchRequests,
+    totalResultsReturned: searchResultCountTotal,
+  }
+}
+
+export function getCachedWorkspaceSearchResponse(
+  query: string,
+  mode: WorkspaceSearchMode,
+) {
+  const cacheKey = buildSearchResponseCacheKey(query, mode)
+  const cached = cachedResponses.get(cacheKey)
+
+  if (cached && cached.expiresAt > Date.now()) {
+    searchResponseCacheHits += 1
+    return cached.response
+  }
+
+  searchResponseCacheMisses += 1
+  cachedResponses.delete(cacheKey)
+  return null
+}
+
+export function storeWorkspaceSearchResponse(response: WorkspaceSearchResponse) {
+  const cacheKey = buildSearchResponseCacheKey(response.query, response.mode)
+  cachedResponses.set(cacheKey, {
+    expiresAt: Date.now() + searchResponseCacheTtlMs,
+    response,
+  })
+}
+
+export function invalidateWorkspaceSearchIndex(_reason = 'event') {
+  searchIndexRevision += 1
+  searchIndexInvalidations += 1
+  searchLastInvalidatedAt = new Date().toISOString()
+  cachedDocuments.clear()
+  cachedResponses.clear()
+}
+
 export async function searchWorkspace(
   query: string,
   repos: WorkspaceRepo[],
@@ -491,9 +582,15 @@ export async function searchWorkspace(
   capabilities: WorkspaceCapability[] = [],
   mode: WorkspaceSearchMode = 'thin',
 ): Promise<WorkspaceSearchResponse> {
+  searchRequests += 1
+  const startedAt = Date.now()
   const normalizedQuery = compactWhitespace(query).toLowerCase()
 
   if (!normalizedQuery) {
+    const durationMs = Date.now() - startedAt
+    searchLastDurationMs = durationMs
+    searchTotalDurationMs += durationMs
+    searchMaxDurationMs = Math.max(searchMaxDurationMs, durationMs)
     return {
       mode,
       query,
@@ -536,6 +633,12 @@ export async function searchWorkspace(
       return left.title.localeCompare(right.title)
     })
     .slice(0, 12)
+
+  const durationMs = Date.now() - startedAt
+  searchLastDurationMs = durationMs
+  searchTotalDurationMs += durationMs
+  searchMaxDurationMs = Math.max(searchMaxDurationMs, durationMs)
+  searchResultCountTotal += results.length
 
   return {
     mode,

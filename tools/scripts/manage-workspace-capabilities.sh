@@ -25,6 +25,11 @@ Default behavior is a dry run. Use --run to apply changes.
 EOF
 }
 
+die() {
+  printf '%s\n' "$1" >&2
+  exit 1
+}
+
 append_requested_id() {
   requested_id=$1
   if [ -n "$requested_ids" ]; then
@@ -68,6 +73,71 @@ ensure_state_file() {
 file_exists() {
   target_path=$1
   [ -e "$target_path" ]
+}
+
+normalize_workspace_relative_path() {
+  target_path=$1
+  label=$2
+
+  if [ -z "$target_path" ] || [ "$target_path" = "null" ]; then
+    die "$label is required."
+  fi
+
+  case "$target_path" in
+    /*)
+      die "$label must stay inside the workspace root."
+      ;;
+  esac
+
+  normalized_path=""
+  old_ifs=$IFS
+  IFS='/'
+  set -f
+  # shellcheck disable=SC2086
+  set -- $target_path
+  set +f
+  IFS=$old_ifs
+
+  for segment in "$@"; do
+    case "$segment" in
+      ''|.)
+        continue
+        ;;
+      ..)
+        case "$normalized_path" in
+          '')
+            die "$label must stay inside the workspace root."
+            ;;
+          */*)
+            normalized_path=${normalized_path%/*}
+            ;;
+          *)
+            normalized_path=""
+            ;;
+        esac
+        ;;
+      *)
+        if [ -n "$normalized_path" ]; then
+          normalized_path=$normalized_path/$segment
+        else
+          normalized_path=$segment
+        fi
+        ;;
+    esac
+  done
+
+  if [ -z "$normalized_path" ]; then
+    die "$label must stay inside the workspace root."
+  fi
+
+  printf '%s\n' "$normalized_path"
+}
+
+resolve_workspace_relative_path() {
+  target_path=$1
+  label=$2
+  normalized_path=$(normalize_workspace_relative_path "$target_path" "$label")
+  printf '%s/%s\n' "$workspace_root" "$normalized_path"
 }
 
 require_tool() {
@@ -130,7 +200,7 @@ capability_install_path() {
     return 0
   fi
 
-  printf '%s\n' "$workspace_root/$install_target"
+  resolve_workspace_relative_path "$install_target" "Capability installTarget"
 }
 
 capability_installed() {
@@ -215,24 +285,59 @@ update_repo_dir() {
 }
 
 run_manifest_command() {
-  shell_command=$1
+  command_json=$1
 
-  if [ -z "$shell_command" ] || [ "$shell_command" = "null" ]; then
+  if [ -z "$command_json" ] || [ "$command_json" = "null" ]; then
     return 0
   fi
 
+  if ! printf '%s' "$command_json" | jq -e '
+    type == "array"
+    and length > 0
+    and all(.[]; type == "string" and length > 0)
+  ' >/dev/null 2>&1; then
+    die "Workspace capability commands must be non-empty JSON string arrays."
+  fi
+
+  args_file=$(mktemp)
+  printf '%s' "$command_json" | jq -r '.[]' >"$args_file"
+
+  set --
+  command_target=""
+  command_display=$(printf '%s' "$command_json" | jq -r 'map(@sh) | join(" ")')
+  arg_index=0
+  while IFS= read -r command_part || [ -n "$command_part" ]; do
+    arg_index=$((arg_index + 1))
+    if [ "$arg_index" -eq 1 ]; then
+      command_target=$command_part
+    else
+      set -- "$@" "$command_part"
+    fi
+  done <"$args_file"
+  rm -f "$args_file"
+
+  if [ -z "$command_target" ]; then
+    die "Workspace capability commands must not be empty."
+  fi
+
+  command_path=$(resolve_workspace_relative_path "$command_target" "Capability command target")
+
+  if [ ! -x "$command_path" ]; then
+    die "Capability command target is not executable: $command_path"
+  fi
+
   if [ "$run_mode" = "run" ]; then
-    (cd "$workspace_root" && sh -lc "$shell_command")
+    (cd "$workspace_root" && "$command_path" "$@")
   else
-    printf 'Plan: would run post-step: %s\n' "$shell_command"
+    printf 'Plan: would run post-step: %s\n' "$command_display"
   fi
 }
 
 run_post_install_commands() {
   capability_json=$1
-  printf '%s' "$capability_json" | jq -r '.postInstallCommands[]? // empty' | while IFS= read -r shell_command; do
-    [ -n "$shell_command" ] || continue
-    run_manifest_command "$shell_command"
+  printf '%s' "$capability_json" | jq -c '.postInstallCommands[]? // empty' | while IFS= read -r command_json; do
+    [ -n "$command_json" ] || continue
+    run_manifest_command "$command_json"
   done
 }
 
@@ -255,7 +360,7 @@ install_capability() {
   install_method=$(printf '%s' "$capability_json" | jq -r '.installMethod')
   install_path=$(capability_install_path "$capability_json")
   source_url=$(printf '%s' "$capability_json" | jq -r '.sourceUrl')
-  install_command=$(printf '%s' "$capability_json" | jq -r '.installCommand // empty')
+  install_command=$(printf '%s' "$capability_json" | jq -c '.installCommand // empty')
 
   print_capability_header "$capability_json"
 
@@ -306,7 +411,7 @@ update_capability() {
   capability_json=$1
   install_method=$(printf '%s' "$capability_json" | jq -r '.installMethod')
   install_path=$(capability_install_path "$capability_json")
-  sync_command=$(printf '%s' "$capability_json" | jq -r '.syncCommand // empty')
+  sync_command=$(printf '%s' "$capability_json" | jq -c '.syncCommand // empty')
   capability_id=$(printf '%s' "$capability_json" | jq -r '.id')
 
   print_capability_header "$capability_json"
@@ -362,7 +467,7 @@ uninstall_capability() {
 
   printf '%s' "$capability_json" | jq -r '.disposablePaths[]? // empty' | while IFS= read -r disposable_path; do
     [ -n "$disposable_path" ] || continue
-    target_path="$workspace_root/$disposable_path"
+    target_path=$(resolve_workspace_relative_path "$disposable_path" "Capability disposable path")
     if [ "$run_mode" = "run" ]; then
       rm -rf "$target_path"
       printf 'Removed disposable path %s\n' "$target_path"

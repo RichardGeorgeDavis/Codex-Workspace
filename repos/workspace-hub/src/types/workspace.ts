@@ -259,9 +259,24 @@ export type WorkspaceCapability = {
   updateStrategy: string
 }
 
+export type WorkspaceCapabilityManifestIssue = {
+  capabilityId: string | null
+  capabilityName: string | null
+  remediation: string
+  reason: string
+}
+
+export type WorkspaceCoreServiceManifestIssue = {
+  remediation: string
+  reason: string
+  serviceId: string | null
+  serviceName: string | null
+}
+
 export type WorkspaceCapabilitiesSnapshot = {
   capabilities: WorkspaceCapability[]
   generatedAt: string
+  manifestIssues: WorkspaceCapabilityManifestIssue[]
   stats: {
     abilities: number
     coreServices: number
@@ -271,6 +286,7 @@ export type WorkspaceCapabilitiesSnapshot = {
     installed: number
     installable: number
     notInstalled: number
+    rejectedEntries: number
     referenceOnly: number
     total: number
   }
@@ -332,6 +348,7 @@ export type WorkspaceCoreService = {
   identityPath: string
   install: RepoInstall
   installCommand: string
+  installCommandArgs: string[]
   lastCommandAt: string | null
   lastCommandKind: string | null
   lastCommandTarget: string | null
@@ -356,9 +373,11 @@ export type WorkspaceCoreService = {
   repoRelativePath: string
   runtime: RepoRuntime
   runtimeCommand: string
+  runtimeCommandArgs: string[]
   sharedRoot: string
   statePath: string
   syncCommand: string
+  syncCommandArgs: string[]
   upstreamUrl: string | null
   updatedAt: string | null
   user: string
@@ -431,6 +450,7 @@ export type WorkspaceRepo = {
   detailLevel: 'detail' | 'list'
   diagnosticsFreshness: 'fresh' | 'skipped' | 'stale' | 'warming'
   dependencies: RepoDependencyState
+  designPath: string | null
   devCommand: string | null
   externalUrl: string | null
   failureReport: RepoFailureReportSummary | null
@@ -473,6 +493,7 @@ export type WorkspaceSummary = {
   archives: WorkspaceArchive[]
   capabilities: WorkspaceCapability[]
   coreServices: WorkspaceCoreService[]
+  coreServiceIssues: WorkspaceCoreServiceManifestIssue[]
   dataRoot: string
   generatedAt: string
   milestones: WorkspaceMilestone[]

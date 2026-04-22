@@ -1,9 +1,13 @@
 import { SectionCard } from '../../components/SectionCard.tsx'
-import type { WorkspaceCoreService } from '../../types/workspace.ts'
+import type {
+  WorkspaceCoreService,
+  WorkspaceCoreServiceManifestIssue,
+} from '../../types/workspace.ts'
 
 type CoreServicesPanelProps = {
   actionPendingKey: string | null
   loading: boolean
+  manifestIssues: WorkspaceCoreServiceManifestIssue[]
   onInstallAction: (serviceId: string) => Promise<void>
   onOpenAction: (
     serviceId: string,
@@ -198,6 +202,7 @@ function ServiceStatusCard({
 export function CoreServicesPanel({
   actionPendingKey,
   loading,
+  manifestIssues,
   onInstallAction,
   onOpenAction,
   onOpenServiceWorkspace,
@@ -216,6 +221,31 @@ export function CoreServicesPanel({
       eyebrow="Core Services"
       title="Core services"
     >
+      {manifestIssues.length ? (
+        <div className="discovery-group">
+          <div className="discovery-section-heading">
+            <span className="discovery-section-title">Skipped manifest entries</span>
+            <span className="tag">{manifestIssues.length}</span>
+          </div>
+          <p className="section-copy capability-copy">
+            Some core-service entries were rejected while loading
+            <code> tools/manifests/workspace-capabilities.json </code>
+            because their config is incomplete or points outside the workspace root.
+          </p>
+          <ul className="settings-list service-paths">
+            {manifestIssues.slice(0, 5).map((issue) => (
+              <li
+                key={`${issue.serviceId ?? issue.serviceName ?? 'unknown'}:${issue.reason}`}
+                className="settings-item"
+              >
+                <span>{issue.serviceName ?? issue.serviceId ?? 'Unnamed entry'}</span>
+                <code>{`${issue.reason} Fix: ${issue.remediation}`}</code>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {loading && !services.length ? (
         <p className="loading-copy">Loading workspace services...</p>
       ) : services.length ? (
@@ -238,7 +268,7 @@ export function CoreServicesPanel({
       ) : (
         <div className="empty-state">
           <strong>No core services are configured.</strong>
-          <p>Add a service to `tools/manifests/core-services.json` to surface it here.</p>
+          <p>Add a core-service entry to `tools/manifests/workspace-capabilities.json` to surface it here.</p>
         </div>
       )}
     </SectionCard>

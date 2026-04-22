@@ -33,6 +33,21 @@ async function writeTextFile(targetPath: string, content: string) {
   await writeFile(targetPath, content, 'utf8')
 }
 
+async function ensureInstallHookScript(root: string) {
+  const installHookPath = path.join(root, 'tools', 'scripts', 'test-install-hook.sh')
+
+  await writeTextFile(
+    installHookPath,
+    `#!/usr/bin/env sh
+set -eu
+workspace_root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
+mkdir -p "$workspace_root/cache/helper-skill"
+printf 'ok\n' >"$workspace_root/cache/helper-skill/hook-ran.txt"
+`,
+  )
+  await execFileAsync('chmod', ['755', installHookPath], { cwd: root })
+}
+
 async function runCapabilityScript(
   args: string[],
   manifestPath: string,
@@ -47,6 +62,15 @@ async function runCapabilityScript(
       WORKSPACE_CAPABILITIES_WORKSPACE_ROOT: tempWorkspaceRoot,
     },
   })
+}
+
+async function importWorkspaceCapabilitiesModule(root: string) {
+  process.env.WORKSPACE_HUB_WORKSPACE_ROOT = root
+  const cacheBuster = `${Date.now()}-${Math.random().toString(16).slice(2)}`
+
+  return await import(
+    new URL(`../server/workspace-capabilities.ts?test=${cacheBuster}`, import.meta.url).href
+  )
 }
 
 async function configureGitIdentity(cwd: string) {
@@ -82,6 +106,8 @@ before(async () => {
 })
 
 after(async () => {
+  delete process.env.WORKSPACE_HUB_WORKSPACE_ROOT
+
   if (tempWorkspaceRoot) {
     await rm(tempWorkspaceRoot, { force: true, recursive: true })
   }
@@ -96,6 +122,9 @@ test('workspace capability lifecycle supports list, install, enable, disable, up
   const manifestPath = path.join(tempWorkspaceRoot, 'tools', 'manifests', 'workspace-capabilities.json')
   const statePath = path.join(tempWorkspaceRoot, 'shared', 'workspace-capabilities', 'state.json')
   const disposablePath = 'cache/helper-skill/test-user'
+  const hookMarkerPath = path.join(tempWorkspaceRoot, 'cache', 'helper-skill', 'hook-ran.txt')
+
+  await ensureInstallHookScript(tempWorkspaceRoot)
 
   await writeTextFile(
     manifestPath,
@@ -114,6 +143,7 @@ test('workspace capability lifecycle supports list, install, enable, disable, up
             installMethod: 'git',
             updateStrategy: 'git-fast-forward',
             exposeInHub: true,
+            installCommand: ['tools/scripts/test-install-hook.sh'],
             disposablePaths: [disposablePath],
           },
         ],
@@ -135,6 +165,7 @@ test('workspace capability lifecycle supports list, install, enable, disable, up
   await runCapabilityScript(['install', '--run', 'helper-skill'], manifestPath, statePath)
   const installPath = path.join(tempWorkspaceRoot, 'repos', 'abilities', 'helper-skill')
   assert.equal(await pathExists(path.join(installPath, '.git')), true)
+  assert.equal(await pathExists(hookMarkerPath), true)
 
   await writeTextFile(path.join(installPath, 'LOCAL_CHANGE.md'), 'dirty tree\n')
   const updateResult = await runCapabilityScript(['update', '--run', 'helper-skill'], manifestPath, statePath)
@@ -151,6 +182,221 @@ test('workspace capability lifecycle supports list, install, enable, disable, up
 
   assert.equal(await pathExists(installPath), false)
   assert.equal(await pathExists(path.join(tempWorkspaceRoot, disposablePath)), false)
+})
+
+test('workspace capability manager rejects paths that escape the workspace root', async () => {
+  const helperRemotePath = await createRemoteRepo('outside-path')
+  const manifestPath = path.join(tempWorkspaceRoot, 'tools', 'manifests', 'workspace-capabilities-outside.json')
+  const statePath = path.join(tempWorkspaceRoot, 'shared', 'workspace-capabilities', 'state-outside.json')
+
+  await writeTextFile(
+    manifestPath,
+    JSON.stringify(
+      {
+        version: 1,
+        capabilities: [
+          {
+            id: 'outside-path',
+            name: 'Outside Path',
+            description: 'Invalid install target',
+            classification: 'ability',
+            sourceUrl: helperRemotePath,
+            installTarget: '../outside-root',
+            enabledByDefault: false,
+            installMethod: 'git',
+            updateStrategy: 'git-fast-forward',
+            exposeInHub: true,
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  )
+
+  await assert.rejects(
+    runCapabilityScript(['install', '--run', 'outside-path'], manifestPath, statePath),
+    /Capability installTarget must stay inside the workspace root\./,
+  )
+})
+
+test('workspace capability manager rejects non-array manifest commands', async () => {
+  const helperRemotePath = await createRemoteRepo('unsafe-command')
+  const manifestPath = path.join(tempWorkspaceRoot, 'tools', 'manifests', 'workspace-capabilities-unsafe.json')
+  const statePath = path.join(tempWorkspaceRoot, 'shared', 'workspace-capabilities', 'state-unsafe.json')
+
+  await ensureInstallHookScript(tempWorkspaceRoot)
+
+  await writeTextFile(
+    manifestPath,
+    JSON.stringify(
+      {
+        version: 1,
+        capabilities: [
+          {
+            id: 'unsafe-command',
+            name: 'Unsafe Command',
+            description: 'Invalid install command',
+            classification: 'ability',
+            sourceUrl: helperRemotePath,
+            installTarget: 'repos/abilities/unsafe-command',
+            enabledByDefault: false,
+            installMethod: 'git',
+            updateStrategy: 'git-fast-forward',
+            exposeInHub: true,
+            installCommand: 'tools/scripts/test-install-hook.sh && echo nope',
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  )
+
+  await assert.rejects(
+    runCapabilityScript(['install', '--run', 'unsafe-command'], manifestPath, statePath),
+    /Workspace capability commands must be non-empty JSON string arrays\./,
+  )
+})
+
+test('workspace capability manager rejects disposable paths that escape the workspace root', async () => {
+  const helperRemotePath = await createRemoteRepo('unsafe-disposable')
+  const manifestPath = path.join(tempWorkspaceRoot, 'tools', 'manifests', 'workspace-capabilities-disposable.json')
+  const statePath = path.join(tempWorkspaceRoot, 'shared', 'workspace-capabilities', 'state-disposable.json')
+
+  await writeTextFile(
+    manifestPath,
+    JSON.stringify(
+      {
+        version: 1,
+        capabilities: [
+          {
+            id: 'unsafe-disposable',
+            name: 'Unsafe Disposable',
+            description: 'Invalid disposable path',
+            classification: 'ability',
+            sourceUrl: helperRemotePath,
+            installTarget: 'repos/abilities/unsafe-disposable',
+            enabledByDefault: false,
+            installMethod: 'git',
+            updateStrategy: 'git-fast-forward',
+            exposeInHub: true,
+            disposablePaths: ['../outside-cache'],
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  )
+
+  await assert.rejects(
+    runCapabilityScript(['uninstall', '--run', 'unsafe-disposable'], manifestPath, statePath),
+    /Capability disposable path must stay inside the workspace root\./,
+  )
+})
+
+test('workspace capability reader skips manifest entries with install targets outside the workspace root', async () => {
+  const manifestPath = path.join(tempWorkspaceRoot, 'tools', 'manifests', 'workspace-capabilities.json')
+
+  await writeTextFile(
+    manifestPath,
+    JSON.stringify(
+      {
+        version: 1,
+        capabilities: [
+          {
+            id: 'safe-entry',
+            name: 'Safe Entry',
+            description: 'Valid',
+            classification: 'ability',
+            sourceUrl: 'https://example.com/safe.git',
+            installTarget: 'repos/abilities/safe-entry',
+            enabledByDefault: false,
+            installMethod: 'git',
+            updateStrategy: 'git-fast-forward',
+            exposeInHub: true,
+          },
+          {
+            id: 'unsafe-entry',
+            name: 'Unsafe Entry',
+            description: 'Invalid',
+            classification: 'ability',
+            sourceUrl: 'https://example.com/unsafe.git',
+            installTarget: '../unsafe-entry',
+            enabledByDefault: false,
+            installMethod: 'git',
+            updateStrategy: 'git-fast-forward',
+            exposeInHub: true,
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  )
+
+  const capabilitiesModule = await importWorkspaceCapabilitiesModule(tempWorkspaceRoot)
+  const result = await capabilitiesModule.readWorkspaceCapabilities()
+
+  assert.deepEqual(result.capabilities.map((capability) => capability.id), ['safe-entry'])
+  assert.equal(result.manifestIssues.length, 1)
+  assert.match(result.manifestIssues[0]?.reason ?? '', /outside the workspace root/i)
+  assert.match(result.manifestIssues[0]?.remediation ?? '', /workspace-relative `installTarget`/i)
+
+  const snapshot = await capabilitiesModule.buildWorkspaceCapabilitiesSnapshot()
+  assert.equal(snapshot.stats.rejectedEntries, 1)
+  assert.equal(snapshot.manifestIssues.length, 1)
+
+  const observability = capabilitiesModule.getWorkspaceCapabilitiesObservability()
+  assert.equal(observability.rejectedEntries, 1)
+
+  delete process.env.WORKSPACE_HUB_WORKSPACE_ROOT
+})
+
+test('workspace capability reader rejects docs paths that escape the workspace root', async () => {
+  const helperRemotePath = await createRemoteRepo('outside-docs')
+  const manifestPath = path.join(tempWorkspaceRoot, 'tools', 'manifests', 'workspace-capabilities.json')
+
+  await writeTextFile(
+    manifestPath,
+    JSON.stringify(
+      {
+        version: 1,
+        capabilities: [
+          {
+            id: 'outside-docs',
+            name: 'Outside Docs',
+            description: 'Invalid docs path',
+            classification: 'ability',
+            sourceUrl: helperRemotePath,
+            installTarget: 'repos/abilities/outside-docs',
+            enabledByDefault: false,
+            installMethod: 'git',
+            updateStrategy: 'git-fast-forward',
+            exposeInHub: true,
+            docsPath: '../outside-docs.md',
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  )
+
+  const capabilitiesModule = await importWorkspaceCapabilitiesModule(tempWorkspaceRoot)
+  const result = await capabilitiesModule.readWorkspaceCapabilities()
+
+  assert.equal(result.capabilities.length, 0)
+  assert.equal(result.manifestIssues.length, 1)
+  assert.match(result.manifestIssues[0]?.reason ?? '', /docs path resolves outside the workspace root/i)
+  assert.match(result.manifestIssues[0]?.remediation ?? '', /workspace-relative `docsPath`/i)
+
+  const snapshot = await capabilitiesModule.buildWorkspaceCapabilitiesSnapshot()
+  assert.equal(snapshot.stats.rejectedEntries, 1)
+  assert.equal(snapshot.manifestIssues.length, 1)
+
+  delete process.env.WORKSPACE_HUB_WORKSPACE_ROOT
 })
 
 test('workspace capability snapshot stats summarize operator state clearly', () => {
@@ -221,6 +467,13 @@ test('workspace capability snapshot stats summarize operator state clearly', () 
       updatedAt: null,
       updateStrategy: 'archive-snapshot',
     },
+  ], [
+    {
+      capabilityId: 'bad-entry',
+      capabilityName: 'Bad Entry',
+      reason: 'Install target resolves outside the workspace root and was rejected.',
+      remediation: 'Use a workspace-relative `installTarget` under the workspace root.',
+    },
   ])
 
   assert.deepEqual(stats, {
@@ -232,6 +485,7 @@ test('workspace capability snapshot stats summarize operator state clearly', () 
     installed: 2,
     installable: 2,
     notInstalled: 1,
+    rejectedEntries: 1,
     referenceOnly: 1,
     total: 3,
   })

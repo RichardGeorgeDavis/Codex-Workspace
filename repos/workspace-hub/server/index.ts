@@ -56,7 +56,12 @@ import {
   invalidateWorkspaceSummaryCache,
   recordSummaryRequest,
 } from './workspace.ts'
-import { searchWorkspace } from './workspace-search.ts'
+import {
+  getCachedWorkspaceSearchResponse,
+  invalidateWorkspaceSearchIndex,
+  searchWorkspace,
+  storeWorkspaceSearchResponse,
+} from './workspace-search.ts'
 
 const apiHost = process.env.WORKSPACE_HUB_API_HOST ?? '127.0.0.1'
 const apiPort = Number.parseInt(process.env.WORKSPACE_HUB_API_PORT ?? '4101', 10)
@@ -171,8 +176,12 @@ function parseSummaryReason(
   return 'manual-refresh'
 }
 
-function invalidateWorkspaceCaches() {
+function invalidateWorkspaceCaches(options: { search?: boolean } = {}) {
   invalidateWorkspaceSummaryCache()
+
+  if (options.search) {
+    invalidateWorkspaceSearchIndex('api-mutation')
+  }
 }
 
 async function fileExists(targetPath: string) {
@@ -344,6 +353,61 @@ app.get('/api/workspace/observability', (_request: Request, response: Response) 
   })
 })
 
+app.get(
+  '/api/workspace/healthcheck',
+  async (_request: Request, response: Response, next: NextFunction) => {
+    try {
+      const [summary, capabilitySnapshot] = await Promise.all([
+        buildWorkspaceSummary(
+          apiPort,
+          getInstallSnapshots(),
+          getRuntimeSnapshots(),
+          { includeDiagnostics: false, repoProjection: 'list' },
+        ),
+        buildWorkspaceCapabilitiesSnapshot(),
+      ])
+      const observability = getWorkspaceHubObservability()
+      const checks = [
+        {
+          message:
+            summary.coreServiceIssues.length === 0
+              ? 'Core-service manifest validation passed.'
+              : `${summary.coreServiceIssues.length} core-service manifest entries were rejected.`,
+          name: 'coreServices',
+          ok: summary.coreServiceIssues.length === 0,
+        },
+        {
+          message:
+            capabilitySnapshot.manifestIssues.length === 0
+              ? 'Capability manifest validation passed.'
+              : `${capabilitySnapshot.manifestIssues.length} capability manifest entries were rejected.`,
+          name: 'capabilities',
+          ok: capabilitySnapshot.manifestIssues.length === 0,
+        },
+        {
+          message: observability.search ? 'Search observability is available.' : 'Search observability is missing.',
+          name: 'searchObservability',
+          ok: Boolean(observability.search),
+        },
+        {
+          message: 'Workspace summary and capability snapshot builders responded successfully.',
+          name: 'workspaceEndpoints',
+          ok: true,
+        },
+      ]
+
+      response.json({
+        checks,
+        generatedAt: new Date().toISOString(),
+        observability,
+        status: checks.every((check) => check.ok) ? 'ok' : 'warn',
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
 app.get('/api/events', (request: Request, response: Response) => {
   handleWorkspaceEvents(request, response)
 })
@@ -444,7 +508,12 @@ app.get(
         return
       }
 
-      recordSummaryRequest(true, 'search')
+      const cachedResponse = getCachedWorkspaceSearchResponse(query, mode)
+      if (cachedResponse) {
+        response.json(cachedResponse)
+        return
+      }
+
       const summary = await buildWorkspaceSummary(
         apiPort,
         getInstallSnapshots(),
@@ -453,16 +522,18 @@ app.get(
           ? undefined
           : { includeDiagnostics: false, repoProjection: 'list' },
       )
+      recordSummaryRequest(true, 'search')
 
-      response.json(
-        await searchWorkspace(
-          query,
-          summary.repos,
-          summary.coreServices,
-          summary.capabilities,
-          mode,
-        ),
+      const searchResponse = await searchWorkspace(
+        query,
+        summary.repos,
+        summary.coreServices,
+        summary.capabilities,
+        mode,
       )
+      storeWorkspaceSearchResponse(searchResponse)
+
+      response.json(searchResponse)
     } catch (error) {
       next(error)
     }
@@ -508,7 +579,7 @@ app.post(
         status: action === 'disable' ? 'disabled' : 'ready',
         type: 'capability',
       })
-      invalidateWorkspaceCaches()
+      invalidateWorkspaceCaches({ search: true })
       response.json({ ok: true, output })
     } catch (error) {
       next(error)
@@ -706,7 +777,7 @@ app.post(
         repoRelativePath,
         searchQuery,
       })
-      invalidateWorkspaceCaches()
+      invalidateWorkspaceCaches({ search: true })
       response.json({ ok: true, ...result })
     } catch (error) {
       next(error)
@@ -830,7 +901,7 @@ app.post(
         return
       }
 
-      invalidateWorkspaceCaches()
+      invalidateWorkspaceCaches({ search: true })
       response.json({ ok: true })
     } catch (error) {
       next(error)
@@ -867,7 +938,7 @@ app.post(
       }
 
       await runCoreServiceInstall(service)
-      invalidateWorkspaceCaches()
+      invalidateWorkspaceCaches({ search: true })
       response.json({ ok: true })
     } catch (error) {
       next(error)
@@ -899,7 +970,7 @@ app.post(
       }
 
       await runCoreServiceSync(service)
-      invalidateWorkspaceCaches()
+      invalidateWorkspaceCaches({ search: true })
       response.json({ ok: true })
     } catch (error) {
       next(error)
@@ -1039,7 +1110,7 @@ app.post(
 
         const runtime = await startRepoRuntime(repo)
         await saveRepoActivity(relativePath, 'runtime')
-        invalidateWorkspaceCaches()
+        invalidateWorkspaceCaches({ search: true })
         publishWorkspaceEvent({
           message: action,
           relativePath,
@@ -1053,7 +1124,7 @@ app.post(
       if (action === 'stop') {
         const runtime = await stopRepoRuntime(repo.path)
         await saveRepoActivity(relativePath, 'runtime')
-        invalidateWorkspaceCaches()
+        invalidateWorkspaceCaches({ search: true })
         publishWorkspaceEvent({
           message: action,
           relativePath,
@@ -1074,7 +1145,7 @@ app.post(
 
         const runtime = await restartRepoRuntime(repo)
         await saveRepoActivity(relativePath, 'runtime')
-        invalidateWorkspaceCaches()
+        invalidateWorkspaceCaches({ search: true })
         publishWorkspaceEvent({
           message: action,
           relativePath,
@@ -1200,7 +1271,7 @@ app.post(
 
       const result = await runRepoIntake(repo, workspaceRoot)
       await saveRepoActivity(relativePath, 'open')
-      invalidateWorkspaceCaches()
+      invalidateWorkspaceCaches({ search: true })
 
       publishWorkspaceEvent({
         message: result.manifestCreated ? 'intake + manifest' : 'intake',
@@ -1326,7 +1397,7 @@ app.post(
         manifestPath: result.manifestPath,
         ok: true,
       })
-      invalidateWorkspaceCaches()
+      invalidateWorkspaceCaches({ search: true })
       publishWorkspaceEvent({
         message: result.manifestPath,
         relativePath,
@@ -1364,7 +1435,7 @@ app.post(
         ),
       )
 
-      invalidateWorkspaceCaches()
+      invalidateWorkspaceCaches({ search: true })
       publishWorkspaceEvent({
         message: 'saved',
         relativePath,
@@ -1395,7 +1466,7 @@ app.post(
       }
 
       await resetRepoMetadata(relativePath)
-      invalidateWorkspaceCaches()
+      invalidateWorkspaceCaches({ search: true })
       publishWorkspaceEvent({
         message: 'reset',
         relativePath,

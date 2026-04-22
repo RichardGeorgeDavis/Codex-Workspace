@@ -20,7 +20,7 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") [--list] [--refresh] [--sync-upstream] [--force] [site-id] [target-dir]
 
-Browse, mirror, and copy reviewed DESIGN.md files from the managed VoltAgent catalog repo.
+Browse, mirror, and copy reviewed example DESIGN.md files from the managed VoltAgent catalog repo.
 
 Examples:
   $0 --list
@@ -30,12 +30,15 @@ Examples:
   $0 vercel /path/to/repo
 
 Behavior:
-  --list           list available site ids from the local catalog mirror
+  --list           list available example site ids from the local catalog mirror
   --refresh        rebuild cache/design-md/catalog from the managed repos/abilities clone
   --sync-upstream  update the managed repos/abilities clone first
   --force          overwrite an existing target DESIGN.md when copying
 
-If site-id is provided, the script copies that DESIGN.md into target-dir/DESIGN.md.
+This script is the example-catalog wrapper. The canonical repo-authoring flow uses
+tools/scripts/design-md.sh plus a repo-owned DESIGN.md.
+
+If site-id is provided, the script copies that example DESIGN.md into target-dir/DESIGN.md.
 The default target directory is the current working directory.
 EOF
 }
