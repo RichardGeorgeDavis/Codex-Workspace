@@ -159,6 +159,50 @@ The workspace launcher baseline is now:
 
 This is intended to reduce same-time launcher collisions without making local URLs unpredictable.
 
+## `DESIGN.md` capability note (2026-04-22)
+
+The workspace now has a canonical per-repo `DESIGN.md` path.
+
+Current stance:
+
+- treat [`google-labs-code/design.md`](https://github.com/google-labs-code/design.md) as the canonical `DESIGN.md` standard for this workspace
+- keep repo-root `DESIGN.md` optional and per-repo, recommended mainly for UI-heavy repos
+- use `tools/scripts/design-md.sh` for the repo-owned workflow:
+  - `init` copies the tracked starter template into repo-root `DESIGN.md`
+  - `lint` runs `npx -y @google/design.md lint`
+  - `diff` runs `npx -y @google/design.md diff`
+  - `examples ...` delegates to the existing VoltAgent-backed example catalog flow
+- keep `tools/scripts/use-design-md.sh` as the optional VoltAgent example-catalog wrapper, not as the canonical authoring workflow
+- keep copied or authored `DESIGN.md` files inside the individual repo that owns them rather than inventing one shared workspace-wide design file
+
+Tracked surfaces added in this slice:
+
+- `tools/scripts/design-md.sh`
+- `tools/templates/design-md/`
+- `tools/manifests/workspace-capabilities.json` entry for `google-labs-code/design.md`
+- Workspace Hub repo-details detection for repo-root `DESIGN.md`
+
+Verification completed in this slice:
+
+- `sh -n tools/scripts/design-md.sh tools/scripts/use-design-md.sh`
+- `pnpm --dir "repos/workspace-hub" typecheck`
+- targeted `workspace-hub` tests covering the new wrapper, template flow, and repo detection
+- live smoke of the real CLI:
+  - `tools/scripts/design-md.sh init <tmpdir>`
+  - `tools/scripts/design-md.sh lint <tmpdir>` returned `0` errors and `0` warnings on the starter template
+  - `tools/scripts/design-md.sh diff <tmpdir> <tmpdir>/DESIGN-v2.md` reported the expected token change
+  - a deliberately invalid color fixture produced a structured lint error
+
+Public docs now aligned for this feature:
+
+- `README.md`
+- `docs/README.md`
+- `docs/CHANGELOG.md`
+- `docs/06-cross-agent-skills-and-mcp.md`
+- `docs/09-new-repo-baseline.md`
+
+Repo-local `repos/workspace-hub/README.md` did not need a matching public-doc update for this slice because the change there is limited to lightweight repo-details detection rather than a new end-user Hub workflow surface.
+
 ## Release verification status
 
 The stable release gate has already been exercised successfully:

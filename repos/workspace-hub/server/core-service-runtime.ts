@@ -11,6 +11,7 @@ import type {
   WorkspaceCoreServiceCommandId,
 } from '../src/types/workspace.ts'
 import { publishWorkspaceEvent } from './live-events.ts'
+import { invalidateWorkspaceSearchIndex } from './workspace-search.ts'
 
 type ManagedServiceRuntime = {
   child: ChildProcess
@@ -139,7 +140,7 @@ export async function startCoreService(service: WorkspaceCoreService) {
     throw new Error(`${service.name} is already running.`)
   }
 
-  const child = spawn(service.runtimeCommand, [], {
+  const child = spawn(service.runtimeCommandArgs[0], service.runtimeCommandArgs.slice(1), {
     cwd: service.repoPresent ? service.repoPath : undefined,
     env: process.env,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -236,7 +237,7 @@ export async function runCoreServiceInstall(service: WorkspaceCoreService) {
     throw new Error(`${service.name} install is already running.`)
   }
 
-  const child = spawn(service.installCommand, [], {
+  const child = spawn(service.installCommandArgs[0], service.installCommandArgs.slice(1), {
     cwd: service.repoPresent ? service.repoPath : undefined,
     env: process.env,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -284,6 +285,7 @@ export async function runCoreServiceInstall(service: WorkspaceCoreService) {
       status: record.snapshot.status,
       type: 'service',
     })
+    invalidateWorkspaceSearchIndex('core-service-install')
   })
 
   publishWorkspaceEvent({
@@ -295,7 +297,7 @@ export async function runCoreServiceInstall(service: WorkspaceCoreService) {
 }
 
 export async function runCoreServiceSync(service: WorkspaceCoreService) {
-  await execFileAsync(service.syncCommand, [], {
+  await execFileAsync(service.syncCommandArgs[0], service.syncCommandArgs.slice(1), {
     cwd: service.repoPresent ? service.repoPath : undefined,
     env: process.env,
     maxBuffer: 1024 * 512,
@@ -308,6 +310,7 @@ export async function runCoreServiceSync(service: WorkspaceCoreService) {
     status: 'ready',
     type: 'service',
   })
+  invalidateWorkspaceSearchIndex('core-service-sync')
 }
 
 type CoreServiceCommandOptions = {

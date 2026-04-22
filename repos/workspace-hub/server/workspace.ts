@@ -32,8 +32,15 @@ import {
   getCoreServiceInstallSnapshots,
   getCoreServiceRuntimeSnapshots,
 } from './core-service-runtime.ts'
-import { readWorkspaceCapabilities } from './workspace-capabilities.ts'
-import { readCoreServices } from './core-services.ts'
+import {
+  getWorkspaceCapabilitiesObservability,
+  readWorkspaceCapabilities,
+} from './workspace-capabilities.ts'
+import {
+  getWorkspaceCoreServicesObservability,
+  readCoreServices,
+} from './core-services.ts'
+import { getWorkspaceSearchObservability } from './workspace-search.ts'
 import { readWorkspaceMetadata, type StoredRepoMetadata } from './workspace-metadata.ts'
 
 type RepoManifest = {
@@ -345,6 +352,8 @@ export function getWorkspaceHubObservability() {
     requestsBase: summaryRequestsBase,
     requestsFull: summaryRequestsFull,
   }
+  const capabilities = getWorkspaceCapabilitiesObservability()
+  const coreServices = getWorkspaceCoreServicesObservability()
   const repoDetails = {
     avgDurationMs:
       repoDetailsRequests > 0
@@ -354,12 +363,16 @@ export function getWorkspaceHubObservability() {
     maxDurationMs: repoDetailsRequests > 0 ? repoDetailsMaxDurationMs : null,
     requests: repoDetailsRequests,
   }
+  const search = getWorkspaceSearchObservability()
 
   return {
     observabilityVersion: 2,
+    capabilities,
+    coreServices,
     discovery,
     diagnostics,
     repoDetails,
+    search,
     summary,
     // Compatibility aliases (deprecated; retained for existing clients).
     activeDiagnosticsJobs: diagnostics.activeJobs,
@@ -369,6 +382,14 @@ export function getWorkspaceHubObservability() {
     diagnosticsCacheTtlMs: diagnostics.ttlMs,
     diagnosticsQueueDepth: diagnostics.queueDepth,
     diagnosticsWorkerConcurrency: diagnostics.workerConcurrency,
+    capabilityManifestLastValidatedAt: capabilities.lastValidatedAt,
+    capabilityManifestLoggedWarnings: capabilities.loggedWarnings,
+    capabilityManifestRejectedEntries: capabilities.rejectedEntries,
+    capabilityManifestRejectedReasons: capabilities.manifestIssueReasons,
+    coreServiceManifestLastValidatedAt: coreServices.lastValidatedAt,
+    coreServiceManifestLoggedWarnings: coreServices.loggedWarnings,
+    coreServiceManifestRejectedEntries: coreServices.rejectedEntries,
+    coreServiceManifestRejectedReasons: coreServices.manifestIssueReasons,
     discoveryCacheActive: discovery.active,
     discoveryCacheEntries: discovery.entries,
     discoveryCacheExpiresAt: discovery.expiresAt,
@@ -384,6 +405,14 @@ export function getWorkspaceHubObservability() {
     repoDetailsMaxDurationMs: repoDetails.maxDurationMs,
     repoDetailsRequests: repoDetails.requests,
     repoTreeSignatureSample: discovery.repoTreeSignatureSample,
+    searchDocumentCacheHits: search.documentCacheHits,
+    searchDocumentCacheMisses: search.documentCacheMisses,
+    searchDocumentCacheSize: search.documentCacheSize,
+    searchDocumentCacheTtlMs: search.documentCacheTtlMs,
+    searchLastDurationMs: search.lastDurationMs,
+    searchMaxDurationMs: search.maxDurationMs,
+    searchRequests: search.requests,
+    searchResultsReturnedTotal: search.totalResultsReturned,
     summaryRequestReasons: summary.reasons,
     summaryRequestsBase: summary.requestsBase,
     summaryRequestsFull: summary.requestsFull,
@@ -1790,6 +1819,10 @@ function detectReadmePath(fullPath: string, names: string[]) {
   return fileName ? path.join(fullPath, fileName) : null
 }
 
+function detectDesignPath(fullPath: string, names: string[]) {
+  return names.includes('DESIGN.md') ? path.join(fullPath, 'DESIGN.md') : null
+}
+
 function deriveEntryDocs(relativePath: string, names: string[], manifest: RepoManifest | null) {
   const manifestEntryDocs = normalizeEntryDocs(manifest?.entryDocs)
   if (manifestEntryDocs.length) {
@@ -2042,6 +2075,7 @@ async function buildRepoRecord(
     detailLevel: 'detail' as const,
     diagnosticsFreshness: diagnostics.freshness,
     dependencies: diagnostics.dependencies,
+    designPath: detectDesignPath(fullPath, names),
     devCommand: effectiveDevCommand,
     externalUrl,
     failureReport,
@@ -2388,11 +2422,11 @@ export async function buildWorkspaceSummary(
     runtimeSnapshots,
     { includeDiagnostics, repoProjection },
   )
-  const coreServices = await readCoreServices(
+  const { manifestIssues: coreServiceIssues, services: coreServices } = await readCoreServices(
     getCoreServiceInstallSnapshots(),
     getCoreServiceRuntimeSnapshots(),
   )
-  const capabilities = await readWorkspaceCapabilities()
+  const { capabilities } = await readWorkspaceCapabilities()
   const abilityCapabilities = capabilities.filter((capability) => capability.classification === 'ability')
   const agentEnvironment = await readWorkspaceAgentEnvironment()
   lastWorkspaceSummaryBuildAt = new Date().toISOString()
@@ -2402,6 +2436,7 @@ export async function buildWorkspaceSummary(
     archives,
     capabilities,
     coreServices,
+    coreServiceIssues,
     dataRoot,
     generatedAt: new Date().toISOString(),
     milestones: buildMilestones(),

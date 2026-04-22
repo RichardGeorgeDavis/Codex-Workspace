@@ -281,15 +281,17 @@ Current workspace source taxonomy:
 - `repo-level adoption` lives under normal `repos/...`
 - `core service` lives under `tools/<name>/` with durable state in `shared/<name>/<user>/` and disposable state in `cache/<name>/<user>/`
 
-External skill catalogs such as [`openai/skills`](https://github.com/openai/skills) and upstream design catalogs such as [`VoltAgent/awesome-design-md`](https://github.com/VoltAgent/awesome-design-md) should be treated as optional reviewed sources, not vendored workspace dependencies.
+External skill catalogs such as [`openai/skills`](https://github.com/openai/skills), the canonical [`google-labs-code/design.md`](https://github.com/google-labs-code/design.md) spec/tooling, and example catalogs such as [`VoltAgent/awesome-design-md`](https://github.com/VoltAgent/awesome-design-md) should be treated as optional reviewed sources, not vendored workspace dependencies.
 
 - install only the specific skills that solve a real workflow need
 - prefer local skill installation via Codex tooling such as `$skill-installer`
 - for repo-level Codex discoverability, prefer tracked `.codex/skills/` and keep `.agents/skills/` only when repo-local compatibility mirroring helps
 - keep workspace-wide reusable skill sources in `shared/skills/` and starter templates in `tools/templates/skills/`
-- keep the managed VoltAgent `DESIGN.md` catalog as an optional ability under `repos/abilities/voltagent-awesome-design-md` and copy only the specific `DESIGN.md` files a repo actually needs
+- treat `google-labs-code/design.md` as the canonical repo-level `DESIGN.md` standard and use `tools/scripts/design-md.sh` to initialize, lint, and diff repo-owned `DESIGN.md` files
+- keep repo-root `DESIGN.md` optional and per-repo, recommended mainly for UI-heavy repos rather than the whole workspace
+- keep the managed VoltAgent `DESIGN.md` catalog as an optional example ability under `repos/abilities/voltagent-awesome-design-md` and copy only the specific example files a repo actually needs
 - use `tools/scripts/capture-site-reference.sh` when a repo needs a conservative `httrack`-based public-site reference capture plus a repo-local acquisition note under `ref/httrack/`
-- use `tools/scripts/use-design-md.sh` when you want a stable local mirror under `cache/design-md/catalog/` or need to copy one `DESIGN.md` into a repo root quickly
+- use `tools/scripts/use-design-md.sh` only for the VoltAgent example catalog mirror under `cache/design-md/catalog/`
 - keep third-party orchestration layers and generated agent setup local-only unless there is a strong reason to publish them
 - do not add the whole upstream skill catalog to `repos/`, `tools/`, or as a submodule unless there is a very specific maintenance reason
 

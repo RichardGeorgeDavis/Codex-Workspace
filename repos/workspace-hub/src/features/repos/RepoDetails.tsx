@@ -1824,6 +1824,10 @@ function RepoDetailsContent({
           <dd>{repo.manifestPath ?? 'No manifest detected'}</dd>
         </div>
         <div className="details-row">
+          <dt>DESIGN.md</dt>
+          <dd>{repo.designPath ?? 'Not detected'}</dd>
+        </div>
+        <div className="details-row">
           <dt>Codex config (.codex)</dt>
           <dd>{repo.agentTooling.codexProjectConfigPath ?? 'Not detected'}</dd>
         </div>

@@ -37,6 +37,7 @@ This is not meant to force every repo into one shape. The goal is to keep each r
 When useful, add small explicit metadata instead of hidden assumptions:
 
 - `.workspace/project.json` for runtime mode, launch command, preview URL, or notes
+- `DESIGN.md` at the repo root when the repo has meaningful UI or design-system work and needs a tracked visual language reference
 - `.workspace/agent-stack.json` when the repo intentionally supports tracked multi-tool agent hints such as OMX-ready or OpenCode-ready setup
 - `README.md` for repo purpose, setup, run instructions, preview notes, and cover block
 - `docs/cover.png` as the default repo-local cover path, even if it starts as a placeholder
@@ -76,9 +77,10 @@ Recommended intake order:
 4. Create `README.md` if it is missing, or tighten the current one if it exists but does not explain setup and preview.
 5. Add a runnable launcher command file so the repo can be started without remembering the shell incantation.
 6. Add a repo-local cover image reference in the README, even if the image is a placeholder at first.
-7. Add `.workspace/project.json` only when runtime behavior is not obvious from the repo files.
-8. Add repo-level `AGENTS.md`, `HANDOVER.md`, or repo-local skills only when they solve a real repo-specific need.
-9. If README, HANDOVER, or durable setup docs were created or materially updated, run `tools/bin/workspace-memory save-repo <repo-path-or-name>` so the shared memory layer captures the repo state, related workspace docs, and the current Codex thread in one closeout step.
+7. Add repo-root `DESIGN.md` only when the repo would benefit from tracked UI or design-system guidance; do not add it mechanically to every repo.
+8. Add `.workspace/project.json` only when runtime behavior is not obvious from the repo files.
+9. Add repo-level `AGENTS.md`, `HANDOVER.md`, or repo-local skills only when they solve a real repo-specific need.
+10. If README, HANDOVER, `DESIGN.md`, or other durable setup docs were created or materially updated, run `tools/bin/workspace-memory save-repo <repo-path-or-name>` so the shared memory layer captures the repo state, related workspace docs, and the current Codex thread in one closeout step.
 
 For MemPalace target metadata, prefer `.workspace/mempalace/` inside the repo rather than dropping `mempalace.yaml` or `entities.json` at the repo root.
 
@@ -93,6 +95,8 @@ For the initial README cover block, prefer a PNG path that Workspace Hub can lat
 Use a placeholder image first if a real preview capture is not ready yet. Keeping the path as `docs/cover.png` makes later cover capture simpler and consistent with the Hub defaults.
 
 The starter files in `tools/templates/repo-docs/` are the default template source for this intake step.
+
+For UI-heavy repos that need tracked design-system context, the starter source for a repo-local `DESIGN.md` now lives in `tools/templates/design-md/`, and the canonical wrapper is `tools/scripts/design-md.sh`.
 
 ## Implementation batches
 

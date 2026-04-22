@@ -134,6 +134,7 @@ test('detects repo-local codex, compatibility, and opencode surfaces from a disc
   const repoRoot = await createRepo(relativePath)
 
   await writeTextFile(path.join(repoRoot, 'README.md'), '# Fixture Detection\n')
+  await writeTextFile(path.join(repoRoot, 'DESIGN.md'), '# Fixture Design\n')
   await writeTextFile(path.join(repoRoot, 'AGENTS.md'), '# Repo Agent Rules\n')
   await writeTextFile(path.join(repoRoot, '.codex', 'config.toml'), 'model = "gpt-5"\n')
   await writeTextFile(
@@ -167,6 +168,7 @@ test('detects repo-local codex, compatibility, and opencode surfaces from a disc
 
   assert.ok(repo)
   assert.equal(repo.relativePath, `repos/${relativePath}`)
+  assert.equal(repo.designPath, path.join(repoRoot, 'DESIGN.md'))
   assert.equal(repo.agentTooling.agentsPath, 'AGENTS.md')
   assert.equal(repo.agentTooling.agentStackPath, '.workspace/agent-stack.json')
   assert.equal(repo.agentTooling.codexProjectConfigPath, '.codex/config.toml')

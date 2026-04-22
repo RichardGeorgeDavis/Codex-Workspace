@@ -52,14 +52,21 @@ Treat upstream skill catalogs such as [`openai/skills`](https://github.com/opena
 - keep `.agents/skills/` only as an optional compatibility mirror when needed
 - keep shared reusable source material in `shared/skills/` and `tools/templates/skills/`
 
-Treat upstream design catalogs such as [`VoltAgent/awesome-design-md`](https://github.com/VoltAgent/awesome-design-md) similarly:
+Treat repo-level `DESIGN.md` in two layers:
 
-- classify it as an optional workspace `ability`
+- use [`google-labs-code/design.md`](https://github.com/google-labs-code/design.md) as the canonical workspace standard for repo-owned `DESIGN.md` files
+- keep repo-root `DESIGN.md` optional and per-repo, recommended mainly for UI-heavy repos
+- initialize, lint, and diff those files through `tools/scripts/design-md.sh`
+- keep one repo's `DESIGN.md` local to that repo instead of inventing a shared cross-repo design file
+
+Treat upstream example catalogs such as [`VoltAgent/awesome-design-md`](https://github.com/VoltAgent/awesome-design-md) similarly:
+
+- classify the catalog as an optional workspace `ability`
 - keep the managed catalog as a standalone repo under `repos/abilities/voltagent-awesome-design-md`
 - refresh it with `tools/scripts/manage-workspace-capabilities.sh update --run voltagent-awesome-design-md` when you want newer `DESIGN.md` files
-- copy only the specific `DESIGN.md` files a repo needs into that repo instead of making the catalog a shared runtime dependency
+- use it as example source material only, and copy only the specific `DESIGN.md` files a repo needs into that repo instead of making the catalog a shared runtime dependency
 
-The reviewed update flow now uses one classification-aware lifecycle: snapshot sources such as `openai/skills` and `openai/codex` stay under `tools/ref/`, optional abilities such as `VoltAgent/awesome-design-md` live under `repos/abilities/`, and core workspace services live under `tools/`.
+The reviewed update flow now uses one classification-aware lifecycle: snapshot sources such as `openai/skills` and `openai/codex` stay under `tools/ref/`, optional abilities such as `google-labs-code/design.md` and `VoltAgent/awesome-design-md` live under `repos/abilities/`, and core workspace services live under `tools/`.
 
 Third-party orchestration layers that generate `AGENTS.md`, skills folders, or MCP config should remain optional local tooling by default rather than becoming the canonical workspace layout.
 

@@ -14,9 +14,16 @@
       "enabledByDefault": true,
       "exposeInHub": true,
       "docsPath": "docs/11-core-memory-and-reference-promotion.md",
-      "installCommand": "tools/bin/workspace-memory install",
-      "runtimeCommand": "tools/bin/mempalace-start",
-      "syncCommand": "tools/bin/mempalace-sync",
+      "installCommand": [
+        "tools/bin/workspace-memory",
+        "install"
+      ],
+      "runtimeCommand": [
+        "tools/bin/mempalace-start"
+      ],
+      "syncCommand": [
+        "tools/bin/mempalace-sync"
+      ],
       "sharedRoot": "shared/mempalace",
       "cacheRoot": "cache/mempalace",
       "disposablePaths": [
@@ -27,11 +34,28 @@
       "notes": "Keep runtime code in tools/, durable per-user state in shared/, and disposable runtime artifacts in cache/."
     },
     {
+      "id": "google-design-md",
+      "name": "google-labs-code/design.md",
+      "classification": "ability",
+      "category": "design-standard",
+      "description": "Optional upstream DESIGN.md spec and CLI reference for repo-level design-system authoring, linting, and diffing.",
+      "sourceUrl": "https://github.com/google-labs-code/design.md.git",
+      "installMethod": "git",
+      "updateStrategy": "git-fast-forward",
+      "installTarget": "repos/abilities/google-design-md",
+      "enabledByDefault": false,
+      "exposeInHub": true,
+      "docsPath": "docs/06-cross-agent-skills-and-mcp.md",
+      "repoUsageNotes": "Use tools/scripts/design-md.sh to initialize, lint, and diff repo-root DESIGN.md files. Keep DESIGN.md optional and repo-local, especially for UI-heavy repos.",
+      "uninstallPolicy": "Remove the managed repo checkout only. Do not modify repo-local DESIGN.md files or starter templates that were already copied into individual repos.",
+      "notes": "Canonical workspace standard for DESIGN.md authoring and validation. The upstream repo is reviewed source material, not a shared runtime dependency."
+    },
+    {
       "id": "voltagent-awesome-design-md",
       "name": "VoltAgent/awesome-design-md",
       "classification": "ability",
       "category": "design-reference",
-      "description": "Optional local DESIGN.md catalog that repos can copy from without turning the upstream repo into a shared runtime dependency.",
+      "description": "Optional local example catalog of DESIGN.md files that repos can copy from without turning the upstream repo into a shared runtime dependency.",
       "sourceUrl": "https://github.com/VoltAgent/awesome-design-md.git",
       "installMethod": "git",
       "updateStrategy": "git-fast-forward",
@@ -40,14 +64,17 @@
       "exposeInHub": true,
       "docsPath": "docs/06-cross-agent-skills-and-mcp.md",
       "postInstallCommands": [
-        "tools/scripts/use-design-md.sh --refresh"
+        [
+          "tools/scripts/use-design-md.sh",
+          "--refresh"
+        ]
       ],
       "disposablePaths": [
         "cache/design-md/catalog"
       ],
-      "repoUsageNotes": "Copy only the specific DESIGN.md files a repo needs. Repos should document the copied file or the required ability explicitly instead of depending on the catalog silently.",
+      "repoUsageNotes": "Use this as an example catalog only. Copy only the specific DESIGN.md files a repo needs, and prefer tools/scripts/design-md.sh plus a repo-owned DESIGN.md for the canonical workflow.",
       "uninstallPolicy": "Remove the managed repo checkout and the disposable DESIGN.md catalog cache. Do not rewrite copied DESIGN.md files that already live inside other repos.",
-      "notes": "Treat this as an optional installable ability rather than core workspace infrastructure."
+      "notes": "Treat this as an optional example-source ability rather than the canonical DESIGN.md standard or core workspace infrastructure."
     },
     {
       "id": "openai-skills",

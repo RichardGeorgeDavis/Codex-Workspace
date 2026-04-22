@@ -241,6 +241,7 @@ test('thin search uses side-load summaries while deep search can include debug-o
       reason: 'skipped for base summary',
       state: 'unknown',
     },
+    designPath: null,
     devCommand: 'pnpm dev',
     externalUrl: null,
     failureReport: null,
@@ -336,6 +337,132 @@ test('thin search uses side-load summaries while deep search can include debug-o
   const deepResult = await searchModule.searchWorkspace('gamma-321', [repo], [], [], 'deep')
   assert.equal(deepResult.mode, 'deep')
   assert.ok(deepResult.results.some((entry) => entry.category === 'repo'))
+})
+
+test('deep search only indexes the configured file prefix for large files', async () => {
+  await createNodeRepo(tempWorkspaceRoot, 'repo-large-readme')
+  const prefixToken = 'prefix-token-123'
+  const suffixToken = 'suffix-token-987'
+  const oversizedReadme = `${prefixToken}\n${'a'.repeat(26 * 1024)}\n${suffixToken}\n`
+  const readmePath = path.join(tempWorkspaceRoot, 'repos', 'repo-large-readme', 'README.md')
+
+  await writeTextFile(readmePath, oversizedReadme)
+
+  const searchModule = await importWorkspaceSearchModule(tempWorkspaceRoot, 'false')
+  const repo = {
+    agentTooling: {
+      agentsPath: null,
+      agentStackPath: null,
+      codexProjectConfigPath: null,
+      codexProjectSkillsPath: null,
+      codexSkillsPath: null,
+      omxPath: null,
+      openAgentConfigPath: null,
+      openAgentLegacyConfigPath: null,
+      openCodePath: null,
+      workspaceSkillsPath: null,
+    },
+    buildCommand: 'pnpm build',
+    collection: 'direct',
+    detectedBy: 'files',
+    detailLevel: 'list',
+    diagnosticsFreshness: 'skipped',
+    dependencies: {
+      installPath: null,
+      reason: 'skipped for base summary',
+      state: 'unknown',
+    },
+    designPath: null,
+    devCommand: 'pnpm dev',
+    externalUrl: null,
+    failureReport: null,
+    git: {
+      branch: null,
+      hasGit: false,
+      remoteUrl: null,
+      state: 'unavailable',
+      summary: 'git probe skipped for base summary',
+      visibility: 'unknown',
+      visibilitySource: 'none',
+    },
+    hasManifest: false,
+    hasSavedMetadata: false,
+    health: {
+      checkedAt: null,
+      httpStatus: null,
+      state: 'unknown',
+      url: null,
+    },
+    healthcheckUrl: null,
+    install: {
+      command: 'pnpm install',
+      finishedAt: null,
+      lastExitCode: null,
+      lastSignal: null,
+      logTail: [],
+      message: null,
+      startedAt: null,
+      status: 'idle',
+      updatedAt: null,
+    },
+    installCommand: 'pnpm install',
+    isPinned: false,
+    location: 'direct',
+    manifestPath: null,
+    metadataUpdatedAt: null,
+    name: 'Large README Repo',
+    notes: '',
+    packageManager: 'pnpm',
+    path: path.join(tempWorkspaceRoot, 'repos', 'repo-large-readme'),
+    preferredMode: 'direct',
+    previewCommand: null,
+    previewUrl: null,
+    previewUrlSource: 'unknown',
+    readmePath,
+    recent: {
+      lastActionAt: null,
+      lastActionKind: null,
+      lastOpenedAt: null,
+      lastSelectedAt: null,
+    },
+    recommendedPreset: {
+      id: 'node-pnpm-direct',
+      label: 'Node direct',
+      rationale: 'Node repos usually run directly.',
+    },
+    relativePath: 'repos/repo-large-readme',
+    runtime: {
+      command: 'pnpm dev',
+      lastExitCode: null,
+      lastSignal: null,
+      logTail: [],
+      message: null,
+      pid: null,
+      startedAt: null,
+      status: 'idle',
+      stoppedAt: null,
+      updatedAt: null,
+    },
+    savedMetadata: null,
+    servbayPath: null,
+    servbaySubdomain: null,
+    slug: 'repo-large-readme',
+    suggestedManifest: {
+      entryDocs: ['repos/repo-large-readme/README.md'],
+      name: 'Large README Repo',
+      preferredMode: 'direct',
+      slug: 'repo-large-readme',
+      type: 'node-app',
+    },
+    tags: [],
+    type: 'node-app',
+  }
+
+  const prefixResult = await searchModule.searchWorkspace(prefixToken, [repo], [], [], 'deep')
+  const suffixResult = await searchModule.searchWorkspace(suffixToken, [repo], [], [], 'deep')
+
+  assert.ok(prefixResult.results.some((entry) => entry.repoRelativePath === repo.relativePath))
+  assert.equal(suffixResult.results.some((entry) => entry.repoRelativePath === repo.relativePath), false)
 })
 
 test('indexed search can surface installable workspace capabilities', async () => {
@@ -658,18 +785,168 @@ test('workspace observability reports discovery and diagnostics cache counters',
 
   const observability = workspaceModule.getWorkspaceHubObservability()
   assert.equal(observability.observabilityVersion, 2)
+  assert.ok(observability.capabilities)
+  assert.ok(observability.coreServices)
   assert.ok(observability.discovery)
   assert.ok(observability.diagnostics)
   assert.ok(observability.repoDetails)
+  assert.ok(observability.search)
   assert.ok(observability.summary)
+  assert.equal(typeof observability.capabilities.rejectedEntries, 'number')
+  assert.equal(typeof observability.coreServices.rejectedEntries, 'number')
   assert.equal(typeof observability.discovery.hits, 'number')
   assert.equal(typeof observability.diagnostics.misses, 'number')
   assert.equal(typeof observability.repoDetails.requests, 'number')
+  assert.equal(typeof observability.search.requests, 'number')
   assert.equal(typeof observability.summary.requestsFull, 'number')
   assert.ok(observability.discoveryCacheMisses >= 1)
   assert.ok(observability.discoveryCacheHits >= 1)
   assert.ok(observability.diagnosticsCacheMisses >= 1)
   assert.ok(observability.discoveryCacheMaxEntries >= 1)
+})
+
+test('search observability tracks requests and document cache reuse', async () => {
+  const searchModule = await importWorkspaceSearchModule(tempWorkspaceRoot, 'false')
+  const workspaceModule = await importWorkspaceModule(tempWorkspaceRoot, '60000')
+  const repo = {
+    agentTooling: {
+      agentsPath: null,
+      agentStackPath: null,
+      codexProjectConfigPath: null,
+      codexProjectSkillsPath: null,
+      codexSkillsPath: null,
+      omxPath: null,
+      openAgentConfigPath: null,
+      openAgentLegacyConfigPath: null,
+      openCodePath: null,
+      workspaceSkillsPath: null,
+    },
+    buildCommand: 'pnpm build',
+    collection: 'direct',
+    detectedBy: 'files',
+    detailLevel: 'list',
+    diagnosticsFreshness: 'skipped',
+    dependencies: {
+      installPath: null,
+      reason: 'skipped for base summary',
+      state: 'unknown',
+    },
+    designPath: null,
+    devCommand: 'pnpm dev',
+    externalUrl: null,
+    failureReport: null,
+    git: {
+      branch: null,
+      hasGit: false,
+      remoteUrl: null,
+      state: 'unavailable',
+      summary: 'git probe skipped for base summary',
+      visibility: 'unknown',
+      visibilitySource: 'none',
+    },
+    hasManifest: false,
+    hasSavedMetadata: false,
+    health: {
+      checkedAt: null,
+      httpStatus: null,
+      state: 'unknown',
+      url: null,
+    },
+    healthcheckUrl: null,
+    install: {
+      command: 'pnpm install',
+      finishedAt: null,
+      lastExitCode: null,
+      lastSignal: null,
+      logTail: [],
+      message: null,
+      startedAt: null,
+      status: 'idle',
+      updatedAt: null,
+    },
+    installCommand: 'pnpm install',
+    isPinned: false,
+    location: 'direct',
+    manifestPath: null,
+    metadataUpdatedAt: null,
+    name: 'Observable Search Repo',
+    notes: 'needle search token',
+    packageManager: 'pnpm',
+    path: path.join(tempWorkspaceRoot, 'repos', 'repo-search-observability'),
+    preferredMode: 'direct',
+    previewCommand: null,
+    previewUrl: null,
+    previewUrlSource: 'unknown',
+    readmePath: null,
+    recent: {
+      lastActionAt: null,
+      lastActionKind: null,
+      lastOpenedAt: null,
+      lastSelectedAt: null,
+    },
+    recommendedPreset: {
+      id: 'node-pnpm-direct',
+      label: 'Node direct',
+      rationale: 'Node repos usually run directly.',
+    },
+    relativePath: 'repos/repo-search-observability',
+    runtime: {
+      command: 'pnpm dev',
+      lastExitCode: null,
+      lastSignal: null,
+      logTail: [],
+      message: null,
+      pid: null,
+      startedAt: null,
+      status: 'idle',
+      stoppedAt: null,
+      updatedAt: null,
+    },
+    savedMetadata: null,
+    servbayPath: null,
+    servbaySubdomain: null,
+    slug: 'repo-search-observability',
+    suggestedManifest: {
+      entryDocs: [],
+      name: 'Observable Search Repo',
+      preferredMode: 'direct',
+      slug: 'repo-search-observability',
+      type: 'node-app',
+    },
+    tags: [],
+    type: 'node-app',
+  }
+
+  await searchModule.searchWorkspace('needle', [repo], [], [], 'thin')
+  await searchModule.searchWorkspace('needle', [repo], [], [], 'thin')
+
+  const miss = searchModule.getCachedWorkspaceSearchResponse('needle', 'thin')
+  assert.equal(miss, null)
+
+  const computed = await searchModule.searchWorkspace('needle', [repo], [], [], 'thin')
+  searchModule.storeWorkspaceSearchResponse(computed)
+
+  const cached = searchModule.getCachedWorkspaceSearchResponse('needle', 'thin')
+  assert.ok(cached)
+  assert.equal(cached?.query, 'needle')
+
+  const beforeInvalidation = searchModule.getWorkspaceSearchObservability()
+  searchModule.invalidateWorkspaceSearchIndex('test')
+  const afterInvalidation = searchModule.getWorkspaceSearchObservability()
+
+  const directObservability = searchModule.getWorkspaceSearchObservability()
+  assert.ok(directObservability.requests >= 2)
+  assert.ok(directObservability.documentCacheMisses >= 1)
+  assert.ok(directObservability.documentCacheHits >= 1)
+  assert.ok(directObservability.responseCacheMisses >= 1)
+  assert.ok(directObservability.responseCacheHits >= 1)
+  assert.ok(afterInvalidation.indexRevision > beforeInvalidation.indexRevision)
+  assert.ok(afterInvalidation.invalidations >= beforeInvalidation.invalidations + 1)
+
+  const workspaceObservability = workspaceModule.getWorkspaceHubObservability()
+  assert.ok(workspaceObservability.search)
+  assert.equal(typeof workspaceObservability.search.requests, 'number')
+  assert.equal(typeof workspaceObservability.search.indexRevision, 'number')
 })
 
 test('discovery cache enforces a bounded max entries policy', async () => {

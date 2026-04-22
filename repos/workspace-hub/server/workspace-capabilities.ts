@@ -7,8 +7,14 @@ import { promisify } from 'node:util'
 import type {
   WorkspaceCapability,
   WorkspaceCapabilityActionId,
+  WorkspaceCapabilityManifestIssue,
   WorkspaceCapabilitiesSnapshot,
 } from '../src/types/workspace.ts'
+import {
+  resolveWorkspaceCommand,
+  resolveWorkspaceCommandList,
+  resolveWorkspacePath,
+} from './workspace-manifest-utils.ts'
 
 type CapabilityManifest = {
   capabilities?: Array<{
@@ -19,16 +25,21 @@ type CapabilityManifest = {
     enabledByDefault?: boolean
     exposeInHub?: boolean
     id?: string
+    installCommand?: unknown
     installMethod?: WorkspaceCapability['installMethod']
     installTarget?: string
     name?: string
     notes?: string
+    postInstallCommands?: unknown
     repoUsageNotes?: string
     sourceUrl?: string
+    syncCommand?: unknown
     uninstallPolicy?: string
     updateStrategy?: string
   }>
 }
+
+type CapabilityManifestEntry = NonNullable<CapabilityManifest['capabilities']>[number]
 
 type CapabilityState = {
   capabilities?: Record<
@@ -51,6 +62,10 @@ const workspaceRoot = configuredWorkspaceRoot
 const manifestPath = path.join(workspaceRoot, 'tools', 'manifests', 'workspace-capabilities.json')
 const statePath = path.join(workspaceRoot, 'shared', 'workspace-capabilities', 'state.json')
 const capabilityScriptPath = path.join(workspaceRoot, 'tools', 'scripts', 'manage-workspace-capabilities.sh')
+const loggedManifestIssueKeys = new Set<string>()
+let lastCapabilityManifestValidationAt: string | null = null
+let lastCapabilityManifestIssues: WorkspaceCapabilityManifestIssue[] = []
+let capabilityManifestLoggedWarnings = 0
 
 async function fileExists(targetPath: string) {
   try {
@@ -94,26 +109,178 @@ function resolveCapabilityEnabled(
   return typeof storedValue === 'boolean' ? storedValue : enabledByDefault
 }
 
+function buildCapabilityManifestIssue(
+  capabilityConfig: CapabilityManifestEntry | undefined,
+  reason: string,
+  remediation: string,
+): WorkspaceCapabilityManifestIssue {
+  const capabilityId = capabilityConfig?.id?.trim() ?? null
+  const capabilityName = capabilityConfig?.name?.trim() ?? null
+
+  return {
+    capabilityId,
+    capabilityName,
+    remediation,
+    reason,
+  }
+}
+
+function logCapabilityManifestIssue(issue: WorkspaceCapabilityManifestIssue) {
+  const issueKey = `${issue.capabilityId ?? 'unknown-id'}|${issue.capabilityName ?? 'unknown-name'}|${issue.reason}`
+
+  if (loggedManifestIssueKeys.has(issueKey)) {
+    return
+  }
+
+  loggedManifestIssueKeys.add(issueKey)
+  capabilityManifestLoggedWarnings += 1
+  console.warn(
+    `[workspace-capabilities] Skipping manifest entry${issue.capabilityId ? ` ${issue.capabilityId}` : ''}: ${issue.reason}`,
+  )
+}
+
 export async function readWorkspaceCapabilities() {
   const [manifest, state] = await Promise.all([readManifest(), readState()])
   const capabilities: WorkspaceCapability[] = []
+  const manifestIssues: WorkspaceCapabilityManifestIssue[] = []
 
   for (const capabilityConfig of manifest.capabilities ?? []) {
     const id = capabilityConfig.id?.trim()
     const name = capabilityConfig.name?.trim()
     const classification = capabilityConfig.classification
     const installMethod = capabilityConfig.installMethod
-    const installTarget = capabilityConfig.installTarget?.trim()
+    const installPath = resolveWorkspacePath(workspaceRoot, capabilityConfig.installTarget)
     const sourceUrl = capabilityConfig.sourceUrl?.trim()
+    const docsPath = resolveWorkspacePath(workspaceRoot, capabilityConfig.docsPath)
+    const installCommand = resolveWorkspaceCommand(workspaceRoot, capabilityConfig.installCommand)
+    const syncCommand = resolveWorkspaceCommand(workspaceRoot, capabilityConfig.syncCommand)
+    const postInstallCommands = resolveWorkspaceCommandList(
+      workspaceRoot,
+      capabilityConfig.postInstallCommands,
+    )
 
-    if (!id || !name || !classification || !installMethod || !installTarget || !sourceUrl) {
+    if (!id) {
+      manifestIssues.push(
+        buildCapabilityManifestIssue(
+          capabilityConfig,
+          'Missing required capability id.',
+          'Add a unique `id` string to the manifest entry.',
+        ),
+      )
       continue
     }
 
-    const installPath = path.join(workspaceRoot, installTarget)
-    const docsPath = capabilityConfig.docsPath
-      ? path.join(workspaceRoot, capabilityConfig.docsPath)
-      : null
+    if (!name) {
+      manifestIssues.push(
+        buildCapabilityManifestIssue(
+          capabilityConfig,
+          'Missing required capability name.',
+          'Add a human-readable `name` for the manifest entry.',
+        ),
+      )
+      continue
+    }
+
+    if (!classification) {
+      manifestIssues.push(
+        buildCapabilityManifestIssue(
+          capabilityConfig,
+          'Missing required capability classification.',
+          'Set `classification` to a supported value such as `ability`, `core-service`, or `reference-only`.',
+        ),
+      )
+      continue
+    }
+
+    if (!installMethod) {
+      manifestIssues.push(
+        buildCapabilityManifestIssue(
+          capabilityConfig,
+          'Missing required install method.',
+          'Set `installMethod` to the reviewed install flow for this entry.',
+        ),
+      )
+      continue
+    }
+
+    if (!capabilityConfig.installTarget?.trim()) {
+      manifestIssues.push(
+        buildCapabilityManifestIssue(
+          capabilityConfig,
+          'Missing required install target.',
+          'Set `installTarget` to a workspace-relative path under the workspace root.',
+        ),
+      )
+      continue
+    }
+
+    if (!installPath) {
+      manifestIssues.push(
+        buildCapabilityManifestIssue(
+          capabilityConfig,
+          'Install target resolves outside the workspace root and was rejected.',
+          'Use a workspace-relative `installTarget` that stays under the workspace root.',
+        ),
+      )
+      continue
+    }
+
+    if (!sourceUrl) {
+      manifestIssues.push(
+        buildCapabilityManifestIssue(
+          capabilityConfig,
+          'Missing required source URL.',
+          'Add `sourceUrl` so the workspace can trace the reviewed upstream source.',
+        ),
+      )
+      continue
+    }
+
+    if (capabilityConfig.docsPath?.trim() && !docsPath) {
+      manifestIssues.push(
+        buildCapabilityManifestIssue(
+          capabilityConfig,
+          'Docs path resolves outside the workspace root and was rejected.',
+          'Use a workspace-relative `docsPath` that stays under the workspace root.',
+        ),
+      )
+      continue
+    }
+
+    if (capabilityConfig.installCommand !== undefined && !installCommand) {
+      manifestIssues.push(
+        buildCapabilityManifestIssue(
+          capabilityConfig,
+          'Install command must be a non-empty workspace-local argv array.',
+          'Convert `installCommand` to a JSON string array such as `["tools/bin/example", "install"]`.',
+        ),
+      )
+      continue
+    }
+
+    if (capabilityConfig.syncCommand !== undefined && !syncCommand) {
+      manifestIssues.push(
+        buildCapabilityManifestIssue(
+          capabilityConfig,
+          'Sync command must be a non-empty workspace-local argv array.',
+          'Convert `syncCommand` to a JSON string array rooted in the workspace.',
+        ),
+      )
+      continue
+    }
+
+    if (capabilityConfig.postInstallCommands !== undefined && postInstallCommands === null) {
+      manifestIssues.push(
+        buildCapabilityManifestIssue(
+          capabilityConfig,
+          'Post-install commands must be an array of workspace-local argv arrays.',
+          'Convert each `postInstallCommands` entry to a JSON string array rooted in the workspace.',
+        ),
+      )
+      continue
+    }
+
+    const installTarget = path.relative(workspaceRoot, installPath).split(path.sep).join('/')
     const readmePath = path.join(installPath, 'README.md')
 
     capabilities.push({
@@ -140,10 +307,23 @@ export async function readWorkspaceCapabilities() {
     })
   }
 
-  return capabilities
+  lastCapabilityManifestValidationAt = new Date().toISOString()
+  lastCapabilityManifestIssues = manifestIssues
+
+  for (const issue of manifestIssues) {
+    logCapabilityManifestIssue(issue)
+  }
+
+  return {
+    capabilities,
+    manifestIssues,
+  }
 }
 
-export function summarizeWorkspaceCapabilities(capabilities: WorkspaceCapability[]) {
+export function summarizeWorkspaceCapabilities(
+  capabilities: WorkspaceCapability[],
+  manifestIssues: WorkspaceCapabilityManifestIssue[] = [],
+) {
   return {
     abilities: capabilities.filter((capability) => capability.classification === 'ability').length,
     coreServices: capabilities.filter((capability) => capability.classification === 'core-service')
@@ -155,26 +335,44 @@ export function summarizeWorkspaceCapabilities(capabilities: WorkspaceCapability
     installable: capabilities.filter(
       (capability) =>
         capability.classification === 'ability' || capability.classification === 'core-service',
-    ).length,
+      ).length,
     notInstalled: capabilities.filter((capability) => !capability.installed).length,
+    rejectedEntries: manifestIssues.length,
     referenceOnly: capabilities.filter((capability) => capability.classification === 'reference-only')
       .length,
     total: capabilities.length,
   } satisfies WorkspaceCapabilitiesSnapshot['stats']
 }
 
+export function getWorkspaceCapabilitiesObservability() {
+  const manifestIssueReasons = Object.entries(
+    lastCapabilityManifestIssues.reduce<Record<string, number>>((counts, issue) => {
+      counts[issue.reason] = (counts[issue.reason] ?? 0) + 1
+      return counts
+    }, {}),
+  ).sort(([left], [right]) => left.localeCompare(right))
+
+  return {
+    lastValidatedAt: lastCapabilityManifestValidationAt,
+    loggedWarnings: capabilityManifestLoggedWarnings,
+    manifestIssueReasons: Object.fromEntries(manifestIssueReasons),
+    rejectedEntries: lastCapabilityManifestIssues.length,
+  }
+}
+
 export async function buildWorkspaceCapabilitiesSnapshot() {
-  const capabilities = await readWorkspaceCapabilities()
+  const { capabilities, manifestIssues } = await readWorkspaceCapabilities()
 
   return {
     capabilities,
     generatedAt: new Date().toISOString(),
-    stats: summarizeWorkspaceCapabilities(capabilities),
+    manifestIssues,
+    stats: summarizeWorkspaceCapabilities(capabilities, manifestIssues),
   } satisfies WorkspaceCapabilitiesSnapshot
 }
 
 export async function findWorkspaceCapability(capabilityId: string) {
-  const capabilities = await readWorkspaceCapabilities()
+  const { capabilities } = await readWorkspaceCapabilities()
   return capabilities.find((capability) => capability.id === capabilityId) ?? null
 }
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-04-22
+
+- Added `tools/scripts/design-md.sh` as the canonical repo-level `DESIGN.md` wrapper for starter-template init, `@google/design.md` lint/diff, and optional delegation to the VoltAgent example catalog.
+- Added `tools/templates/design-md/` with a Google-spec-aligned starter `DESIGN.md` template so UI-heavy repos can adopt repo-root design context without inventing a shared workspace-wide design file.
+- Registered `google-labs-code/design.md` as the canonical optional workspace ability, while explicitly retaining `VoltAgent/awesome-design-md` as the optional example catalog path.
+- Updated [README](../README.md), [docs/README](README.md), [06-cross-agent-skills-and-mcp](06-cross-agent-skills-and-mcp.md), and [09-new-repo-baseline](09-new-repo-baseline.md) so `DESIGN.md` is documented as an opt-in per-repo surface, recommended for UI-heavy repos only.
+- Added lightweight Workspace Hub detection for repo-root `DESIGN.md` presence so repo details can surface it without introducing a new manifest layer.
+
 ## 2026-04-17
 
 - Added `tools/scripts/workspace-port-allocator.sh` and rewired the workspace-level launchers under `tools/local/commands/` to reserve ports through `cache/runtime/ports/`, reducing same-time launcher collisions while keeping hosts fixed on `127.0.0.1` and falling forward to the next open port in each repo's range.

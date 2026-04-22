@@ -33,6 +33,7 @@ function buildRepo(sideLoad: WorkspaceRepo['sideLoad']): WorkspaceRepo {
       reason: 'ready',
       state: 'ready',
     },
+    designPath: null,
     devCommand: 'pnpm dev',
     externalUrl: null,
     failureReport: null,

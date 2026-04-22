@@ -3,6 +3,7 @@ import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import type { RepoInstall, RepoRuntime, WorkspaceRepo } from '../src/types/workspace.ts'
 import { writeFailureReport } from './failure-reports.ts'
 import { publishWorkspaceEvent } from './live-events.ts'
+import { invalidateWorkspaceSearchIndex } from './workspace-search.ts'
 
 type ManagedRuntime = {
   child: ChildProcess
@@ -117,6 +118,7 @@ async function persistFailureReportIfNeeded(
 
   try {
     const report = await writeFailureReport(repo, kind, record.snapshot)
+    invalidateWorkspaceSearchIndex('failure-report')
     publishWorkspaceEvent({
       message: report.workspaceRelativePath,
       relativePath: repo.relativePath,
@@ -283,6 +285,7 @@ export async function startRepoRuntime(repo: WorkspaceRepo) {
     status: snapshot.status,
     type: 'runtime',
   })
+  invalidateWorkspaceSearchIndex('runtime')
 
   child.stdout?.on('data', (chunk) => {
     appendLog(repo.path, chunk, 'stdout')
@@ -307,6 +310,7 @@ export async function startRepoRuntime(repo: WorkspaceRepo) {
       status: nextSnapshot?.status ?? 'error',
       type: 'runtime',
     })
+    invalidateWorkspaceSearchIndex('runtime')
 
     const record = managedRuntimes.get(repo.path)
     if (record) {
@@ -345,6 +349,7 @@ export async function startRepoRuntime(repo: WorkspaceRepo) {
       status: record.snapshot.status,
       type: 'runtime',
     })
+    invalidateWorkspaceSearchIndex('runtime')
 
     if (record.snapshot.status === 'error') {
       void persistFailureReportIfNeeded('runtime', repo, record)
@@ -444,6 +449,7 @@ export async function runRepoInstall(repo: WorkspaceRepo) {
     status: snapshot.status,
     type: 'install',
   })
+  invalidateWorkspaceSearchIndex('install')
 
   child.stdout?.on('data', (chunk) => {
     appendInstallLog(repo.path, chunk, 'stdout')
@@ -481,6 +487,7 @@ export async function runRepoInstall(repo: WorkspaceRepo) {
         status: nextSnapshot.status,
         type: 'install',
       })
+      invalidateWorkspaceSearchIndex('install')
 
       const record = managedInstalls.get(repo.path)
       if (record) {
@@ -516,6 +523,7 @@ export async function runRepoInstall(repo: WorkspaceRepo) {
         status: nextSnapshot.status,
         type: 'install',
       })
+      invalidateWorkspaceSearchIndex('install')
 
       const record = managedInstalls.get(repo.path)
       if (record && nextSnapshot.status === 'error') {
@@ -562,6 +570,7 @@ export async function shutdownManagedRuntimes() {
           status: nextSnapshot?.status ?? 'error',
           type: 'install',
         })
+        invalidateWorkspaceSearchIndex('install')
       }
     }),
   )

@@ -85,10 +85,11 @@ Useful maintenance scripts:
 - `tools/scripts/run-with-workspace-env.sh` runs a command with the shared workspace environment, including the shared Playwright browser cache path.
 - `tools/scripts/setup-workspace-profile.sh` provides a guided, non-destructive profile check for `core`, `hub`, `mixed-stack`, `wordpress`, `agent-enhanced`, `workflow-state`, `spec-driven`, and `ui-previews`.
 - `tools/scripts/manage-workspace-capabilities.sh` lists, installs, updates, enables, disables, or uninstalls tracked workspace abilities and core services, with dry-run mode by default.
+- `tools/scripts/design-md.sh` is the canonical repo-level `DESIGN.md` wrapper for starter-template init, `@google/design.md` lint/diff, and example-catalog delegation.
 - `tools/scripts/update-github-refs.sh` remains the compatibility wrapper for update-only reviewed GitHub-ref flows and delegates to the capability lifecycle command.
 - `tools/scripts/capture-site-reference.sh` previews or runs an `httrack` capture for a public-site reference repo, using conservative same-domain defaults and writing capture notes under repo-local `ref/httrack/`.
 - `tools/scripts/workspace-port-allocator.sh` centralizes workspace launcher port reservations under `cache/runtime/ports/`, so concurrent launchers can keep `127.0.0.1` stable and step to the next open port without colliding.
-- `tools/scripts/use-design-md.sh` mirrors the managed VoltAgent `DESIGN.md` catalog ability into `cache/design-md/catalog/`, lists available site ids, and can copy a selected `DESIGN.md` into a repo root.
+- `tools/scripts/use-design-md.sh` mirrors the managed VoltAgent example `DESIGN.md` catalog ability into `cache/design-md/catalog/`, lists available site ids, and can copy a selected example `DESIGN.md` into a repo root.
 - `tools/scripts/sync-reference-snapshots.sh` previews or refreshes ignored upstream reference snapshots under `tools/ref/`, with dry-run mode by default.
 - `tools/scripts/sync-codex-skills.sh` previews or syncs tracked workspace skill sources into repo `.codex/skills/` folders plus optional `.agents/skills/` compatibility mirrors, with dry-run mode by default.
 - `tools/scripts/trim-git-repos.sh` performs safe Git maintenance across `repos/` by cleaning `.git` sync noise, expiring older reflog entries, and running `git gc` with a conservative prune window.
@@ -103,6 +104,7 @@ Useful template locations:
 
 - `tools/templates/skills/` holds starter skill packs, execution-mode conventions, and a selective install-profile example.
 - `tools/templates/repo-docs/` holds a starter repo `README.md` template plus a placeholder cover image for new repo intake.
+- `tools/templates/design-md/` holds the canonical repo-level `DESIGN.md` starter template and notes for UI-heavy repos that want tracked design-system context.
 - `tools/templates/codex/` holds starter material for official repo-local `.codex/` setup.
 - `tools/templates/opencode/` holds starter material for optional `.opencode/` setup plus mixed-tool agent presets.
 - `tools/templates/mcp/` holds the official MCP v1 profile and server examples, env templates, generic `read-only` versus `mutating` starter examples, and stdio/logging hygiene notes.

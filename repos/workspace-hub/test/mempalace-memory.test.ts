@@ -46,12 +46,12 @@ async function createCoreServiceWorkspaceFixture(root: string) {
             classification: 'core-service',
             docsPath: 'docs/11-core-memory-and-reference-promotion.md',
             id: 'mempalace',
-            installCommand: 'tools/bin/workspace-memory',
+            installCommand: ['tools/bin/workspace-memory'],
             installTarget: 'tools/mempalace',
             name: 'MemPalace',
-            runtimeCommand: 'tools/bin/mempalace-start',
+            runtimeCommand: ['tools/bin/mempalace-start'],
             sharedRoot: 'shared/mempalace',
-            syncCommand: 'tools/bin/mempalace-sync',
+            syncCommand: ['tools/bin/mempalace-sync'],
           },
         ],
       },
@@ -207,6 +207,135 @@ test('core service search command updates persisted MemPalace service state', as
   assert.equal(refreshedService.lastSearchQuery, 'graph memory status')
   assert.equal(refreshedService.lastSearchAt, '2026-04-10T10:30:00Z')
   assert.equal(refreshedService.lastCommandKind, 'search')
+})
+
+test('core service reader skips services whose paths escape the workspace root', async () => {
+  const root = await createTempWorkspaceRoot('codex-workspace-mempalace-invalid-path-')
+  await createCoreServiceWorkspaceFixture(root)
+
+  await writeTextFile(
+    path.join(root, 'tools', 'manifests', 'workspace-capabilities.json'),
+    JSON.stringify(
+      {
+        capabilities: [
+          {
+            cacheRoot: '../cache-outside',
+            category: 'memory',
+            classification: 'core-service',
+            docsPath: 'docs/11-core-memory-and-reference-promotion.md',
+            id: 'mempalace',
+            installCommand: ['tools/bin/workspace-memory'],
+            installTarget: '../tools/mempalace',
+            name: 'MemPalace',
+            runtimeCommand: ['tools/bin/mempalace-start'],
+            sharedRoot: 'shared/mempalace',
+            syncCommand: ['tools/bin/mempalace-sync'],
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  )
+
+  const { coreServices } = await importCoreServiceModules(root)
+  const service = await coreServices.findCoreService('mempalace', new Map(), new Map())
+  const observability = coreServices.getWorkspaceCoreServicesObservability()
+
+  assert.equal(service, null)
+  assert.equal(observability.rejectedEntries, 1)
+  assert.match(
+    Object.keys(observability.manifestIssueReasons)[0] ?? '',
+    /outside the workspace root/i,
+  )
+})
+
+test('core service reader records validation issues for invalid manifest fields', async () => {
+  const root = await createTempWorkspaceRoot('codex-workspace-mempalace-manifest-issues-')
+  await createCoreServiceWorkspaceFixture(root)
+
+  await writeTextFile(
+    path.join(root, 'tools', 'manifests', 'workspace-capabilities.json'),
+    JSON.stringify(
+      {
+        capabilities: [
+          {
+            cacheRoot: 'cache/mempalace',
+            category: 'memory',
+            classification: 'core-service',
+            docsPath: '../outside-docs.md',
+            id: 'bad-docs',
+            installCommand: ['tools/bin/workspace-memory'],
+            installTarget: 'tools/mempalace',
+            name: 'Bad Docs',
+            runtimeCommand: ['tools/bin/mempalace-start'],
+            sharedRoot: 'shared/mempalace',
+            syncCommand: ['tools/bin/mempalace-sync'],
+          },
+          {
+            cacheRoot: 'cache/mempalace',
+            category: 'memory',
+            classification: 'core-service',
+            id: 'missing-name',
+            installCommand: ['tools/bin/workspace-memory'],
+            installTarget: 'tools/mempalace',
+            runtimeCommand: ['tools/bin/mempalace-start'],
+            sharedRoot: 'shared/mempalace',
+            syncCommand: ['tools/bin/mempalace-sync'],
+          },
+          {
+            cacheRoot: 'cache/mempalace',
+            category: 'memory',
+            classification: 'core-service',
+            id: 'bad-shared-root',
+            installCommand: ['tools/bin/workspace-memory'],
+            installTarget: 'tools/mempalace',
+            name: 'Bad Shared Root',
+            runtimeCommand: ['tools/bin/mempalace-start'],
+            sharedRoot: '../shared-outside',
+            syncCommand: ['tools/bin/mempalace-sync'],
+          },
+          {
+            cacheRoot: '../cache-outside',
+            category: 'memory',
+            classification: 'core-service',
+            id: 'bad-cache-root',
+            installCommand: ['tools/bin/workspace-memory'],
+            installTarget: 'tools/mempalace',
+            name: 'Bad Cache Root',
+            runtimeCommand: ['tools/bin/mempalace-start'],
+            sharedRoot: 'shared/mempalace',
+            syncCommand: ['tools/bin/mempalace-sync'],
+          },
+          {
+            cacheRoot: 'cache/mempalace',
+            category: 'memory',
+            classification: 'core-service',
+            id: 'bad-command',
+            installCommand: 'tools/bin/workspace-memory',
+            installTarget: 'tools/mempalace',
+            name: 'Bad Command',
+            runtimeCommand: ['tools/bin/mempalace-start'],
+            sharedRoot: 'shared/mempalace',
+            syncCommand: ['tools/bin/mempalace-sync'],
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  )
+
+  const { coreServices } = await importCoreServiceModules(root)
+  const result = await coreServices.readCoreServices(new Map(), new Map())
+
+  assert.equal(result.services.length, 0)
+  assert.equal(result.manifestIssues.length, 5)
+  assert.ok(result.manifestIssues.some((issue) => /docs path resolves outside/i.test(issue.reason)))
+  assert.ok(result.manifestIssues.some((issue) => /missing required service name/i.test(issue.reason)))
+  assert.ok(result.manifestIssues.some((issue) => /shared root resolves outside/i.test(issue.reason)))
+  assert.ok(result.manifestIssues.some((issue) => /cache root resolves outside/i.test(issue.reason)))
+  assert.ok(result.manifestIssues.some((issue) => /install command must be a non-empty workspace-local argv array/i.test(issue.reason)))
 })
 
 test('workspace-memory build-graph emits target-scoped graph artifacts', async () => {
