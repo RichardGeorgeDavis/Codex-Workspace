@@ -67,6 +67,28 @@ The workspace foundation is in place and released as a stable baseline:
 - optional abilities live under `repos/abilities/` rather than the normal repo-group update path
 - workspace-level launchers under `tools/local/commands/` now coordinate port reservations through `cache/runtime/ports/`, so concurrent launches keep `127.0.0.1` stable and step forward inside each repo's local port range instead of racing on the same candidate port
 
+## Private operator services
+
+Personal-only SaaS/API/MCP services are documented in
+`docs/18-mcp-server-catalog.md` under **Private operator services**.
+
+Rules for this surface:
+
+- keep provider names, public docs URLs, endpoint shapes, and env var names in
+  tracked docs only when they are non-secret
+- keep real API tokens in macOS Keychain, not in tracked files
+- use ignored helpers under `tools/local/agents/codex/` for local credential
+  loading and private account references; that folder is covered by `.gitignore`
+- keep `~/.codex/config.toml` limited to MCP endpoint references and env var
+  names, not bearer-token values
+- mark these services as not required globally unless a concrete repo workflow
+  proves otherwise
+
+The tracked catalog intentionally keeps private account tiers, quota amounts,
+renewal dates, reset dates, credential labels, and raw tokens out of the public
+repo. Full personal reference details belong only in ignored local files and
+macOS Keychain.
+
 ## Current source taxonomy
 
 Use this classification model consistently across the workspace docs and tooling:

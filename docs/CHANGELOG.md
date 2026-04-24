@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-04-24
+
+- Added a personal-only private operator services process to the MCP catalog, including storage rules for non-secret tracked service facts, macOS Keychain tokens, ignored local credential loaders, and repo-specific dependency promotion.
+- Documented redacted private operator service awareness without committing credentials, account tiers, quota details, renewal dates, credential labels, or making them baseline workspace requirements.
+- Added CodeMate and EWWW IO to the private service review queue so they can be assessed before any credentials, IDE integrations, WordPress site dependencies, or workflow requirements are added.
+
 ## 2026-04-22
 
 - Hardened the Workspace Hub capability/core-service lifecycle so manifest-derived paths are confined to the workspace root, manifest commands are structured argv arrays instead of shell strings, and `tools/manifests/workspace-capabilities.json` is now the single canonical lifecycle manifest.
