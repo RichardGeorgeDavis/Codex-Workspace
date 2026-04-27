@@ -191,6 +191,7 @@ type VisibleDirectoryData = {
 }
 
 type WorkspaceSummaryBuildOptions = {
+  includeArchives?: boolean
   includeDiagnostics?: boolean
   repoProjection?: 'detail' | 'list'
 }
@@ -628,16 +629,23 @@ function shouldDisplayArchive(archive: WorkspaceArchive) {
   return !ignoredArchiveDisplayRoots.some((prefix) => archive.relativePath.startsWith(prefix))
 }
 
-function buildVisibleDirectoryData(rootPath: string, entries: Dirent[]): VisibleDirectoryData {
+function buildVisibleDirectoryData(
+  rootPath: string,
+  entries: Dirent[],
+  options: { includeArchives?: boolean } = {},
+): VisibleDirectoryData {
   return {
-    archiveFiles: buildArchiveRecords(rootPath, entries),
+    archiveFiles: options.includeArchives ? buildArchiveRecords(rootPath, entries) : [],
     directoryNames: entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name),
     names: entries.map((entry) => entry.name),
   }
 }
 
-async function readVisibleDirectoryData(rootPath: string): Promise<VisibleDirectoryData> {
-  return buildVisibleDirectoryData(rootPath, await readVisibleEntries(rootPath))
+async function readVisibleDirectoryData(
+  rootPath: string,
+  options: { includeArchives?: boolean } = {},
+): Promise<VisibleDirectoryData> {
+  return buildVisibleDirectoryData(rootPath, await readVisibleEntries(rootPath), options)
 }
 
 async function readJsonIfPresent<T>(targetPath: string): Promise<T | null> {
@@ -2120,9 +2128,10 @@ async function discoverWorkspace(
   runtimeSnapshots: Map<string, RepoRuntime>,
   options: WorkspaceSummaryBuildOptions = {},
 ) {
+  const includeArchives = options.includeArchives ?? false
   const includeDiagnostics = options.includeDiagnostics ?? true
   const repoProjection = options.repoProjection ?? 'detail'
-  const cacheKey = `${buildSnapshotCacheKey(installSnapshots, runtimeSnapshots)}::diagnostics=${includeDiagnostics ? 'full' : 'base'}::projection=${repoProjection}`
+  const cacheKey = `${buildSnapshotCacheKey(installSnapshots, runtimeSnapshots)}::diagnostics=${includeDiagnostics ? 'full' : 'base'}::projection=${repoProjection}::archives=${includeArchives ? 'included' : 'hidden'}`
   const repoTreeSignature = await buildReposTreeSignature()
   const cachedWorkspaceDiscovery = workspaceDiscoveryCache.get(cacheKey)
   if (
@@ -2139,7 +2148,7 @@ async function discoverWorkspace(
   }
   discoveryCacheMisses += 1
 
-  const reposDirectoryData = await readVisibleDirectoryData(reposRoot)
+  const reposDirectoryData = await readVisibleDirectoryData(reposRoot, { includeArchives })
   const [savedMetadataState, latestFailureReports] = await Promise.all([
     readWorkspaceMetadata(),
     readLatestFailureReports(),
@@ -2147,7 +2156,7 @@ async function discoverWorkspace(
   const directoryResults = await Promise.all(
     reposDirectoryData.directoryNames.map(async (directoryName) => {
       const fullPath = path.join(reposRoot, directoryName)
-      const directoryData = await readVisibleDirectoryData(fullPath)
+      const directoryData = await readVisibleDirectoryData(fullPath, { includeArchives })
       const directRepo = await buildRepoRecord(
         fullPath,
         directoryData.names,
@@ -2176,7 +2185,7 @@ async function discoverWorkspace(
       const childResults = await Promise.all(
         directoryData.directoryNames.map(async (childDirectoryName) => {
           const childPath = path.join(fullPath, childDirectoryName)
-          const childDirectoryData = await readVisibleDirectoryData(childPath)
+          const childDirectoryData = await readVisibleDirectoryData(childPath, { includeArchives })
 
           return {
             archiveFiles: childDirectoryData.archiveFiles,
@@ -2416,11 +2425,12 @@ export async function buildWorkspaceSummary(
   options: WorkspaceSummaryBuildOptions = {},
 ): Promise<WorkspaceSummary> {
   const includeDiagnostics = options.includeDiagnostics ?? true
+  const includeArchives = options.includeArchives ?? false
   const repoProjection = options.repoProjection ?? 'detail'
   const { archives, repos, topLevelEntries } = await discoverWorkspace(
     installSnapshots,
     runtimeSnapshots,
-    { includeDiagnostics, repoProjection },
+    { includeArchives, includeDiagnostics, repoProjection },
   )
   const { manifestIssues: coreServiceIssues, services: coreServices } = await readCoreServices(
     getCoreServiceInstallSnapshots(),

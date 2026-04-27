@@ -51,6 +51,8 @@ test('workspace healthcheck reports manifest validation warnings and observabili
     await mkdir(path.join(workspaceRoot, directory), { recursive: true })
   }
 
+  await writeTextFile(path.join(workspaceRoot, 'repos', 'fixture-archive.zip'), 'archive fixture\n')
+
   await writeTextFile(
     path.join(workspaceRoot, 'tools', 'manifests', 'workspace-capabilities.json'),
     JSON.stringify(
@@ -114,6 +116,26 @@ test('workspace healthcheck reports manifest validation warnings and observabili
     assert.ok(payload.checks.some((check) => check.name === 'searchObservability' && check.ok === true))
     assert.equal(payload.observability.coreServices?.rejectedEntries, 1)
     assert.equal(typeof payload.observability.search?.indexRevision, 'number')
+
+    const defaultSummaryResponse = await fetch(`${baseUrl}/api/workspace/summary/base`)
+    assert.equal(defaultSummaryResponse.status, 200)
+    const defaultSummary = await defaultSummaryResponse.json() as {
+      archives: unknown[]
+      stats: { archiveFiles: number }
+    }
+    assert.deepEqual(defaultSummary.archives, [])
+    assert.equal(defaultSummary.stats.archiveFiles, 0)
+
+    const archiveSummaryResponse = await fetch(`${baseUrl}/api/workspace/summary/base?includeArchives=true`)
+    assert.equal(archiveSummaryResponse.status, 200)
+    const archiveSummary = await archiveSummaryResponse.json() as {
+      archives: Array<{ relativePath: string }>
+      stats: { archiveFiles: number }
+    }
+    assert.ok(
+      archiveSummary.archives.some((archive) => archive.relativePath === 'repos/fixture-archive.zip'),
+    )
+    assert.ok(archiveSummary.stats.archiveFiles >= 1)
   } finally {
     child.kill('SIGTERM')
     await new Promise<void>((resolve) => {

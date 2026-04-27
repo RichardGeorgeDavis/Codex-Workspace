@@ -176,6 +176,10 @@ function parseSummaryReason(
   return 'manual-refresh'
 }
 
+function parseBooleanQueryFlag(value: unknown) {
+  return value === 'true' || value === '1'
+}
+
 function invalidateWorkspaceCaches(options: { search?: boolean } = {}) {
   invalidateWorkspaceSummaryCache()
 
@@ -425,12 +429,14 @@ app.get(
   async (request: Request, response: Response, next: NextFunction) => {
     try {
       const reason = parseSummaryReason(request.query.reason)
+      const includeArchives = parseBooleanQueryFlag(request.query.includeArchives)
       recordSummaryRequest(true, reason)
       response.json(
         await buildWorkspaceSummary(
           apiPort,
           getInstallSnapshots(),
           getRuntimeSnapshots(),
+          { includeArchives },
         ),
       )
     } catch (error) {
@@ -444,13 +450,14 @@ app.get(
   async (request: Request, response: Response, next: NextFunction) => {
     try {
       const reason = parseSummaryReason(request.query.reason)
+      const includeArchives = parseBooleanQueryFlag(request.query.includeArchives)
       recordSummaryRequest(false, reason)
       response.json(
         await buildWorkspaceSummary(
           apiPort,
           getInstallSnapshots(),
           getRuntimeSnapshots(),
-          { includeDiagnostics: false, repoProjection: 'list' },
+          { includeArchives, includeDiagnostics: false, repoProjection: 'list' },
         ),
       )
     } catch (error) {

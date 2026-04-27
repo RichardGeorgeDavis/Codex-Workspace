@@ -21,16 +21,26 @@ async function readErrorMessage(response: Response) {
   }
 }
 
-function withSummaryReason(pathname: string, reason: SummaryRequestReason) {
+function withSummaryReason(
+  pathname: string,
+  reason: SummaryRequestReason,
+  options: { includeArchives?: boolean } = {},
+) {
   const params = new URLSearchParams({ reason })
+
+  if (options.includeArchives) {
+    params.set('includeArchives', 'true')
+  }
+
   return `${pathname}?${params.toString()}`
 }
 
 export async function fetchWorkspaceSummary(
   signal?: AbortSignal,
   reason: SummaryRequestReason = 'manual-refresh',
+  options: { includeArchives?: boolean } = {},
 ) {
-  const response = await fetch(withSummaryReason('/api/workspace/summary', reason), { signal })
+  const response = await fetch(withSummaryReason('/api/workspace/summary', reason, options), { signal })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -42,8 +52,9 @@ export async function fetchWorkspaceSummary(
 export async function fetchWorkspaceSummaryBase(
   signal?: AbortSignal,
   reason: SummaryRequestReason = 'event',
+  options: { includeArchives?: boolean } = {},
 ) {
-  const response = await fetch(withSummaryReason('/api/workspace/summary/base', reason), { signal })
+  const response = await fetch(withSummaryReason('/api/workspace/summary/base', reason, options), { signal })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
