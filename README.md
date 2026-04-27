@@ -79,7 +79,9 @@ pnpm install
 pnpm dev
 ```
 
-Once the Hub is open, use the `Workspace memory` switch in the header to open the dedicated MemPalace page directly. That page now covers service state, target selection, in-app memory search, target-scoped graph builds, and safe wrapper actions.
+The Hub still shows the `Workspace memory` surface, but MemPalace actions are
+temporarily paused because `tools/bin/workspace-memory` is disabled during the
+write-lock and corpus-size review.
 The dashboard also exposes installable abilities and core services through the Workspace Capabilities panel, and supports a persisted `split` versus `discovery-first` repo layout.
 
 If you want the fuller workspace path after that:
@@ -207,6 +209,7 @@ Deeper docs:
 - [docs/18-mcp-server-catalog.md](docs/18-mcp-server-catalog.md)
 - [docs/19-mcp-authoring-rules.md](docs/19-mcp-authoring-rules.md)
 - [docs/20-ai-context-side-load.md](docs/20-ai-context-side-load.md)
+- [docs/21-agent-token-budget.md](docs/21-agent-token-budget.md)
 
 Supporting references:
 - [docs/HANDOVER.md](docs/HANDOVER.md)
@@ -240,25 +243,23 @@ The current MCP v1 support set is intentionally small: OpenAI Docs, Context7, Pl
 
 This keeps context easier to inspect, reason about, and adapt across tools while keeping each repo independently runnable.
 
+Default token-saving stance: read `docs/HANDOVER.md` for current state, use only
+`cache/context/.../entry.md` when a generated packet helps, keep Workspace Hub
+search in `thin` mode, and avoid `docs/archive/`, `ref/`, `screenshots/`,
+`cache/`, and `shared/mempalace/` unless the task explicitly needs them. See
+[docs/21-agent-token-budget.md](docs/21-agent-token-budget.md).
+
 Tracked repo knowledge belongs in public docs, manifests, and portable skills. Local operator memory belongs in ignored local files until it becomes stable enough to promote into tracked project guidance.
 
-The Workspace Hub app is optional for memory operations. MemPalace ingest, search, and wake-up run through `tools/bin/workspace-memory`, so a shell session or tool-capable chat can save repo or conversation memory without the Hub UI running.
+Workspace memory is temporarily disabled. `tools/bin/workspace-memory` now exits
+without running MemPalace closeout, ingest, search, wake-up, export, or graph
+commands while the write-lock and corpus-size behavior is reviewed.
 
-Recommended closeout commands:
+Current closeout guidance:
 
-- `tools/bin/workspace-memory save-repo <repo-name>` after meaningful repo README, HANDOVER, or setup changes
-- `tools/bin/workspace-memory save-workspace` after docs-only or workspace-level planning sessions
-- `tools/bin/workspace-memory export-codex current` when you want a readable transcript bundle under `shared/mempalace/<user>/exports/codex/`
-
-Other safe operator commands:
-
-- `tools/bin/workspace-memory status`
-- `tools/bin/workspace-memory wake-up`
-- `tools/bin/workspace-memory mine-codex-current`
-- `tools/bin/mempalace-start`
-- `tools/bin/mempalace-sync`
-
-Current note: `wake-up` is much cleaner after low-signal filtering, but it may still occasionally surface config-heavy files such as `tsconfig.node.json`.
+- record repo closeout in tracked repo docs such as `README.md`, `HANDOVER.md`, or `DESIGN.md`
+- record workspace closeout in `docs/HANDOVER.md` and `docs/CHANGELOG.md`
+- use generated context-cache summaries under `cache/context/` only as optional local side-load material, not as canonical memory
 
 When a capability becomes part of how the whole workspace operates, prefer a core-service shape:
 

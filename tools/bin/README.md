@@ -4,18 +4,14 @@ Place small workspace wrappers here when a shared command is useful across repos
 
 Current wrappers include:
 
-- `workspace-memory` for the MemPalace workspace service
+- `workspace-memory` for the MemPalace workspace service, currently disabled while write-lock and corpus-size behavior is reviewed
 - `mempalace-start` for the MemPalace MCP runtime
 - `mempalace-sync` for safe fast-forward updates of the MemPalace repo
-- `workspace-memory mine-convos` for local conversation-export ingest
-- `workspace-memory mine-codex` for Codex archived session ingest
-- `workspace-memory export-codex` for readable Codex session exports under `shared/mempalace/<user>/exports/`
-- `workspace-memory mine-codex-current` for active-thread capture from `~/.codex/sessions`
-- `workspace-memory search` for workspace-scoped MemPalace retrieval with persisted query metadata
-- `workspace-memory build-graph` for target-scoped graph artifacts under `cache/mempalace/<user>/graphs/`
-- `workspace-memory save-repo` and `workspace-memory save-workspace` for explicit closeout saves without the Hub UI
 
-The write-heavy closeout and ingest paths now serialize through a workspace-owned lock under `cache/mempalace/<user>/locks/` so overlapping `save-repo`, `save-workspace`, `mine-*`, and `wake-up` runs do not contend on the same local MemPalace store.
+While disabled, all `workspace-memory` subcommands fail fast before running
+MemPalace closeout, ingest, search, wake-up, export, or graph work. Use tracked
+docs and optional generated context-cache summaries for closeout context until
+the pause is explicitly lifted.
 
 These wrappers are operator-facing workspace commands. When their behavior or placement changes, update the public docs in the same slice:
 

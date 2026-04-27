@@ -83,9 +83,8 @@ These names are guidance, not enforcement.
 - Use non-closing references such as `Refs #123` when the issue lives in another repo, when the PR targets a fork first, or when more work remains.
 - Close the issue when the accepted change actually lands, not when a branch merely exists.
 - For local-only or git-only repos, record equivalent closeout context in tracked docs instead of inventing a fake issue queue.
-- In Codex Workspace, a request to update a tracked handover should also trigger the matching `workspace-memory` closeout after the docs update:
-  repo-specific handover updates should run `tools/bin/workspace-memory save-repo <repo-name>`, and workspace-level handover updates should run `tools/bin/workspace-memory save-workspace`.
-- If both repo and workspace handover surfaces changed in one slice, run those MemPalace closeout commands serially so they do not contend on the same local store.
+- In Codex Workspace, `workspace-memory` closeout is temporarily disabled while the MemPalace write-lock and corpus-size behavior is reviewed.
+- For now, a request to update a tracked handover should update the relevant tracked docs only: repo-specific handovers should update repo-local docs, and workspace-level handovers should update `docs/HANDOVER.md` plus `docs/CHANGELOG.md`.
 - Before closing the chat, run a quick `git status` sanity check and confirm any changed public doc surfaces still agree, especially `README.md`, `docs/README.md`, `docs/CHANGELOG.md`, and the relevant repo-local README.
 
 ## What this baseline does not require

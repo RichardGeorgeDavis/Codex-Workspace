@@ -1,0 +1,70 @@
+# 21-agent-token-budget
+
+## Purpose
+
+This note defines default context-loading limits for agents working in Codex
+Workspace. The goal is to reduce token usage without hiding useful evidence.
+
+## Default Read Path
+
+For a fresh task, read in this order:
+
+1. `AGENTS.md`
+2. `docs/HANDOVER.md`
+3. the relevant repo README, handover, manifest, or source files
+4. generated `cache/context/.../entry.md` only when a compact side-load packet is useful
+
+Do not load long historical logs just because they exist.
+
+## Opt-In Paths
+
+Open these only when the task specifically requires them:
+
+- `docs/archive/`
+- repo `ref/`
+- repo `screenshots/`
+- `cache/`
+- `shared/mempalace/`
+- generated reports
+- copied site HTML
+- archives such as `.zip`, `.tar.gz`, `.7z`
+- lockfiles, vendor folders, and build output
+
+When these paths are relevant, inspect targeted files or summarize counts first
+instead of loading whole folders.
+
+## Search Defaults
+
+Use Workspace Hub indexed search in `thin` mode by default.
+
+Keep artifact indexing disabled unless needed:
+
+```bash
+WORKSPACE_HUB_SEARCH_INCLUDE_ARTIFACTS=false
+```
+
+Use deep search only for explicit investigation tasks where broad repo logs,
+docs, or generated artifacts are likely to matter.
+
+## Side-Load Summaries
+
+Generated context files under `cache/context/` are optional and disposable.
+
+Prefer:
+
+- `entry.md` for the first compact read
+- `abstract.md` only when choosing whether a target is relevant
+- `overview.md` when planning a broader slice
+- `sources.json` when checking provenance
+
+Do not read generated summaries and all canonical docs by default. If generated
+summaries disagree with tracked docs or source files, trust the tracked source.
+
+## Workspace Memory
+
+`tools/bin/workspace-memory` is temporarily disabled. Do not run MemPalace
+closeout, ingest, search, wake-up, export, or graph commands until the pause is
+explicitly lifted.
+
+Use tracked docs and optional side-load `entry.md` packets for closeout context
+while memory is paused.

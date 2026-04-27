@@ -244,12 +244,12 @@ function targetMatchesPath(servicePath: string | null, targetPath: string | null
 }
 
 function buildMempalaceContextCommands(
-  serviceId: string,
+  _serviceId: string,
   targetKind: 'current-repo' | 'repo' | 'workspace-docs',
   repoRelativePath: string | null,
   targetAvailable: boolean,
 ) {
-  const saveRepoEnabled = targetAvailable && (targetKind === 'current-repo' || targetKind === 'repo')
+  const pausedReason = 'Workspace memory is temporarily paused.'
   const buildGraphCommand =
     targetAvailable && repoRelativePath
       ? `tools/bin/workspace-memory build-graph repo ${repoRelativePath}`
@@ -263,74 +263,82 @@ function buildMempalaceContextCommands(
   return [
     {
       description: 'Build a target-scoped graph export from MemPalace sidecars and nearby docs.',
-      enabled: targetAvailable,
+      enabled: false,
       id: 'build-graph',
       label: 'Build graph',
-      reasonDisabled: targetAvailable ? null : 'Choose an available target before building a graph.',
+      reasonDisabled: pausedReason,
       shellCommand: buildGraphCommand,
     },
     {
       description: 'Check local service readiness and key workspace paths.',
-      enabled: true,
+      enabled: false,
       id: 'status',
       label: 'Status',
-      reasonDisabled: null,
+      reasonDisabled: pausedReason,
       shellCommand: 'tools/bin/workspace-memory status',
     },
     {
+      description: 'Run a retrieval search against the workspace memory corpus.',
+      enabled: false,
+      id: 'search',
+      label: 'Search memory',
+      reasonDisabled: pausedReason,
+      shellCommand: 'tools/bin/workspace-memory search <query>',
+    },
+    {
       description: 'Save workspace docs and the current Codex thread into MemPalace.',
-      enabled: true,
+      enabled: false,
       id: 'save-workspace',
       label: 'Save workspace',
-      reasonDisabled: null,
+      reasonDisabled: pausedReason,
       shellCommand: 'tools/bin/workspace-memory save-workspace',
     },
     {
       description: 'Save the selected repo target plus the current Codex thread.',
-      enabled: saveRepoEnabled,
+      enabled: false,
       id: 'save-repo',
       label: 'Save repo',
-      reasonDisabled: saveRepoEnabled ? null : 'Choose a repo target to enable repo closeout.',
+      reasonDisabled: pausedReason,
       shellCommand: saveRepoCommand,
     },
     {
       description: 'Export the active Codex thread into a readable transcript bundle.',
-      enabled: true,
+      enabled: false,
       id: 'export-codex-current',
       label: 'Export current Codex thread',
-      reasonDisabled: null,
+      reasonDisabled: pausedReason,
       shellCommand: 'tools/bin/workspace-memory export-codex current',
     },
     {
       description: 'Mine the active Codex thread directly from the local session log.',
-      enabled: true,
+      enabled: false,
       id: 'mine-codex-current',
       label: 'Mine current Codex thread',
-      reasonDisabled: null,
+      reasonDisabled: pausedReason,
       shellCommand: 'tools/bin/workspace-memory mine-codex-current',
     },
     {
       description: 'Refresh the MemPalace wake-up summary from the current corpus.',
-      enabled: true,
+      enabled: false,
       id: 'wake-up',
       label: 'Wake-up',
-      reasonDisabled: null,
+      reasonDisabled: pausedReason,
       shellCommand: 'tools/bin/workspace-memory wake-up',
     },
     {
       description: 'Start the MemPalace MCP server for the workspace user.',
-      enabled: serviceId === 'mempalace',
+      enabled: false,
       id: 'runtime-start',
       label: 'Start MCP server',
-      reasonDisabled: null,
+      reasonDisabled: pausedReason,
       shellCommand: 'tools/bin/mempalace-start',
     },
     {
       description: 'Fast-forward the MemPalace fork from upstream when the tree is clean.',
-      enabled: serviceId === 'mempalace',
+      enabled: false,
       id: 'sync',
       label: 'Sync fork',
-      reasonDisabled: null,
+      reasonDisabled: pausedReason,
       shellCommand: 'tools/bin/mempalace-sync',
     },
   ]
@@ -699,12 +707,7 @@ app.post(
         (targetMatchesPath(service.lastSaveTarget, targetPath) && service.lastSaveTarget) ||
         (targetMatchesPath(service.lastIngestTarget, targetPath) && service.lastIngestTarget) ||
         null
-      const recommendedActionId =
-        targetKind === 'workspace-docs'
-          ? 'save-workspace'
-          : resolvedRepo
-            ? 'save-repo'
-            : null
+      const recommendedActionId = null
       const graph = await readMempalaceGraphSnapshot(service, {
         available: targetKind === 'workspace-docs' || Boolean(resolvedRepo),
         repoRelativePath: resolvedRepo?.relativePath ?? resolvedRepoRelativePath,
@@ -722,12 +725,7 @@ app.post(
         metadataExists,
         metadataPath,
         recommendedActionId,
-        recommendedActionLabel:
-          recommendedActionId === 'save-repo'
-            ? 'Save repo memory now'
-            : recommendedActionId === 'save-workspace'
-              ? 'Save workspace memory now'
-              : null,
+        recommendedActionLabel: null,
         repoRelativePath: resolvedRepo?.relativePath ?? resolvedRepoRelativePath,
         serviceId: service.id,
         targetAvailable: targetKind === 'workspace-docs' || Boolean(resolvedRepo),

@@ -99,7 +99,11 @@ Do not mix the two flows.
 
 ## MemPalace health checks
 
-Useful checks:
+`tools/bin/workspace-memory` is temporarily disabled while the MemPalace
+write-lock and corpus-size behavior is reviewed. Do not run memory closeout,
+ingest, search, wake-up, export, or graph commands during this pause.
+
+Historical checks, currently paused:
 
 ```bash
 tools/bin/workspace-memory status

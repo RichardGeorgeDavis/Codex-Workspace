@@ -186,7 +186,7 @@ after(async () => {
   }
 })
 
-test('core service search command updates persisted MemPalace service state', async () => {
+test('core service memory commands are disabled while workspace memory is paused', async () => {
   const root = await createTempWorkspaceRoot('codex-workspace-mempalace-search-')
   await createCoreServiceWorkspaceFixture(root)
 
@@ -195,18 +195,12 @@ test('core service search command updates persisted MemPalace service state', as
 
   assert.ok(service)
 
-  const result = await coreServiceRuntime.runCoreServiceCommand(service, 'search', {
-    searchQuery: 'graph memory status',
-  })
-
-  assert.equal(result.command, "tools/bin/workspace-memory search 'graph memory status'")
-  assert.match(result.output, /searched: graph memory status/)
-
-  const refreshedService = await coreServices.findCoreService('mempalace', new Map(), new Map())
-  assert.ok(refreshedService)
-  assert.equal(refreshedService.lastSearchQuery, 'graph memory status')
-  assert.equal(refreshedService.lastSearchAt, '2026-04-10T10:30:00Z')
-  assert.equal(refreshedService.lastCommandKind, 'search')
+  await assert.rejects(
+    coreServiceRuntime.runCoreServiceCommand(service, 'search', {
+      searchQuery: 'graph memory status',
+    }),
+    /Workspace memory is temporarily paused/,
+  )
 })
 
 test('core service reader skips services whose paths escape the workspace root', async () => {
@@ -338,11 +332,47 @@ test('core service reader records validation issues for invalid manifest fields'
   assert.ok(result.manifestIssues.some((issue) => /install command must be a non-empty workspace-local argv array/i.test(issue.reason)))
 })
 
-test('workspace-memory build-graph emits target-scoped graph artifacts', async () => {
+test('workspace-memory wrapper exits disabled while memory is paused', async () => {
+  const root = await createTempWorkspaceRoot('codex-workspace-mempalace-disabled-')
+  await createGraphWorkspaceFixture(root)
+
+  await assert.rejects(
+    execFileAsync(path.join(root, 'tools', 'bin', 'workspace-memory'), ['build-graph', 'workspace-docs'], {
+      cwd: root,
+      env: {
+        ...process.env,
+        CODEX_WORKSPACE_USER: 'test-user',
+        HOME: path.join(root, 'home'),
+        USER: 'test-user',
+      },
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof Error)
+      assert.match(error.message, /workspace-memory is temporarily disabled/)
+      return true
+    },
+  )
+})
+
+test('graph adapter reads target-scoped graph artifacts', async () => {
   const root = await createTempWorkspaceRoot('codex-workspace-mempalace-graph-')
   await createGraphWorkspaceFixture(root)
 
-  await execFileAsync(path.join(root, 'tools', 'bin', 'workspace-memory'), ['build-graph', 'workspace-docs'], {
+  await execFileAsync(process.execPath, [
+    path.join(root, 'tools', 'scripts', 'build-mempalace-graph.mjs'),
+    '--workspace-root',
+    root,
+    '--target-kind',
+    'workspace-docs',
+    '--target-path',
+    path.join(root, 'docs'),
+    '--target-label',
+    'Workspace docs',
+    '--target-slug',
+    'workspace-docs',
+    '--output-dir',
+    path.join(root, 'cache', 'mempalace', 'test-user', 'graphs', 'workspace-docs'),
+  ], {
     cwd: root,
     env: {
       ...process.env,

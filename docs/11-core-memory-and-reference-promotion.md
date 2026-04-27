@@ -204,9 +204,13 @@ Current wrapper coverage includes:
 - `workspace-memory save-repo`
 - `workspace-memory save-workspace`
 
+Temporary status: `tools/bin/workspace-memory` is disabled for now. All wrapper
+subcommands fail fast while the MemPalace write-lock and corpus-size behavior is
+reviewed. Keep closeout state in tracked docs during this pause.
+
 For repo or docs targets, wrapper-managed MemPalace metadata should live under `.workspace/mempalace/` rather than at the target root.
 
-The intended operator flow is now:
+Historical intended operator flow, currently paused:
 
 - use `save-repo <repo>` at repo closeout after meaningful README, HANDOVER, or setup updates
 - use `save-workspace` for docs-only or workspace-level planning sessions
@@ -250,7 +254,8 @@ Design rules:
 - rebuildable graph artifacts should live under `cache/mempalace/<user>/graphs/`
 - do not introduce automatic agent-hook or `AGENTS.md` mutation as part of graph rendering
 
-Current wrapper command shape:
+Historical wrapper command shape, currently paused while `tools/bin/workspace-memory`
+is disabled:
 
 ```bash
 tools/bin/workspace-memory build-graph workspace-docs

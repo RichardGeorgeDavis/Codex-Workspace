@@ -80,7 +80,7 @@ Recommended intake order:
 7. Add repo-root `DESIGN.md` only when the repo would benefit from tracked UI or design-system guidance; do not add it mechanically to every repo.
 8. Add `.workspace/project.json` only when runtime behavior is not obvious from the repo files.
 9. Add repo-level `AGENTS.md`, `HANDOVER.md`, or repo-local skills only when they solve a real repo-specific need.
-10. If README, HANDOVER, `DESIGN.md`, or other durable setup docs were created or materially updated, run `tools/bin/workspace-memory save-repo <repo-path-or-name>` so the shared memory layer captures the repo state, related workspace docs, and the current Codex thread in one closeout step.
+10. If README, HANDOVER, `DESIGN.md`, or other durable setup docs were created or materially updated, record the closeout in tracked docs. `tools/bin/workspace-memory save-repo` is temporarily disabled while the MemPalace write-lock and corpus-size behavior is reviewed.
 
 For MemPalace target metadata, prefer `.workspace/mempalace/` inside the repo rather than dropping `mempalace.yaml` or `entities.json` at the repo root.
 
@@ -195,7 +195,7 @@ For a repo to feel workspace-ready, it should ideally have:
 2. a known runtime mode: `direct`, `external`, or explicit repo-native server mode
 3. a `README.md` that captures setup, run, and preview expectations
 4. a repo-local cover image path in the README, even if it begins as a placeholder
-5. a Codex-friendly closeout path such as `tools/bin/workspace-memory save-repo <repo-path-or-name>`
+5. a Codex-friendly closeout note in tracked repo docs; MemPalace `workspace-memory` closeout is temporarily disabled
 6. enough docs that another person can resume work without guessing
 
 For GitHub-backed repos, that usually means enough repo-local docs to explain setup plus a readable issue and PR path. For local-only or git-only repos, it means the tracked local docs carry the same resumable context without pretending GitHub is required.

@@ -72,6 +72,9 @@ export function MempalaceWorkspacePage({
 }: MempalaceWorkspacePageProps) {
   const pendingPrefix = `service:${service.id}:`
   const [searchQuery, setSearchQuery] = useState(service.lastSearchQuery ?? '')
+  const searchCommand = context?.commands.find((command) => command.id === 'search') ?? null
+  const buildGraphCommand = context?.commands.find((command) => command.id === 'build-graph') ?? null
+  const memoryPausedReason = searchCommand?.reasonDisabled ?? 'Workspace memory is temporarily paused.'
 
   return (
     <main className="memory-workspace-page">
@@ -81,8 +84,8 @@ export function MempalaceWorkspacePage({
           <h2>{service.name}</h2>
           <p className="hero-text">
             This page is the workspace-level memory surface. It tracks shared memory state,
-            selected repo or docs targets, and safe wrapper commands for capture, export, wake-up,
-            and service maintenance.
+            selected repo or docs targets, and the paused command surface for capture, export,
+            wake-up, and service maintenance.
           </p>
         </div>
 
@@ -324,7 +327,7 @@ export function MempalaceWorkspacePage({
         </SectionCard>
 
         <SectionCard
-          body="Search runs against the current MemPalace corpus for this workspace user. Use plain-language recall questions, repo names, architecture topics, or thread-specific phrases."
+          body="Workspace memory search is paused while the local wrapper is disabled. Keep tracked docs and entry packets as the default context path."
           className="reveal delayed-more"
           eyebrow="Retrieval"
           title="Search workspace memory"
@@ -343,6 +346,7 @@ export function MempalaceWorkspacePage({
             <label className="field">
               <span>Search query</span>
               <input
+                disabled
                 onChange={(event) => {
                   setSearchQuery(event.target.value)
                 }}
@@ -355,13 +359,16 @@ export function MempalaceWorkspacePage({
             <button
               className="primary-button"
               disabled={
-                actionPendingKey === `${pendingPrefix}search` || searchQuery.trim().length === 0
+                !searchCommand?.enabled ||
+                actionPendingKey === `${pendingPrefix}search` ||
+                searchQuery.trim().length === 0
               }
               type="submit"
             >
               {actionPendingKey === `${pendingPrefix}search` ? 'Searching...' : 'Run search'}
             </button>
           </form>
+          <p className="memory-command-note">{memoryPausedReason}</p>
 
           <dl className="details-list">
             <div className="details-row">
@@ -441,7 +448,11 @@ export function MempalaceWorkspacePage({
               <div className="service-actions">
                 <button
                   className="primary-button"
-                  disabled={!context.graph.available || actionPendingKey === `${pendingPrefix}build-graph`}
+                  disabled={
+                    !buildGraphCommand?.enabled ||
+                    !context.graph.available ||
+                    actionPendingKey === `${pendingPrefix}build-graph`
+                  }
                   onClick={() => {
                     void onRunCommand('build-graph')
                   }}
@@ -474,6 +485,9 @@ export function MempalaceWorkspacePage({
                   Open graph folder
                 </button>
               </div>
+              {buildGraphCommand?.reasonDisabled ? (
+                <p className="memory-command-note">{buildGraphCommand.reasonDisabled}</p>
+              ) : null}
             </>
           ) : (
             <p className="loading-copy">Load a target context to inspect graph status.</p>

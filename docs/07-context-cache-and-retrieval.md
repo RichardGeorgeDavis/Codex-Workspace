@@ -69,6 +69,11 @@ Use a three-layer model:
 - `L1` overview: a concise operating view for planning and navigation
 - `L2` details: the original docs, manifests, source files, and logs
 
+For day-to-day agent work, prefer the generated `entry.md` packet before loading
+broader generated summaries or historical handover logs. See
+[21-agent-token-budget.md](21-agent-token-budget.md) for the default token
+budget rules and opt-in evidence paths.
+
 ### 3. Observable retrieval
 
 When a tool or agent uses a summary, it should be possible to see which files fed that summary.

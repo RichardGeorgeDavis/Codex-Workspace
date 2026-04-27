@@ -18,7 +18,10 @@ What a new user gets by default is:
 
 So if we want a predictable onboarding path, we need to provide it in tracked docs and helper scripts.
 
-MemPalace is now integrated as the first core workspace memory service. The current bootstrap and doctor scripts can prepare and verify that service for the active workspace user.
+MemPalace is integrated as a core workspace memory service, but
+`tools/bin/workspace-memory` is temporarily disabled while the write-lock and
+corpus-size behavior is reviewed. Do not use MemPalace closeout, ingest, search,
+wake-up, export, or graph commands during this pause.
 
 ## Fastest way to try it
 
@@ -34,10 +37,9 @@ pnpm dev
 
 Then, once the app is open:
 
-1. open `Workspace memory` from the header
-2. confirm service state and target context
-3. run a retrieval search from the in-app search form
-4. build a target-scoped graph for `Workspace docs` or a selected repo if you want the graph view
+1. open the Hub repo and workspace views
+2. use tracked docs and generated context-cache summaries for current context
+3. skip the `Workspace memory` command actions until the pause is lifted
 
 If that trial path is enough, stop there and keep the rest of this doc as optional setup and maintenance guidance.
 
@@ -50,13 +52,13 @@ If you are starting a fresh repo-aware chat and want a cheaper wake-up path, use
    `tools/scripts/generate-context-cache.sh --workspace --run`
 3. for `workspace-hub` work, also run:
    `tools/scripts/generate-context-cache.sh --repo workspace-hub --run`
-4. if a repo was just added or its setup changed, close it into the current Codex thread with `tools/bin/workspace-memory save-repo <repo-path-or-name>`
-5. treat generated files under `cache/context/` as compact `L0` and `L1` summaries only
+4. if a repo was just added or its setup changed, record that closeout in tracked repo docs and `docs/HANDOVER.md` when relevant
+5. treat generated `entry.md` files under `cache/context/` as the first compact side-load packet; open broader generated summaries only when needed
 6. trust tracked docs, manifests, and repo files over generated summaries whenever they differ
 
 Suggested instruction for a fresh chat:
 
-> Read `docs/HANDOVER.md` first. Use generated side-load files under `cache/context/` only as a compact summary layer, and treat tracked docs and repo files as canonical.
+> Read `docs/HANDOVER.md` first. Use generated `entry.md` files under `cache/context/` only as a compact summary layer, and treat tracked docs and repo files as canonical.
 
 ## Optional first-run questions
 
@@ -89,16 +91,12 @@ Install or verify:
 
 This is the recommended baseline for every user.
 
-Core profile now also supports:
+Core profile keeps the MemPalace paths documented, but active memory commands are paused:
 
-- verifying or installing the MemPalace workspace service
 - keeping its code in `tools/` and its durable per-user state in `shared/`
 - keeping disposable service artifacts in `cache/`
-- keeping readable Codex transcript exports in `shared/mempalace/<user>/exports/`
 - keeping that memory layer separate from canonical tracked repo documentation
-- running memory ingest and search from the shell without requiring Workspace Hub to be open
-- using explicit closeout saves such as `tools/bin/workspace-memory save-repo <repo-name>` or `tools/bin/workspace-memory save-workspace`
-- using safe operator commands such as `tools/bin/workspace-memory status`, `wake-up`, `mine-codex-current`, `tools/bin/mempalace-start`, and `tools/bin/mempalace-sync`
+- not running `tools/bin/workspace-memory` until the pause is explicitly lifted
 
 Maintainer note:
 
@@ -123,7 +121,9 @@ pnpm install
 pnpm dev
 ```
 
-Once the Hub is open, use the `Workspace memory` switch in the header to open the dedicated MemPalace page. That page is the workspace-level view for memory state, target selection, in-app retrieval search, target-scoped graph builds, and safe wrapper commands.
+Once the Hub is open, the `Workspace memory` switch still opens the MemPalace
+page, but its command actions are paused while `tools/bin/workspace-memory` is
+disabled.
 
 ### Mixed Stack
 

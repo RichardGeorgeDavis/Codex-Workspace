@@ -29,8 +29,9 @@ Read these in order:
 19. `18-mcp-server-catalog.md`
 20. `19-mcp-authoring-rules.md`
 21. `20-ai-context-side-load.md`
-22. `HANDOVER.md`
-23. `CHANGELOG.md`
+22. `21-agent-token-budget.md`
+23. `HANDOVER.md`
+24. `CHANGELOG.md`
 
 ## What Lives Here
 
@@ -50,7 +51,8 @@ Read these in order:
 - `18-mcp-server-catalog.md` defines the small approved MCP server catalog for v1.
 - `19-mcp-authoring-rules.md` defines the quality bar for adding future tracked MCP examples.
 - `20-ai-context-side-load.md` defines the concrete v1 side-load generator, `entry.md` routing packet, provenance contract, and Workspace Hub freshness semantics for generated `cache/context/` summaries plus the thin-versus-deep search split.
-- `HANDOVER.md` summarizes the current state of the workspace, current implementation batches, and the latest acceptance evidence.
+- `21-agent-token-budget.md` defines the default context-loading limits, opt-in evidence paths, and search defaults for reducing agent token usage.
+- `HANDOVER.md` is the short current-state handover; detailed historical logs live under `docs/archive/`.
 - `CHANGELOG.md` records notable workspace-level changes.
 
 ## Related Locations
@@ -61,6 +63,7 @@ Read these in order:
 - `tools/templates/` holds starter metadata templates.
 - `tools/manifests/` holds source lists and supporting manifests for scripts.
 - `tools/github-rulesets/` holds importable repository ruleset JSON for GitHub.
+- `docs/archive/` holds historical handover and implementation logs that should be opened only for targeted archaeology.
 - `docs/wiki/` holds starter content for the optional GitHub wiki surface.
 - `docs/plans/` holds tracked implementation plans for multi-session work (for example docs closeout).
 - `repos/workspace-hub/docs/` holds repo-local documentation for Workspace Hub itself.
@@ -69,7 +72,7 @@ Read these in order:
 Useful maintenance scripts:
 
 - `tools/scripts/bootstrap-workspace.sh` prepares safe cache/context folders and can install `workspace-hub` dependencies without touching sibling repos.
-- `tools/bin/workspace-memory` manages the MemPalace workspace service lifecycle, local install, and user-scoped paths.
+- `tools/bin/workspace-memory` is temporarily disabled while the MemPalace write-lock and corpus-size behavior is reviewed.
 - `tools/bin/mempalace-start` runs the MemPalace MCP server with the workspace-scoped home.
 - `tools/bin/mempalace-sync` fast-forwards the MemPalace repo when its working tree is clean.
 - `tools/scripts/bootstrap-repo.sh` previews or runs repo-native install/setup using manifest `installCommand` first, then package-manager precedence such as env override, manifest `packageManager`, `package.json`, and lockfiles.

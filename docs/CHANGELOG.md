@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-04-27
+
+- Temporarily disabled `tools/bin/workspace-memory` so MemPalace closeout, ingest, search, wake-up, export, and graph commands fail fast while the write-lock and corpus-size behavior is reviewed.
+- Updated handover and closeout guidance to rely on tracked docs and optional context-cache summaries instead of automatic MemPalace saves during the pause.
+- Reduced default agent context load by replacing the long live handover with a concise current-state handover, archiving the previous detailed log under `docs/archive/`, slimming `AGENTS.md`, and adding `docs/21-agent-token-budget.md`.
+
 ## 2026-04-24
 
 - Added a personal-only private operator services process to the MCP catalog, including storage rules for non-secret tracked service facts, macOS Keychain tokens, ignored local credential loaders, and repo-specific dependency promotion.

@@ -1,6 +1,15 @@
 #!/usr/bin/env sh
 set -eu
 
+cat >&2 <<EOF
+workspace-memory is temporarily disabled for this workspace.
+
+MemPalace closeout, ingest, search, wake-up, export, and graph commands are paused
+until the write-lock and corpus-size behavior is reviewed. Use tracked docs,
+handover notes, and generated context-cache summaries instead.
+EOF
+exit 2
+
 . "$(CDPATH= cd -- "$(dirname "$0")/../scripts" && pwd)/mempalace-env.sh"
 
 usage() {
@@ -282,7 +291,7 @@ with_mempalace_write_lock() {
 
   ensure_mempalace_write_lock_dirs
 
-  lock_timeout=${MEMPALACE_WRITE_LOCK_TIMEOUT_SEC:-30}
+  lock_timeout=${MEMPALACE_WRITE_LOCK_TIMEOUT_SEC:-900}
   lock_poll=${MEMPALACE_WRITE_LOCK_POLL_SEC:-1}
   lock_dir="$mempalace_cache_root/locks/write.lock"
   start_time=$(date +%s)
@@ -305,6 +314,12 @@ with_mempalace_write_lock() {
       if [ -n "$owner_pid" ]; then
         printf 'Active owner PID: %s\n' "$owner_pid" >&2
       fi
+      if [ -f "$lock_dir/command" ]; then
+        printf 'Active owner command: %s\n' "$(cat "$lock_dir/command" 2>/dev/null || printf '')" >&2
+      fi
+      if [ -f "$lock_dir/started-at" ]; then
+        printf 'Active owner started at: %s\n' "$(cat "$lock_dir/started-at" 2>/dev/null || printf '')" >&2
+      fi
       exit 1
     fi
 
@@ -312,6 +327,8 @@ with_mempalace_write_lock() {
   done
 
   printf '%s\n' "$$" >"$lock_dir/pid"
+  mempalace_timestamp >"$lock_dir/started-at"
+  printf '%s\n' "$*" >"$lock_dir/command"
   MEMPALACE_WRITE_LOCK_DIR=$lock_dir
   export MEMPALACE_WRITE_LOCK_DIR
   export MEMPALACE_WRITE_LOCK_ACTIVE=1
@@ -326,7 +343,7 @@ with_mempalace_write_lock() {
   return "$command_exit"
 }
 
-mempalace_repo_mine_excludes='pnpm-lock.yaml yarn.lock bun.lockb composer.lock Cargo.lock Gemfile.lock Podfile.lock Pipfile.lock poetry.lock uv.lock dist/** build/** coverage/** vendor/** .next/** .nuxt/** .output/** storybook-static/** target/**'
+mempalace_repo_mine_excludes='.workspace/mempalace/** entities.json mempalace.yaml mempalace.yml pnpm-lock.yaml yarn.lock bun.lockb composer.lock Cargo.lock Gemfile.lock Podfile.lock Pipfile.lock poetry.lock uv.lock dist/** build/** coverage/** vendor/** .next/** .nuxt/** .output/** storybook-static/** target/** ref/** screenshots/** test-results/** playwright-report/**'
 mempalace_docs_mine_excludes='.workspace/mempalace/** entities.json mempalace.yaml mempalace.yml'
 
 run_filtered_project_mine() {

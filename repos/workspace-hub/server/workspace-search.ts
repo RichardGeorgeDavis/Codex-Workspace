@@ -107,12 +107,20 @@ async function readTextSnippet(targetPath: string) {
   }
 }
 
-async function readRepoSideLoadSummary(repoRelativePath: string): Promise<RepoSideLoadSummary> {
+async function readRepoSideLoadSummary(
+  repoRelativePath: string,
+  mode: WorkspaceSearchMode,
+): Promise<RepoSideLoadSummary> {
   const repoName = path.basename(repoRelativePath)
   const sideLoadRoot = path.join(workspaceRoot, 'cache', 'context', 'repos', repoName)
-  const [abstract, entry, overview] = await Promise.all([
+  const entry = await readTextSnippet(path.join(sideLoadRoot, 'entry.md'))
+
+  if (mode !== 'deep') {
+    return { abstract: '', entry, overview: '' }
+  }
+
+  const [abstract, overview] = await Promise.all([
     readTextSnippet(path.join(sideLoadRoot, 'abstract.md')),
-    readTextSnippet(path.join(sideLoadRoot, 'entry.md')),
     readTextSnippet(path.join(sideLoadRoot, 'overview.md')),
   ])
 
@@ -282,7 +290,7 @@ async function buildRepoDocuments(repos: WorkspaceRepo[], mode: WorkspaceSearchM
       const [manifestText, readmeText, sideLoad] = await Promise.all([
         repo.manifestPath ? readTextSnippet(repo.manifestPath) : Promise.resolve(''),
         repo.readmePath ? readTextSnippet(repo.readmePath) : Promise.resolve(''),
-        readRepoSideLoadSummary(repo.relativePath),
+        readRepoSideLoadSummary(repo.relativePath, mode),
       ])
       const thinSources = [
         { label: 'notes', text: repo.notes },
@@ -292,13 +300,13 @@ async function buildRepoDocuments(repos: WorkspaceRepo[], mode: WorkspaceSearchM
           text: [repo.relativePath, repo.type, repo.packageManager || 'manual', repo.preferredMode].join(' '),
         },
         { label: 'dependencies', text: `${repo.dependencies.state} ${repo.dependencies.reason}` },
-        { label: 'context abstract', text: sideLoad.abstract },
         { label: 'context entry', text: sideLoad.entry },
-        { label: 'context overview', text: sideLoad.overview },
         { label: 'manifest', text: manifestText },
       ]
       const deepSources = [
         ...thinSources,
+        { label: 'context abstract', text: sideLoad.abstract },
+        { label: 'context overview', text: sideLoad.overview },
         { label: 'git', text: [repo.git.branch ?? '', repo.git.summary, repo.git.remoteUrl ?? ''].join(' ') },
         { label: 'install log', text: repo.install.logTail.join('\n') },
         { label: 'runtime log', text: repo.runtime.logTail.join('\n') },

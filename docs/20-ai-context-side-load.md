@@ -82,10 +82,10 @@ Recommended sequence:
 
 1. treat tracked docs as canonical and start with the relevant side-load entry packet
 2. refresh the side-load cache if the session is broad, new, or likely to re-read workspace context repeatedly
-3. let the chat use generated `entry.md`, `abstract.md`, and `overview.md` as the fast entry layer
+3. let the chat use generated `entry.md` as the fast entry layer; open `abstract.md`, `overview.md`, or `sources.json` only when broader planning or provenance checks are needed
 4. fall back to tracked docs, manifests, and repo files for any real decision or ambiguity
 5. regenerate or ignore the cache if Workspace Hub reports the side-load state as `stale` or `missing`
-6. if a repo intake just created or updated setup docs, close the repo into the current Codex thread with `tools/bin/workspace-memory save-repo <repo-path-or-name>` before continuing
+6. if a repo intake just created or updated setup docs, record that closeout in tracked repo docs; `tools/bin/workspace-memory save-repo` is temporarily disabled
 
 Practical operator flow:
 
@@ -96,7 +96,7 @@ tools/scripts/generate-context-cache.sh --repo workspace-hub --run
 
 Then start the chat with a handover instruction such as:
 
-> Read `docs/HANDOVER.md` first for the current workspace state. Use generated side-load files under `cache/context/` only as a compact entry layer, and treat tracked docs and repo files as canonical.
+> Read `docs/HANDOVER.md` first for the current workspace state. Use generated `entry.md` files under `cache/context/` only as a compact entry layer, and treat tracked docs and repo files as canonical.
 
 For repo-specific work, point the chat at the repo `entry.md` first, then the repo README or handover note only when the side-load packet is insufficient.
 
@@ -104,7 +104,7 @@ When a new repo folder was just added under `repos/`, use this order:
 
 1. run repo intake in Workspace Hub or the equivalent repo-doc setup flow
 2. make sure the repo has a runnable launcher command file
-3. close the repo into memory with `tools/bin/workspace-memory save-repo <repo-path-or-name>`
+3. record the repo closeout in tracked docs; MemPalace `workspace-memory` closeout is temporarily disabled
 4. reopen the generated repo `entry.md` if you want the compact chat packet before deeper docs
 
 ## Source set
