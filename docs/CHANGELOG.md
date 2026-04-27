@@ -5,6 +5,7 @@
 - Temporarily disabled `tools/bin/workspace-memory` so MemPalace closeout, ingest, search, wake-up, export, and graph commands fail fast while the write-lock and corpus-size behavior is reviewed.
 - Updated handover and closeout guidance to rely on tracked docs and optional context-cache summaries instead of automatic MemPalace saves during the pause.
 - Reduced default agent context load by replacing the long live handover with a concise current-state handover, archiving the previous detailed log under `docs/archive/`, slimming `AGENTS.md`, and adding `docs/21-agent-token-budget.md`.
+- Aligned Workspace Hub runtime behavior with the token-budget policy: MemPalace command actions are disabled while memory is paused, repo intake skips memory closeout, thin search indexes only metadata plus side-load `entry.md`, and heavier side-load files stay deep-only.
 
 ## 2026-04-24
 
