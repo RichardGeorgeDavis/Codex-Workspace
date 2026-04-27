@@ -306,7 +306,7 @@ export function RepoSnapshot({
   const showRepoSection = true
   const showArchiveSection = showArchived && filteredArchives.length > 0
   const showGroupedHeadings = showRepoSection && showArchiveSection
-  const hasVisibleItems = filteredRepos.length > 0 || filteredArchives.length > 0
+  const hasVisibleItems = filteredRepos.length > 0 || showArchiveSection
   const hasArtifactResults = indexedSearchResults.some((result) => result.category === 'artifact')
   const effectiveIndexedSearchFilter =
     indexedSearchFilter === 'artifact' && !hasArtifactResults ? 'all' : indexedSearchFilter
@@ -325,7 +325,7 @@ export function RepoSnapshot({
 
   return (
     <SectionCard
-      body="Sibling repos and visible archive files are discovered here. Filtering only changes the list view and does not modify anything on disk."
+      body="Sibling repos are discovered here. Archive files stay hidden until you explicitly show them, and filtering only changes the list view."
       className="wide reveal"
       eyebrow="Repo Discovery"
       title="Repo Discovery"
@@ -338,7 +338,7 @@ export function RepoSnapshot({
               onSearchChange(event.target.value)
               setIndexedSearchFilter('all')
             }}
-            placeholder="name, path, type, tag, side-load"
+            placeholder="name, path, type, tag, entry packet"
             type="search"
             value={searchTerm}
           />

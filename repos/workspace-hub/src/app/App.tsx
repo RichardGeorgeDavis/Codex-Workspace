@@ -248,7 +248,7 @@ export function App({ initialThemePreference }: AppProps) {
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
   const [selectedFilter, setSelectedFilter] = useState<RepoFilterValue>('all')
-  const [showArchived, setShowArchived] = useState(true)
+  const [showArchived, setShowArchived] = useState(false)
   const [workspaceView, setWorkspaceView] = useState<WorkspaceView>('dashboard')
   const [mempalaceTargetKind, setMempalaceTargetKind] =
     useState<WorkspaceCoreServiceTargetKind>('workspace-docs')
@@ -342,7 +342,9 @@ export function App({ initialThemePreference }: AppProps) {
     setError(null)
 
     try {
-      const base = await fetchWorkspaceSummaryBase(signal, reason)
+      const base = await fetchWorkspaceSummaryBase(signal, reason, {
+        includeArchives: showArchived,
+      })
       if (signal?.aborted) {
         return
       }
@@ -409,7 +411,9 @@ export function App({ initialThemePreference }: AppProps) {
 
     try {
       const [full, nextCapabilitySnapshot] = await Promise.all([
-        fetchWorkspaceSummary(signal, 'manual-refresh'),
+        fetchWorkspaceSummary(signal, 'manual-refresh', {
+          includeArchives: showArchived,
+        }),
         fetchWorkspaceCapabilitiesSnapshot(signal).catch(() => null),
       ])
       if (signal?.aborted) {
@@ -482,6 +486,38 @@ export function App({ initialThemePreference }: AppProps) {
         caughtError instanceof Error
           ? caughtError.message
           : 'Unable to open the requested workspace path.',
+      )
+    }
+  }
+
+  async function handleToggleArchived() {
+    if (showArchived) {
+      setShowArchived(false)
+      return
+    }
+
+    setShowArchived(true)
+    setError(null)
+
+    if (summaryRef.current?.archives.length) {
+      return
+    }
+
+    try {
+      const base = await fetchWorkspaceSummaryBase(undefined, 'manual-refresh', {
+        includeArchives: true,
+      })
+      const merged = mergeWorkspaceSummaryDiagnostics(base, summaryRef.current)
+
+      startTransition(() => {
+        setSummary(merged)
+      })
+    } catch (caughtError) {
+      setShowArchived(false)
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unable to load archived files.',
       )
     }
   }
@@ -1396,9 +1432,7 @@ export function App({ initialThemePreference }: AppProps) {
                   handleOpenDashboardView()
                 }}
                 onFilterChange={setSelectedFilter}
-                onToggleArchived={() => {
-                  setShowArchived((currentValue) => !currentValue)
-                }}
+                onToggleArchived={handleToggleArchived}
                 repoLayoutMode={repoLayoutMode}
                 searchTerm={searchTerm}
                 searchMode={indexedSearchMode}

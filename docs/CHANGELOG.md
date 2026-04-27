@@ -6,6 +6,7 @@
 - Updated handover and closeout guidance to rely on tracked docs and optional context-cache summaries instead of automatic MemPalace saves during the pause.
 - Reduced default agent context load by replacing the long live handover with a concise current-state handover, archiving the previous detailed log under `docs/archive/`, slimming `AGENTS.md`, and adding `docs/21-agent-token-budget.md`.
 - Aligned Workspace Hub runtime behavior with the token-budget policy: MemPalace command actions are disabled while memory is paused, repo intake skips memory closeout, thin search indexes only metadata plus side-load `entry.md`, and heavier side-load files stay deep-only.
+- Reduced non-MemPalace default context exposure by hiding Workspace Hub archive files unless `includeArchives=true` is requested, keeping archive UI opt-in, shortening `docs/08-first-run-and-updates.md`, and documenting `safe-readonly` as the token-sensitive MCP profile for routine repo work.
 
 ## 2026-04-24
 

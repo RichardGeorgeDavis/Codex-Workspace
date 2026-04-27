@@ -4,9 +4,17 @@ This folder is the canonical home for the Codex Workspace documentation set.
 
 Use [../README.md](../README.md) as the public-facing project entrypoint, then use this folder for the detailed workspace and handover material.
 
+## Fast Path
+
+For routine agent sessions, start with `HANDOVER.md`, the relevant repo README, and only the specific doc needed for the task. Use generated `cache/context/**/entry.md` packets before opening broader generated summaries, and keep `docs/archive/`, logs, artifacts, screenshots, and `ref/` evidence as opt-in context.
+
+For setup, start with `08-first-run-and-updates.md`. It is now the concise quick path; the historical long setup note lives under `docs/archive/08-first-run-and-updates-history-2026-04.md`.
+
+For token-sensitive routine repo work, prefer the `safe-readonly` MCP profile. Use heavier profiles such as `default-full` only when browser, GitHub, docs, or debugging tools are needed.
+
 ## Core pack
 
-Read these in order:
+Reference these as needed:
 
 1. `00-overview.md`
 2. `01-codex-workspace-handover.md`
@@ -38,7 +46,7 @@ Read these in order:
 - `00-overview.md` to `05-examples-and-templates.md` define the handover pack.
 - `06-cross-agent-skills-and-mcp.md` defines the cross-agent portability layout for skills and MCP.
 - `07-context-cache-and-retrieval.md` defines the layered context-cache model and retrieval visibility rules.
-- `08-first-run-and-updates.md` defines the Hub-first onboarding path, setup profiles, and update flow.
+- `08-first-run-and-updates.md` defines the concise Hub-first onboarding path, setup profiles, update flow, and token-sensitive tooling defaults.
 - `09-new-repo-baseline.md` defines the default repo-intake and repo-baseline contract.
 - `10-release-readiness.md` defines the stable contract, support matrix, migration note, and stable release gate.
 - `11-core-memory-and-reference-promotion.md` defines the workspace source taxonomy and how reviewed GitHub references can graduate into abilities, repo-level adoption, or core workspace services, with MemPalace as the current target.
@@ -63,7 +71,7 @@ Read these in order:
 - `tools/templates/` holds starter metadata templates.
 - `tools/manifests/` holds source lists and supporting manifests for scripts.
 - `tools/github-rulesets/` holds importable repository ruleset JSON for GitHub.
-- `docs/archive/` holds historical handover and implementation logs that should be opened only for targeted archaeology.
+- `docs/archive/` holds historical handover, setup, and implementation logs that should be opened only for targeted archaeology.
 - `docs/wiki/` holds starter content for the optional GitHub wiki surface.
 - `docs/plans/` holds tracked implementation plans for multi-session work (for example docs closeout).
 - `repos/workspace-hub/docs/` holds repo-local documentation for Workspace Hub itself.

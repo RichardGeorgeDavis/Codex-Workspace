@@ -82,11 +82,13 @@ pnpm dev
 The Hub still shows the `Workspace memory` surface, but MemPalace actions are
 temporarily paused because `tools/bin/workspace-memory` is disabled during the
 write-lock and corpus-size review.
+Archive files are also hidden from the default Hub summary and only load when
+you explicitly enable archived items in Repo Discovery.
 The dashboard also exposes installable abilities and core services through the Workspace Capabilities panel, and supports a persisted `split` versus `discovery-first` repo layout.
 
 If you want the fuller workspace path after that:
 
-- Start with [docs/08-first-run-and-updates.md](docs/08-first-run-and-updates.md).
+- Start with the short [docs/08-first-run-and-updates.md](docs/08-first-run-and-updates.md) quick path.
 - Use [docs/README.md](docs/README.md) for the detailed docs index.
 - Use [docs/20-ai-context-side-load.md](docs/20-ai-context-side-load.md) for the generated AI side-load contract and the `generate-context-cache.sh` workflow.
 - Use [docs/09-new-repo-baseline.md](docs/09-new-repo-baseline.md) when adding or onboarding a repo.
@@ -245,9 +247,10 @@ This keeps context easier to inspect, reason about, and adapt across tools while
 
 Default token-saving stance: read `docs/HANDOVER.md` for current state, use only
 `cache/context/.../entry.md` when a generated packet helps, keep Workspace Hub
-search in `thin` mode, and avoid `docs/archive/`, `ref/`, `screenshots/`,
-`cache/`, and `shared/mempalace/` unless the task explicitly needs them. See
-[docs/21-agent-token-budget.md](docs/21-agent-token-budget.md).
+search in `thin` mode, leave Hub archive files hidden, prefer the
+`safe-readonly` MCP profile for routine repo work, and avoid `docs/archive/`,
+`ref/`, `screenshots/`, `cache/`, and `shared/mempalace/` unless the task
+explicitly needs them. See [docs/21-agent-token-budget.md](docs/21-agent-token-budget.md).
 
 Tracked repo knowledge belongs in public docs, manifests, and portable skills. Local operator memory belongs in ignored local files until it becomes stable enough to promote into tracked project guidance.
 

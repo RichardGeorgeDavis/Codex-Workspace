@@ -543,6 +543,34 @@ test('base summary mode skips heavy diagnostics while preserving repo discovery'
   assert.equal(repo.savedMetadata, null)
 })
 
+test('workspace summaries hide archive files unless explicitly requested', async () => {
+  await writeTextFile(path.join(tempWorkspaceRoot, 'repos', 'fixture-archive.zip'), 'archive fixture\n')
+  const workspaceModule = await importWorkspaceModule(tempWorkspaceRoot, '60000')
+  workspaceModule.invalidateWorkspaceSummaryCache()
+
+  const defaultSummary = await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+    { includeDiagnostics: false, repoProjection: 'list' },
+  )
+
+  assert.deepEqual(defaultSummary.archives, [])
+  assert.equal(defaultSummary.stats.archiveFiles, 0)
+
+  const archiveSummary = await workspaceModule.buildWorkspaceSummary(
+    4101,
+    new Map(),
+    new Map(),
+    { includeArchives: true, includeDiagnostics: false, repoProjection: 'list' },
+  )
+
+  assert.ok(
+    archiveSummary.archives.some((archive) => archive.relativePath === 'repos/fixture-archive.zip'),
+  )
+  assert.ok(archiveSummary.stats.archiveFiles >= 1)
+})
+
 test('repo details can eagerly hydrate diagnostics without rebuilding full workspace summary', async () => {
   await createNodeRepo(tempWorkspaceRoot, 'repo-detail-hydration')
   await initGitRepo(tempWorkspaceRoot, 'repo-detail-hydration')

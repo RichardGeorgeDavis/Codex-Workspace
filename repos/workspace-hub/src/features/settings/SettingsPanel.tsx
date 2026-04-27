@@ -101,7 +101,7 @@ export function SettingsPanel({
                 <code>{summary?.stats.topLevelEntries}</code>
               </li>
               <li className="settings-item">
-                <span>Archive files</span>
+                <span>Loaded archive files</span>
                 <code>{summary?.stats.archiveFiles}</code>
               </li>
               <li className="settings-item">

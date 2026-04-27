@@ -37,6 +37,9 @@ instead of loading whole folders.
 
 Use Workspace Hub indexed search in `thin` mode by default.
 
+Hub archive files are hidden from default summary payloads. Load them only with
+the explicit archived-items UI path or an `includeArchives=true` summary request.
+
 Keep artifact indexing disabled unless needed:
 
 ```bash
@@ -45,6 +48,14 @@ WORKSPACE_HUB_SEARCH_INCLUDE_ARTIFACTS=false
 
 Use deep search only for explicit investigation tasks where broad repo logs,
 docs, or generated artifacts are likely to matter.
+
+## Tool Profiles
+
+For routine repo work, prefer the smallest supported MCP surface such as
+`safe-readonly`.
+
+Use heavier profiles such as `default-full` only when the current task needs
+browser automation, GitHub operations, live documentation, or debugging tools.
 
 ## Side-Load Summaries
 

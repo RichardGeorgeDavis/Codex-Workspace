@@ -19,7 +19,6 @@ export function StatusStrip({
   stopAllPending,
   summary,
 }: StatusStripProps) {
-  const archiveCount = summary?.stats.archiveFiles ?? 0
   const runningRepos = summary?.stats.runningRepos ?? 0
   const items: {
     label: string
@@ -28,14 +27,7 @@ export function StatusStrip({
   }[] = [
     {
       label: 'Discovered repos',
-      note: (
-        <>
-          Current repo records in the Hub
-          {!loading && archiveCount ? (
-            <span className="status-card-subnote">Archived files: {archiveCount}</span>
-          ) : null}
-        </>
-      ),
+      note: 'Current repo records in the Hub',
       value: summary?.stats.discoveredRepos ?? '--',
     },
     {
