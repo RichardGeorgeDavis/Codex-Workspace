@@ -50,7 +50,8 @@ The first version should not assume that MemPalace already exposes a rich, direc
 
 Add a workspace-owned export step that reads MemPalace data and emits a graph document for one selected target.
 
-Preferred command shape:
+Historical command shape, currently paused because `tools/bin/workspace-memory`
+is disabled during the write-lock and corpus-size review:
 
 ```bash
 tools/bin/workspace-memory build-graph <target>

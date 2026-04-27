@@ -43,8 +43,8 @@ Workspace Hub is a local control plane for people who manage many standalone rep
 - streams live runtime, install, cover, and activity updates from the local API
 - indexes repo metadata, manifests, side-load summaries, recent logs, failure reports, and local agent-job artifacts for server-side search, with a fast default `thin` mode plus an opt-in `deep` mode for heavier repo content
 - reads generated repo side-load summaries on repo-detail hydration so operators can inspect context-cache freshness and open the generated `entry.md`, `abstract.md`, `overview.md`, and provenance files without paying for that metadata on every base summary refresh
-- exposes a dedicated Workspace memory surface for MemPalace service state, target selection, in-app retrieval search, target-scoped graph builds, and safe wrapper actions
-- builds target-scoped MemPalace graph artifacts from normalized sidecars and nearby markdown instead of introducing a second ingestion engine
+- exposes a dedicated Workspace memory surface for MemPalace service state, target selection, and memory actions; those actions are currently paused because `tools/bin/workspace-memory` is disabled during the write-lock and corpus-size review
+- retains the target-scoped MemPalace graph design, but graph builds are paused while the wrapper is disabled
 - stores lightweight per-repo metadata and recent activity locally
 - writes structured local failure reports for install and runtime errors
 - includes persisted appearance controls with five built-in presets and light or dark mode
@@ -319,14 +319,14 @@ At the moment, Workspace Hub has no required optional ability dependency.
 
 ## Workspace Memory Graph
 
-Workspace Hub now includes a Phase 1 graph flow for Workspace memory.
+Workspace Hub includes a Phase 1 graph flow for Workspace memory, currently paused while `tools/bin/workspace-memory` is disabled.
 
 Current model:
 
 - keep MemPalace as the memory source of truth
 - normalize target-scoped MemPalace sidecars plus nearby markdown into a graph export
 - write rebuildable graph artifacts under `cache/mempalace/<user>/graphs/`
-- expose `Build graph`, `Rebuild graph`, `Open graph`, and `Open graph folder` from the Workspace memory page
+- expose graph actions from the Workspace memory page once the wrapper pause is lifted
 
 This is intentionally a derived view, not a second memory engine beside MemPalace.
 

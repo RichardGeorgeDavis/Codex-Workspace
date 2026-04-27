@@ -307,10 +307,21 @@ export function RepoSnapshot({
   const showArchiveSection = showArchived && filteredArchives.length > 0
   const showGroupedHeadings = showRepoSection && showArchiveSection
   const hasVisibleItems = filteredRepos.length > 0 || filteredArchives.length > 0
+  const hasArtifactResults = indexedSearchResults.some((result) => result.category === 'artifact')
+  const effectiveIndexedSearchFilter =
+    indexedSearchFilter === 'artifact' && !hasArtifactResults ? 'all' : indexedSearchFilter
+  const indexedSearchFilters: Array<[IndexedSearchFilterValue, string]> = [
+    ['all', 'All'],
+    ['repo', 'Repos'],
+    ['service', 'Services'],
+    ['capability', 'Capabilities'],
+    ['failure-report', 'Failures'],
+    ...(hasArtifactResults ? ([['artifact', 'Artifacts']] as Array<[IndexedSearchFilterValue, string]>) : []),
+  ]
   const visibleIndexedResults =
-    indexedSearchFilter === 'all'
+    effectiveIndexedSearchFilter === 'all'
       ? indexedSearchResults
-      : indexedSearchResults.filter((result) => result.category === indexedSearchFilter)
+      : indexedSearchResults.filter((result) => result.category === effectiveIndexedSearchFilter)
 
   return (
     <SectionCard
@@ -343,7 +354,7 @@ export function RepoSnapshot({
             value={searchMode}
           >
             <option value="thin">Thin</option>
-            <option value="deep">Deep</option>
+            <option value="deep">Deep (slower)</option>
           </select>
         </label>
 
@@ -387,19 +398,10 @@ export function RepoSnapshot({
           </div>
 
           <div className="search-filter-row" role="group" aria-label="Indexed search filters">
-            {(
-              [
-                ['all', 'All'],
-                ['repo', 'Repos'],
-                ['service', 'Services'],
-                ['capability', 'Capabilities'],
-                ['failure-report', 'Failures'],
-                ['artifact', 'Artifacts'],
-              ] as const
-            ).map(([value, label]) => (
+            {indexedSearchFilters.map(([value, label]) => (
               <button
                 key={value}
-                className={`search-filter-chip ${indexedSearchFilter === value ? 'active' : ''}`}
+                className={`search-filter-chip ${effectiveIndexedSearchFilter === value ? 'active' : ''}`}
                 onClick={() => {
                   setIndexedSearchFilter(value)
                 }}
@@ -431,16 +433,16 @@ export function RepoSnapshot({
           ) : indexedSearchLoading ? (
             <p className="loading-copy">
               {searchMode === 'deep'
-                ? 'Searching indexed metadata plus debug-only docs, logs, and artifacts...'
-                : 'Searching indexed metadata and side-load summaries...'}
+                ? 'Searching indexed metadata plus debug-only docs, logs, and enabled artifacts...'
+                : 'Searching indexed metadata and entry packets...'}
             </p>
           ) : (
             <div className="empty-state">
               <strong>No indexed matches for this filter yet.</strong>
               <p>
                 {searchMode === 'deep'
-                  ? 'Try a broader phrase or switch filters. Deep search includes debug-only docs and artifacts when available.'
-                  : 'Try a broader phrase, switch filters, or use Deep mode for README, HANDOVER, log, and artifact content.'}
+                  ? 'Try a broader phrase or switch filters. Deep search includes debug-only docs and enabled artifacts.'
+                  : 'Try a broader phrase, switch filters, or use Deep (slower) only when README, HANDOVER, logs, or broader side-load summaries are needed.'}
               </p>
             </div>
           )}

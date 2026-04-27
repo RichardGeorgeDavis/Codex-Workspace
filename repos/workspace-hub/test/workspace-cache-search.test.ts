@@ -213,8 +213,12 @@ test('thin search uses side-load summaries while deep search can include debug-o
     '# entry\nThin-token beta-654\n',
   )
   await writeTextFile(
+    path.join(tempWorkspaceRoot, 'cache', 'context', 'repos', 'repo-search-modes', 'abstract.md'),
+    '# abstract\nDeep-side-load token delta-432\n',
+  )
+  await writeTextFile(
     path.join(tempWorkspaceRoot, 'cache', 'context', 'repos', 'repo-search-modes', 'overview.md'),
-    '# overview\nThin-token beta-654\n',
+    '# overview\nDeep-side-load token gamma-321\n',
   )
 
   const searchModule = await importWorkspaceSearchModule(tempWorkspaceRoot, 'false')
@@ -331,12 +335,19 @@ test('thin search uses side-load summaries while deep search can include debug-o
   assert.equal(thinResult.mode, 'thin')
   assert.ok(thinResult.results.some((entry) => entry.category === 'repo'))
 
-  const thinMiss = await searchModule.searchWorkspace('gamma-321', [repo], [], [], 'thin')
-  assert.equal(thinMiss.results.length, 0)
+  const thinOverviewMiss = await searchModule.searchWorkspace('gamma-321', [repo], [], [], 'thin')
+  assert.equal(thinOverviewMiss.results.length, 0)
+
+  const thinAbstractMiss = await searchModule.searchWorkspace('delta-432', [repo], [], [], 'thin')
+  assert.equal(thinAbstractMiss.results.length, 0)
 
   const deepResult = await searchModule.searchWorkspace('gamma-321', [repo], [], [], 'deep')
   assert.equal(deepResult.mode, 'deep')
   assert.ok(deepResult.results.some((entry) => entry.category === 'repo'))
+
+  const deepAbstractResult = await searchModule.searchWorkspace('delta-432', [repo], [], [], 'deep')
+  assert.equal(deepAbstractResult.mode, 'deep')
+  assert.ok(deepAbstractResult.results.some((entry) => entry.category === 'repo'))
 })
 
 test('deep search only indexes the configured file prefix for large files', async () => {

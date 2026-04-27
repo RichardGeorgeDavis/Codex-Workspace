@@ -318,6 +318,8 @@ type CoreServiceCommandOptions = {
   searchQuery?: string | null
 }
 
+const workspaceMemoryPausedMessage = 'Workspace memory is temporarily paused.'
+
 function buildCoreServiceCommandInvocation(
   service: WorkspaceCoreService,
   commandId: WorkspaceCoreServiceCommandId,
@@ -397,6 +399,10 @@ export async function runCoreServiceCommand(
   commandId: WorkspaceCoreServiceCommandId,
   options: CoreServiceCommandOptions = {},
 ) {
+  if (service.id === 'mempalace') {
+    throw new Error(workspaceMemoryPausedMessage)
+  }
+
   if (commandId === 'runtime-start') {
     await startCoreService(service)
     return {

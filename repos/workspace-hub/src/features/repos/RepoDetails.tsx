@@ -852,7 +852,7 @@ function RepoDetailsContent({
           title="Context cache"
         >
           <p className="section-copy">
-            Repo side-load files are generated under <code>cache/context/</code> and treated as optional read-only summaries rather than repo truth. The default repo route is entry packet, then abstract, then overview, then canonical docs only if needed.
+            Repo side-load files are generated under <code>cache/context/</code> and treated as optional read-only summaries rather than repo truth. The default repo route is the entry packet first; open broader generated files only when needed.
           </p>
 
           <dl className="details-list">
@@ -904,7 +904,7 @@ function RepoDetailsContent({
 
           <div className="action-row">
             <button
-              className="action-button"
+              className="primary-button"
               disabled={!sideLoad.outputs.find((output) => output.role === 'entry')}
               onClick={() => {
                 const output = sideLoad.outputs.find((entry) => entry.role === 'entry')
@@ -916,6 +916,13 @@ function RepoDetailsContent({
             >
               Open entry packet
             </button>
+          </div>
+
+          <p className="section-copy">
+            Deeper generated files are optional context checks, not the default handoff path.
+          </p>
+
+          <div className="action-row">
             <button
               className="action-button"
               disabled={!sideLoad.outputs.find((output) => output.role === 'abstract')}
