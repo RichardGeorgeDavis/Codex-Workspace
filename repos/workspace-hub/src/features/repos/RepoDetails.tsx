@@ -75,8 +75,8 @@ type RepoDetailsProps = {
       preferredMode: PreviewMode
       previewCommand?: string
       previewUrl?: string
-      servbayPath?: string
-      servbaySubdomain?: string
+      mappedHostPath?: string
+      mappedHostSubdomain?: string
       slug: string
       tags?: string[]
       type: RepoType
@@ -110,8 +110,8 @@ type ManifestDraft = {
   preferredMode: PreviewMode
   previewCommand: string
   previewUrl: string
-  servbayPath: string
-  servbaySubdomain: string
+  mappedHostPath: string
+  mappedHostSubdomain: string
   slug: string
   tags: string
   type: RepoType
@@ -209,8 +209,8 @@ function buildManifestDraft(repo: WorkspaceRepo): ManifestDraft {
     preferredMode: repo.preferredMode,
     previewCommand: repo.previewCommand ?? '',
     previewUrl: repo.previewUrl ?? '',
-    servbayPath: repo.servbayPath ?? '',
-    servbaySubdomain: repo.servbaySubdomain ?? '',
+    mappedHostPath: repo.mappedHostPath ?? '',
+    mappedHostSubdomain: repo.mappedHostSubdomain ?? '',
     slug: repo.slug,
     tags: repo.tags.join(', '),
     type: repo.type,
@@ -231,8 +231,8 @@ function buildManifestDraftFromRecord(manifest: WorkspaceManifestRecord): Manife
     preferredMode: manifest.preferredMode,
     previewCommand: manifest.previewCommand ?? '',
     previewUrl: manifest.previewUrl ?? '',
-    servbayPath: manifest.servbayPath ?? '',
-    servbaySubdomain: manifest.servbaySubdomain ?? '',
+    mappedHostPath: manifest.mappedHostPath ?? '',
+    mappedHostSubdomain: manifest.mappedHostSubdomain ?? '',
     slug: manifest.slug,
     tags: (manifest.tags ?? []).join(', '),
     type: manifest.type,
@@ -265,8 +265,8 @@ function buildManifestPayload(draft: ManifestDraft) {
     packageManager: draft.packageManager.trim() || undefined,
     previewCommand: draft.previewCommand.trim() || undefined,
     previewUrl: draft.previewUrl.trim() || undefined,
-    servbayPath: draft.servbayPath.trim() || undefined,
-    servbaySubdomain: draft.servbaySubdomain.trim() || undefined,
+    mappedHostPath: draft.mappedHostPath.trim() || undefined,
+    mappedHostSubdomain: draft.mappedHostSubdomain.trim() || undefined,
     tags: tags.length ? tags : undefined,
   }
 }
@@ -383,11 +383,11 @@ function buildTroubleshootingTips(repo: WorkspaceRepo) {
     )
   }
 
-  if (repo.preferredMode === 'servbay' && !repo.servbayPath && !repo.servbaySubdomain) {
+  if (repo.preferredMode === 'mapped-host' && !repo.mappedHostPath && !repo.mappedHostSubdomain) {
     tips.push('Mapped-host mode is selected, but no path or subdomain is configured yet. Add one before treating routed preview links as stable.')
   }
 
-  if (repo.preferredMode === 'servbay' && repo.previewUrlSource === 'runtime') {
+  if (repo.preferredMode === 'mapped-host' && repo.previewUrlSource === 'runtime') {
     tips.push('The current preview URL came from runtime logs. Save an explicit preview URL once the mapped-host route is stable so the Hub does not fall back to transient ports.')
   }
 
@@ -525,9 +525,9 @@ function RepoDetailsContent({
     repo.runtime.status === 'error'
   const sideLoad = repo.sideLoad
   const sideLoadStatus = sideLoad ? formatSideLoadStatus(sideLoad.status) : null
-  const hasMappedHostRouting = Boolean(repo.servbayPath || repo.servbaySubdomain)
+  const hasMappedHostRouting = Boolean(repo.mappedHostPath || repo.mappedHostSubdomain)
   const mappedHostStatus =
-    repo.preferredMode !== 'servbay'
+    repo.preferredMode !== 'mapped-host'
       ? 'not using mapped-host mode'
       : hasMappedHostRouting
         ? 'configured'
@@ -539,7 +539,7 @@ function RepoDetailsContent({
         ? 'unknown'
         : repo.dependencies.state
   const mappedHostBadgeTone =
-    repo.preferredMode !== 'servbay'
+    repo.preferredMode !== 'mapped-host'
       ? 'unknown'
       : hasMappedHostRouting
         ? 'ready'
@@ -772,9 +772,9 @@ function RepoDetailsContent({
             <dt>Mapped-host routing</dt>
             <dd>
               <span className={`status-pill ${mappedHostBadgeTone}`}>{mappedHostStatus}</span>
-              {repo.preferredMode === 'servbay'
+              {repo.preferredMode === 'mapped-host'
                 ? hasMappedHostRouting
-                  ? ` ${repo.servbaySubdomain ? `${repo.servbaySubdomain} subdomain` : repo.servbayPath}`
+                  ? ` ${repo.mappedHostSubdomain ? `${repo.mappedHostSubdomain} subdomain` : repo.mappedHostPath}`
                   : ' Add a mapped-host path or subdomain before relying on this mode.'
                 : ' Direct or external preview is currently preferred.'}
             </dd>
@@ -1173,7 +1173,7 @@ function RepoDetailsContent({
             >
               <option value="direct">direct</option>
               <option value="external">external</option>
-              <option value="servbay">mapped host (servbay)</option>
+              <option value="mapped-host">mapped host</option>
             </select>
           </label>
 
@@ -1445,7 +1445,7 @@ function RepoDetailsContent({
             >
               <option value="direct">direct</option>
               <option value="external">external</option>
-              <option value="servbay">mapped host (servbay)</option>
+              <option value="mapped-host">mapped host</option>
             </select>
           </label>
 
@@ -1605,12 +1605,12 @@ function RepoDetailsContent({
               onChange={(event) => {
                 setManifestDraft((currentDraft) => ({
                   ...currentDraft,
-                  servbayPath: event.target.value,
+                  mappedHostPath: event.target.value,
                 }))
               }}
               placeholder="/repo/example"
               type="text"
-              value={manifestDraft.servbayPath}
+              value={manifestDraft.mappedHostPath}
             />
           </label>
 
@@ -1620,12 +1620,12 @@ function RepoDetailsContent({
               onChange={(event) => {
                 setManifestDraft((currentDraft) => ({
                   ...currentDraft,
-                  servbaySubdomain: event.target.value,
+                  mappedHostSubdomain: event.target.value,
                 }))
               }}
               placeholder="workspace-hub"
               type="text"
-              value={manifestDraft.servbaySubdomain}
+              value={manifestDraft.mappedHostSubdomain}
             />
           </label>
         </div>
@@ -1670,7 +1670,7 @@ function RepoDetailsContent({
           ))}
         </ul>
 
-        {repo.preferredMode === 'servbay' ? (
+        {repo.preferredMode === 'mapped-host' ? (
           <p className="section-copy troubleshooting-followup">
             Mapped-host previews are only reliable when the repo has a tested path or subdomain and the saved preview URL matches the operator&apos;s local routing setup.
           </p>
@@ -1881,9 +1881,9 @@ function RepoDetailsContent({
         <div className="details-row">
           <dt>Mapped host</dt>
           <dd>
-            {repo.servbaySubdomain
-              ? `${repo.servbaySubdomain} subdomain`
-              : repo.servbayPath ?? 'No mapped-host routing set'}
+            {repo.mappedHostSubdomain
+              ? `${repo.mappedHostSubdomain} subdomain`
+              : repo.mappedHostPath ?? 'No mapped-host routing set'}
           </dd>
         </div>
         <div className="details-row">

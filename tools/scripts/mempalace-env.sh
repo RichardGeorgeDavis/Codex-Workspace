@@ -42,7 +42,6 @@ detect_mempalace_python() {
     "python3.11" \
     "python3.10" \
     "/usr/bin/python3" \
-    "/Applications/ServBay/package/python/current/Python.framework/Versions/Current/bin/python3" \
     "python3"
   do
     [ -n "$candidate" ] || continue

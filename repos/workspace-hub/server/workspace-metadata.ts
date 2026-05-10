@@ -40,7 +40,7 @@ type WorkspaceMetadataFile = {
   version: 1
 }
 
-const previewModes: PreviewMode[] = ['direct', 'external', 'servbay']
+const previewModes: PreviewMode[] = ['direct', 'external', 'mapped-host']
 const serverFile = fileURLToPath(import.meta.url)
 const serverDir = path.dirname(serverFile)
 const dataRoot = path.resolve(serverDir, '..', 'data')

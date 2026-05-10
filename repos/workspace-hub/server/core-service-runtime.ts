@@ -10,6 +10,7 @@ import type {
   WorkspaceCoreService,
   WorkspaceCoreServiceCommandId,
 } from '../src/types/workspace.ts'
+import { workspaceMemoryMaintenancePausedReason } from '../src/lib/workspaceMemoryPause.ts'
 import { publishWorkspaceEvent } from './live-events.ts'
 import { invalidateWorkspaceSearchIndex } from './workspace-search.ts'
 
@@ -114,6 +115,20 @@ function buildIdleInstall(command: string): RepoInstall {
   }
 }
 
+function serviceMaintenancePausedReason(service: WorkspaceCoreService) {
+  return service.maintenancePaused
+    ? service.maintenancePausedReason ?? workspaceMemoryMaintenancePausedReason
+    : null
+}
+
+function assertServiceMaintenanceAvailable(service: WorkspaceCoreService) {
+  const pausedReason = serviceMaintenancePausedReason(service)
+
+  if (pausedReason) {
+    throw new Error(pausedReason)
+  }
+}
+
 export function getCoreServiceRuntimeSnapshots() {
   return new Map(
     [...managedRuntimes.entries()].map(([serviceId, record]) => [serviceId, record.snapshot]),
@@ -135,6 +150,8 @@ export function canInstallCoreService(service: WorkspaceCoreService) {
 }
 
 export async function startCoreService(service: WorkspaceCoreService) {
+  assertServiceMaintenanceAvailable(service)
+
   const existing = managedRuntimes.get(service.id)
   if (existing?.snapshot.status === 'running') {
     throw new Error(`${service.name} is already running.`)
@@ -201,6 +218,8 @@ export async function startCoreService(service: WorkspaceCoreService) {
 }
 
 export async function stopCoreService(service: WorkspaceCoreService) {
+  assertServiceMaintenanceAvailable(service)
+
   const record = managedRuntimes.get(service.id)
   if (!record || record.snapshot.status !== 'running') {
     throw new Error(`${service.name} is not running.`)
@@ -222,6 +241,8 @@ export async function stopCoreService(service: WorkspaceCoreService) {
 }
 
 export async function restartCoreService(service: WorkspaceCoreService) {
+  assertServiceMaintenanceAvailable(service)
+
   const existing = managedRuntimes.get(service.id)
   if (existing?.snapshot.status === 'running') {
     existing.child.kill('SIGTERM')
@@ -232,6 +253,8 @@ export async function restartCoreService(service: WorkspaceCoreService) {
 }
 
 export async function runCoreServiceInstall(service: WorkspaceCoreService) {
+  assertServiceMaintenanceAvailable(service)
+
   const existing = managedInstalls.get(service.id)
   if (existing?.snapshot.status === 'running') {
     throw new Error(`${service.name} install is already running.`)
@@ -297,6 +320,8 @@ export async function runCoreServiceInstall(service: WorkspaceCoreService) {
 }
 
 export async function runCoreServiceSync(service: WorkspaceCoreService) {
+  assertServiceMaintenanceAvailable(service)
+
   await execFileAsync(service.syncCommandArgs[0], service.syncCommandArgs.slice(1), {
     cwd: service.repoPresent ? service.repoPath : undefined,
     env: process.env,
@@ -317,8 +342,6 @@ type CoreServiceCommandOptions = {
   repoRelativePath?: string | null
   searchQuery?: string | null
 }
-
-const workspaceMemoryPausedMessage = 'Workspace memory is temporarily paused.'
 
 function buildCoreServiceCommandInvocation(
   service: WorkspaceCoreService,
@@ -399,9 +422,7 @@ export async function runCoreServiceCommand(
   commandId: WorkspaceCoreServiceCommandId,
   options: CoreServiceCommandOptions = {},
 ) {
-  if (service.id === 'mempalace') {
-    throw new Error(workspaceMemoryPausedMessage)
-  }
+  assertServiceMaintenanceAvailable(service)
 
   if (commandId === 'runtime-start') {
     await startCoreService(service)

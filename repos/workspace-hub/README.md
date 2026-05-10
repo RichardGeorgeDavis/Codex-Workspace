@@ -206,17 +206,22 @@ curl -s "http://127.0.0.1:4101/api/workspace/observability"
 
 Manual smoke (live Hub acceptance):
 
+Mutating local API smoke calls must send
+`X-Workspace-Hub-Intent: same-origin`. The API rejects unsafe methods before
+body parsing when the header is missing, and rejects browser origins outside
+loopback/localhost unless an origin is explicitly listed in
+`WORKSPACE_HUB_ALLOWED_ORIGINS` for a mapped-host Hub session.
+
 ```bash
 pnpm dev:api
 pnpm dev:web --host 127.0.0.1 --port 4174
+HUB_INTENT_HEADER='X-Workspace-Hub-Intent: same-origin'
 curl -s http://127.0.0.1:4101/api/workspace/summary/base | jq '{repoCount: (.repos | length), capabilityCount: (.capabilities | length), firstRepo: (.repos[0] | {relativePath, detailLevel})}'
 curl -s "http://127.0.0.1:4101/api/workspace/summary/base?includeArchives=true" | jq '{archiveCount: (.archives | length)}'
 curl -s http://127.0.0.1:4101/api/capabilities | jq '{generatedAt, stats}'
 curl -s "http://127.0.0.1:4101/api/search?q=memory&mode=thin" | jq '{mode, total: (.results | length), categories: (.results | map(.category))}'
 curl -s "http://127.0.0.1:4101/api/search?q=memory&mode=deep" | jq '{mode, total: (.results | length), categories: (.results | map(.category))}'
-curl -s -X POST http://127.0.0.1:4101/api/services/context -H 'Content-Type: application/json' -d '{"serviceId":"mempalace","targetKind":"workspace-docs"}' | jq '{targetLabel, graph: .graph | {lastBuiltAt, nodeCount, edgeCount}}'
-curl -s -X POST http://127.0.0.1:4101/api/services/command -H 'Content-Type: application/json' -d '{"serviceId":"mempalace","commandId":"search","searchQuery":"workspace memory"}' | jq '{command, ok}'
-curl -s -X POST http://127.0.0.1:4101/api/services/command -H 'Content-Type: application/json' -d '{"serviceId":"mempalace","commandId":"build-graph"}' | jq '{command, ok}'
+curl -s -X POST http://127.0.0.1:4101/api/services/context -H 'Content-Type: application/json' -H "$HUB_INTENT_HEADER" -d '{"serviceId":"mempalace","targetKind":"workspace-docs"}' | jq '{targetLabel, searchEnabled: (.commands[] | select(.id == "search") | .enabled), buildGraphEnabled: (.commands[] | select(.id == "build-graph") | .enabled), graph: .graph | {lastBuiltAt, nodeCount, edgeCount}}'
 curl -s --get http://127.0.0.1:4101/api/repos/details --data-urlencode "relativePath=repos/workspace-hub" | jq '{relativePath, detailLevel, diagnosticsFreshness}'
 curl -s http://127.0.0.1:4101/api/health | jq '.workspaceHub.repoDetails'
 npx playwright screenshot --wait-for-selector 'text=Workspace memory' http://127.0.0.1:4174 /tmp/workspace-hub-workspace-memory.png
@@ -241,7 +246,7 @@ EOF
 npx playwright screenshot --load-storage /tmp/workspace-hub-discovery-storage.json --wait-for-selector 'text=Select a repo to open details.' --full-page http://127.0.0.1:4174 /tmp/workspace-hub-discovery-mode.png
 ```
 
-That smoke pass validates the current base-summary list projection, indexed capability-aware search, selected repo-detail hydration, `Workspace memory`, the in-app MemPalace search flow, target-scoped graph builds, the capability panel, the discovery-first inline empty-state prompt, and the inline selected-repo details rendering path.
+That smoke pass validates the current base-summary list projection, indexed capability-aware search, selected repo-detail hydration, `Workspace memory`, the paused MemPalace command surface, target-scoped graph metadata, the capability panel, the discovery-first inline empty-state prompt, and the inline selected-repo details rendering path.
 
 Default local endpoints:
 

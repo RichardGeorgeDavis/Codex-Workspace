@@ -49,6 +49,8 @@ function buildService(): WorkspaceCoreService {
     lastSearchQuery: null,
     lastSyncAt: null,
     lastWakeUpAt: null,
+    maintenancePaused: true,
+    maintenancePausedReason: 'Workspace memory is temporarily paused.',
     name: 'MemPalace',
     notes: '',
     originUrl: 'https://github.com/milla-jovovich/mempalace.git',
@@ -123,6 +125,8 @@ test('CoreServicesPanel renders skipped manifest warnings with remediation', () 
   assert.match(markup, /tools\/manifests\/workspace-capabilities\.json/)
   assert.match(markup, /Docs path resolves outside the workspace root and was rejected\./)
   assert.match(markup, /Use a workspace-relative `docsPath` that stays inside the workspace\./)
+  assert.match(markup, /Maintenance paused/)
+  assert.match(markup, /Stop paused/)
 })
 
 test('CoreServicesPanel empty state points at workspace capabilities manifest', () => {

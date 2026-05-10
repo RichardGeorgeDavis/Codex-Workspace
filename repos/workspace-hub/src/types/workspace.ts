@@ -1,4 +1,4 @@
-export type PreviewMode = 'direct' | 'external' | 'servbay'
+export type PreviewMode = 'direct' | 'external' | 'mapped-host'
 export type SummaryRequestReason =
   | 'action'
   | 'event'
@@ -189,8 +189,8 @@ export type WorkspaceManifestRecord = {
   preferredMode: PreviewMode
   previewCommand?: string
   previewUrl?: string
-  servbayPath?: string
-  servbaySubdomain?: string
+  mappedHostPath?: string
+  mappedHostSubdomain?: string
   slug: string
   tags?: string[]
   type: RepoType
@@ -364,6 +364,8 @@ export type WorkspaceCoreService = {
   lastSearchQuery: string | null
   lastSyncAt: string | null
   lastWakeUpAt: string | null
+  maintenancePaused: boolean
+  maintenancePausedReason: string | null
   name: string
   notes: string
   originUrl: string | null
@@ -478,8 +480,8 @@ export type WorkspaceRepo = {
   recommendedPreset: RepoPreset
   relativePath: string
   savedMetadata: RepoSavedMetadata | null
-  servbayPath: string | null
-  servbaySubdomain: string | null
+  mappedHostPath: string | null
+  mappedHostSubdomain: string | null
   slug: string
   suggestedManifest: WorkspaceManifestRecord
   sideLoad?: RepoSideLoad | null
@@ -503,7 +505,7 @@ export type WorkspaceSummary = {
     externalWordPressMode: string
     manifestPath: string
     previewMode: PreviewMode
-    servbayOptional: boolean
+    mappedHostOptional: boolean
   }
   sharedRoot: string
   stats: {

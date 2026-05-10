@@ -56,6 +56,7 @@ export function CoreServiceDetails({
   }
 
   const pendingPrefix = `service:${service.id}:`
+  const serviceMaintenancePaused = service.maintenancePaused
 
   return (
     <SectionCard
@@ -88,53 +89,53 @@ export function CoreServiceDetails({
       <div className="service-actions">
         <button
           className="action-button"
-          disabled={actionPendingKey === `${pendingPrefix}install`}
+          disabled={serviceMaintenancePaused || actionPendingKey === `${pendingPrefix}install`}
           onClick={() => {
             void onInstallAction(service.id)
           }}
           type="button"
         >
-          Install
+          {serviceMaintenancePaused ? 'Maintenance paused' : 'Install'}
         </button>
         <button
           className="action-button"
-          disabled={actionPendingKey === `${pendingPrefix}start`}
+          disabled={serviceMaintenancePaused || actionPendingKey === `${pendingPrefix}start`}
           onClick={() => {
             void onRuntimeAction(service.id, 'start')
           }}
           type="button"
         >
-          Start
+          {serviceMaintenancePaused ? 'Start paused' : 'Start'}
         </button>
         <button
           className="action-button"
-          disabled={actionPendingKey === `${pendingPrefix}restart`}
+          disabled={serviceMaintenancePaused || actionPendingKey === `${pendingPrefix}restart`}
           onClick={() => {
             void onRuntimeAction(service.id, 'restart')
           }}
           type="button"
         >
-          Restart
+          {serviceMaintenancePaused ? 'Restart paused' : 'Restart'}
         </button>
         <button
           className="action-button"
-          disabled={actionPendingKey === `${pendingPrefix}stop`}
+          disabled={serviceMaintenancePaused || actionPendingKey === `${pendingPrefix}stop`}
           onClick={() => {
             void onRuntimeAction(service.id, 'stop')
           }}
           type="button"
         >
-          Stop
+          {serviceMaintenancePaused ? 'Stop paused' : 'Stop'}
         </button>
         <button
           className="action-button"
-          disabled={actionPendingKey === `${pendingPrefix}sync`}
+          disabled={serviceMaintenancePaused || actionPendingKey === `${pendingPrefix}sync`}
           onClick={() => {
             void onSyncAction(service.id)
           }}
           type="button"
         >
-          Sync
+          {serviceMaintenancePaused ? 'Sync paused' : 'Sync'}
         </button>
       </div>
 

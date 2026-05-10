@@ -2,7 +2,14 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import { access } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { WorkspaceCoreServiceCommandId } from '../src/types/workspace.ts'
+import type {
+  WorkspaceCoreService,
+  WorkspaceCoreServiceCommandId,
+} from '../src/types/workspace.ts'
+import {
+  workspaceHubIntentHeaderName,
+  workspaceHubIntentHeaderValue,
+} from '../src/lib/workspaceHubIntent.ts'
 
 import { applyRepoAgentPreset, isRepoAgentPresetId } from './agent-tooling.ts'
 import { handleWorkspaceEvents, publishWorkspaceEvent } from './live-events.ts'
@@ -78,7 +85,19 @@ const runtimeTroubleshootingPath = fileURLToPath(
 
 const app = express()
 
-app.use(express.json())
+const unsafeHttpMethods = new Set(['DELETE', 'PATCH', 'POST', 'PUT'])
+const trustedRequestOrigins = parseTrustedRequestOrigins(
+  process.env.WORKSPACE_HUB_ALLOWED_ORIGINS,
+)
+
+function parseTrustedRequestOrigins(value: string | undefined) {
+  return new Set(
+    (value ?? '')
+      .split(',')
+      .map((entry) => normalizeOrigin(entry))
+      .filter((entry): entry is string => Boolean(entry)),
+  )
+}
 
 function isLocalPreviewTarget(target: string | null) {
   if (!target) {
@@ -102,6 +121,73 @@ function isLocalPreviewTarget(target: string | null) {
   }
 }
 
+function normalizeOrigin(value: string | undefined) {
+  if (!value?.trim()) {
+    return null
+  }
+
+  try {
+    return new URL(value.trim()).origin
+  } catch {
+    return null
+  }
+}
+
+function isLoopbackOrigin(origin: string) {
+  try {
+    const url = new URL(origin)
+    const hostname = url.hostname.toLowerCase()
+
+    return (
+      hostname === 'localhost' ||
+      hostname === '::1' ||
+      hostname === '[::1]' ||
+      hostname === '127.0.0.1' ||
+      hostname.startsWith('127.')
+    )
+  } catch {
+    return false
+  }
+}
+
+function isTrustedRequestOrigin(origin: string | undefined) {
+  if (!origin) {
+    return true
+  }
+
+  const normalizedOrigin = normalizeOrigin(origin)
+  if (!normalizedOrigin) {
+    return false
+  }
+
+  return isLoopbackOrigin(normalizedOrigin) || trustedRequestOrigins.has(normalizedOrigin)
+}
+
+app.use((request: Request, response: Response, next: NextFunction) => {
+  if (!unsafeHttpMethods.has(request.method.toUpperCase())) {
+    next()
+    return
+  }
+
+  if (request.get(workspaceHubIntentHeaderName) !== workspaceHubIntentHeaderValue) {
+    response.status(403).json({
+      message: 'Workspace Hub rejected this local action request.',
+    })
+    return
+  }
+
+  if (!isTrustedRequestOrigin(request.get('origin'))) {
+    response.status(403).json({
+      message: 'Workspace Hub rejected this request origin.',
+    })
+    return
+  }
+
+  next()
+})
+
+app.use(express.json())
+
 function requireRelativePath(body: unknown) {
   if (typeof body !== 'object' || body === null) {
     throw new Error('A repo relativePath is required.')
@@ -113,7 +199,7 @@ function requireRelativePath(body: unknown) {
     throw new Error('A repo relativePath is required.')
   }
 
-  return candidate.trim()
+  return candidate.trim().replace(/^\/+/, '')
 }
 
 function requireObjectPayload(body: unknown, fieldName: string, message: string) {
@@ -247,13 +333,37 @@ function targetMatchesPath(servicePath: string | null, targetPath: string | null
   )
 }
 
+function serviceMaintenancePausedReason(service: WorkspaceCoreService) {
+  return service.maintenancePaused
+    ? service.maintenancePausedReason ?? 'This service maintenance is temporarily paused.'
+    : null
+}
+
+function rejectPausedServiceMaintenance(service: WorkspaceCoreService, response: Response) {
+  const pausedReason = serviceMaintenancePausedReason(service)
+
+  if (!pausedReason) {
+    return false
+  }
+
+  response.status(400).json({ message: pausedReason })
+  return true
+}
+
 function buildMempalaceContextCommands(
-  _serviceId: string,
+  service: WorkspaceCoreService,
   targetKind: 'current-repo' | 'repo' | 'workspace-docs',
   repoRelativePath: string | null,
   targetAvailable: boolean,
 ) {
-  const pausedReason = 'Workspace memory is temporarily paused.'
+  const pausedReason = serviceMaintenancePausedReason(service)
+  const serviceCommandsEnabled = !pausedReason
+  const targetCommandsEnabled = serviceCommandsEnabled && targetAvailable
+  const repoCommandEnabled = serviceCommandsEnabled && Boolean(repoRelativePath)
+  const targetUnavailableReason = 'Select an available memory target before running this command.'
+  const repoUnavailableReason = 'Select an available repo target before running this command.'
+  const commandDisabledReason = (enabled: boolean, fallbackReason: string | null = null) =>
+    enabled ? null : pausedReason ?? fallbackReason
   const buildGraphCommand =
     targetAvailable && repoRelativePath
       ? `tools/bin/workspace-memory build-graph repo ${repoRelativePath}`
@@ -267,82 +377,82 @@ function buildMempalaceContextCommands(
   return [
     {
       description: 'Build a target-scoped graph export from MemPalace sidecars and nearby docs.',
-      enabled: false,
+      enabled: targetCommandsEnabled,
       id: 'build-graph',
       label: 'Build graph',
-      reasonDisabled: pausedReason,
+      reasonDisabled: commandDisabledReason(targetCommandsEnabled, targetUnavailableReason),
       shellCommand: buildGraphCommand,
     },
     {
       description: 'Check local service readiness and key workspace paths.',
-      enabled: false,
+      enabled: serviceCommandsEnabled,
       id: 'status',
       label: 'Status',
-      reasonDisabled: pausedReason,
+      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
       shellCommand: 'tools/bin/workspace-memory status',
     },
     {
       description: 'Run a retrieval search against the workspace memory corpus.',
-      enabled: false,
+      enabled: serviceCommandsEnabled,
       id: 'search',
       label: 'Search memory',
-      reasonDisabled: pausedReason,
+      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
       shellCommand: 'tools/bin/workspace-memory search <query>',
     },
     {
       description: 'Save workspace docs and the current Codex thread into MemPalace.',
-      enabled: false,
+      enabled: serviceCommandsEnabled,
       id: 'save-workspace',
       label: 'Save workspace',
-      reasonDisabled: pausedReason,
+      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
       shellCommand: 'tools/bin/workspace-memory save-workspace',
     },
     {
       description: 'Save the selected repo target plus the current Codex thread.',
-      enabled: false,
+      enabled: repoCommandEnabled,
       id: 'save-repo',
       label: 'Save repo',
-      reasonDisabled: pausedReason,
+      reasonDisabled: commandDisabledReason(repoCommandEnabled, repoUnavailableReason),
       shellCommand: saveRepoCommand,
     },
     {
       description: 'Export the active Codex thread into a readable transcript bundle.',
-      enabled: false,
+      enabled: serviceCommandsEnabled,
       id: 'export-codex-current',
       label: 'Export current Codex thread',
-      reasonDisabled: pausedReason,
+      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
       shellCommand: 'tools/bin/workspace-memory export-codex current',
     },
     {
       description: 'Mine the active Codex thread directly from the local session log.',
-      enabled: false,
+      enabled: serviceCommandsEnabled,
       id: 'mine-codex-current',
       label: 'Mine current Codex thread',
-      reasonDisabled: pausedReason,
+      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
       shellCommand: 'tools/bin/workspace-memory mine-codex-current',
     },
     {
       description: 'Refresh the MemPalace wake-up summary from the current corpus.',
-      enabled: false,
+      enabled: serviceCommandsEnabled,
       id: 'wake-up',
       label: 'Wake-up',
-      reasonDisabled: pausedReason,
+      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
       shellCommand: 'tools/bin/workspace-memory wake-up',
     },
     {
       description: 'Start the MemPalace MCP server for the workspace user.',
-      enabled: false,
+      enabled: serviceCommandsEnabled,
       id: 'runtime-start',
       label: 'Start MCP server',
-      reasonDisabled: pausedReason,
+      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
       shellCommand: 'tools/bin/mempalace-start',
     },
     {
       description: 'Fast-forward the MemPalace fork from upstream when the tree is clean.',
-      enabled: false,
+      enabled: serviceCommandsEnabled,
       id: 'sync',
       label: 'Sync fork',
-      reasonDisabled: pausedReason,
+      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
       shellCommand: 'tools/bin/mempalace-sync',
     },
   ]
@@ -722,7 +832,7 @@ app.post(
 
       response.json({
         commands: buildMempalaceContextCommands(
-          service.id,
+          service,
           targetKind,
           resolvedRepo?.relativePath ?? resolvedRepoRelativePath,
           targetKind === 'workspace-docs' || Boolean(resolvedRepo),
@@ -775,6 +885,10 @@ app.post(
 
       if (!service) {
         response.status(404).json({ message: 'Service not found.' })
+        return
+      }
+
+      if (rejectPausedServiceMaintenance(service, response)) {
         return
       }
 
@@ -890,6 +1004,10 @@ app.post(
         return
       }
 
+      if (rejectPausedServiceMaintenance(service, response)) {
+        return
+      }
+
       if (!canRunCoreService(service)) {
         response.status(400).json({ message: 'This service does not have a runtime command.' })
         return
@@ -937,6 +1055,10 @@ app.post(
         return
       }
 
+      if (rejectPausedServiceMaintenance(service, response)) {
+        return
+      }
+
       if (!canInstallCoreService(service)) {
         response.status(400).json({ message: 'This service does not have an install command.' })
         return
@@ -971,6 +1093,10 @@ app.post(
 
       if (!service) {
         response.status(404).json({ message: 'Service not found.' })
+        return
+      }
+
+      if (rejectPausedServiceMaintenance(service, response)) {
         return
       }
 
@@ -1072,11 +1198,11 @@ app.post(
         return
       }
 
-      await saveRepoActivity(relativePath, 'open')
+      await saveRepoActivity(repo.relativePath, 'open')
       invalidateWorkspaceCaches()
       publishWorkspaceEvent({
         message: target,
-        relativePath,
+        relativePath: repo.relativePath,
         status: 'open',
         type: 'activity',
       })
@@ -1114,11 +1240,11 @@ app.post(
         }
 
         const runtime = await startRepoRuntime(repo)
-        await saveRepoActivity(relativePath, 'runtime')
+        await saveRepoActivity(repo.relativePath, 'runtime')
         invalidateWorkspaceCaches({ search: true })
         publishWorkspaceEvent({
           message: action,
-          relativePath,
+          relativePath: repo.relativePath,
           status: runtime.status,
           type: 'activity',
         })
@@ -1128,11 +1254,11 @@ app.post(
 
       if (action === 'stop') {
         const runtime = await stopRepoRuntime(repo.path)
-        await saveRepoActivity(relativePath, 'runtime')
+        await saveRepoActivity(repo.relativePath, 'runtime')
         invalidateWorkspaceCaches({ search: true })
         publishWorkspaceEvent({
           message: action,
-          relativePath,
+          relativePath: repo.relativePath,
           status: runtime?.status ?? 'stopped',
           type: 'activity',
         })
@@ -1149,11 +1275,11 @@ app.post(
         }
 
         const runtime = await restartRepoRuntime(repo)
-        await saveRepoActivity(relativePath, 'runtime')
+        await saveRepoActivity(repo.relativePath, 'runtime')
         invalidateWorkspaceCaches({ search: true })
         publishWorkspaceEvent({
           message: action,
-          relativePath,
+          relativePath: repo.relativePath,
           status: runtime.status,
           type: 'activity',
         })
@@ -1211,11 +1337,11 @@ app.post(
       }
 
       const install = await runRepoInstall(repo)
-      await saveRepoActivity(relativePath, 'install')
+      await saveRepoActivity(repo.relativePath, 'install')
       invalidateWorkspaceCaches()
       publishWorkspaceEvent({
         message: 'install',
-        relativePath,
+        relativePath: repo.relativePath,
         status: install.status,
         type: 'activity',
       })
@@ -1243,11 +1369,11 @@ app.post(
       }
 
       const cover = await generateRepoCover(repo)
-      await saveRepoActivity(relativePath, 'open')
+      await saveRepoActivity(repo.relativePath, 'open')
       invalidateWorkspaceCaches()
       publishWorkspaceEvent({
         message: cover.coverImagePath,
-        relativePath,
+        relativePath: repo.relativePath,
         status: 'cover',
         type: 'cover',
       })
@@ -1275,12 +1401,12 @@ app.post(
       }
 
       const result = await runRepoIntake(repo, workspaceRoot)
-      await saveRepoActivity(relativePath, 'open')
+      await saveRepoActivity(repo.relativePath, 'open')
       invalidateWorkspaceCaches({ search: true })
 
       publishWorkspaceEvent({
         message: result.manifestCreated ? 'intake + manifest' : 'intake',
-        relativePath,
+        relativePath: repo.relativePath,
         status: 'intake',
         type: 'activity',
       })
@@ -1314,11 +1440,14 @@ app.post(
         return
       }
 
-      response.json({ activity: await saveRepoActivity(relativePath, 'select'), ok: true })
+      response.json({
+        activity: await saveRepoActivity(repo.relativePath, 'select'),
+        ok: true,
+      })
       invalidateWorkspaceCaches()
       publishWorkspaceEvent({
         message: 'select',
-        relativePath,
+        relativePath: repo.relativePath,
         status: 'select',
         type: 'activity',
       })
@@ -1361,7 +1490,7 @@ app.post(
       invalidateWorkspaceCaches()
       publishWorkspaceEvent({
         message: preset,
-        relativePath,
+        relativePath: repo.relativePath,
         status: result.appliedFiles.length ? 'applied' : 'unchanged',
         type: 'agent',
       })
@@ -1405,7 +1534,7 @@ app.post(
       invalidateWorkspaceCaches({ search: true })
       publishWorkspaceEvent({
         message: result.manifestPath,
-        relativePath,
+        relativePath: repo.relativePath,
         status: 'manifest',
         type: 'manifest',
       })
@@ -1432,7 +1561,7 @@ app.post(
       }
 
       const savedMetadata = await saveRepoMetadata(
-        relativePath,
+        repo.relativePath,
         requireObjectPayload(
           request.body,
           'metadata',
@@ -1443,7 +1572,7 @@ app.post(
       invalidateWorkspaceCaches({ search: true })
       publishWorkspaceEvent({
         message: 'saved',
-        relativePath,
+        relativePath: repo.relativePath,
         status: 'metadata',
         type: 'metadata',
       })
@@ -1470,11 +1599,11 @@ app.post(
         return
       }
 
-      await resetRepoMetadata(relativePath)
+      await resetRepoMetadata(repo.relativePath)
       invalidateWorkspaceCaches({ search: true })
       publishWorkspaceEvent({
         message: 'reset',
-        relativePath,
+        relativePath: repo.relativePath,
         status: 'metadata',
         type: 'metadata',
       })

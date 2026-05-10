@@ -194,11 +194,25 @@ test('core service memory commands are disabled while workspace memory is paused
   const service = await coreServices.findCoreService('mempalace', new Map(), new Map())
 
   assert.ok(service)
+  assert.equal(service.maintenancePaused, true)
+  assert.equal(service.maintenancePausedReason, 'Workspace memory is temporarily paused.')
 
   await assert.rejects(
     coreServiceRuntime.runCoreServiceCommand(service, 'search', {
       searchQuery: 'graph memory status',
     }),
+    /Workspace memory is temporarily paused/,
+  )
+  await assert.rejects(
+    coreServiceRuntime.runCoreServiceInstall(service),
+    /Workspace memory is temporarily paused/,
+  )
+  await assert.rejects(
+    coreServiceRuntime.startCoreService(service),
+    /Workspace memory is temporarily paused/,
+  )
+  await assert.rejects(
+    coreServiceRuntime.runCoreServiceSync(service),
     /Workspace memory is temporarily paused/,
   )
 })
