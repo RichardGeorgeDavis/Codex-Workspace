@@ -10,8 +10,8 @@
   "previewCommand": "pnpm preview",
   "previewUrl": "http://localhost:5173",
   "externalUrl": "",
-  "servbayPath": "/repo/example-project",
-  "servbaySubdomain": "",
+  "mappedHostPath": "/repo/example-project",
+  "mappedHostSubdomain": "",
   "healthcheckUrl": "http://localhost:5173",
   "tags": [
     "frontend",

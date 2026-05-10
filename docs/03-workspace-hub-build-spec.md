@@ -314,7 +314,7 @@ Suggested example:
   "buildCommand": "pnpm build",
   "previewCommand": "pnpm preview",
   "previewUrl": "http://localhost:5173",
-  "servbayPath": "/repo/three-lab",
+  "mappedHostPath": "/repo/three-lab",
   "tags": ["threejs", "art", "experiment"],
   "notes": "Uses heavy assets and WebGL"
 }
@@ -332,8 +332,8 @@ Suggested example:
 - `previewCommand`
 - `previewUrl`
 - `externalUrl`
-- `servbayPath`
-- `servbaySubdomain`
+- `mappedHostPath`
+- `mappedHostSubdomain`
 - `tags`
 - `notes`
 - `healthcheckUrl`
@@ -398,13 +398,13 @@ Preferred for:
 - WordPress sites already managed in Local
 - any repo controlled by another app
 
-### Mapped host preview (`servbay` mode in manifests)
+### Mapped host preview (`mapped-host` mode in manifests)
 Use when:
 - proxying is useful
 - a stable mapped path is known
 - the dashboard is being used as the front door
 
-The manifest enum value remains `servbay` for compatibility; do not force every repo into this mode.
+Use the manifest enum value `mapped-host` only for repos with a tested mapped path or subdomain; do not force every repo into this mode.
 
 ## Optional mapped-host integration requirements
 
@@ -464,7 +464,7 @@ Build:
 Build:
 - settings for optional proxy base domain
 - mapped-host preview-link generation
-- optional path and subdomain awareness (manifest keys `servbayPath`, `servbaySubdomain`)
+- optional path and subdomain awareness (manifest keys `mappedHostPath`, `mappedHostSubdomain`)
 - dashboard mode through a configured local hostname when used
 
 ## Definition of done
@@ -476,7 +476,7 @@ This build spec is complete when Codex can implement a Workspace Hub that:
 - classifies repo types conservatively
 - reads optional repo manifests
 - starts and stops supported repos
-- opens previews in direct, external, or mapped-host (`servbay`) mode
+- opens previews in direct, external, or mapped-host (`mapped-host`) mode
 - stores useful non-sensitive metadata
 - remains useful even if no proxy front door is configured
 - feels lightweight, practical, and scalable

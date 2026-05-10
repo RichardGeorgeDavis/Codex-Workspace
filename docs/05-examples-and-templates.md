@@ -77,7 +77,7 @@ The manifest template demonstrates:
 - a normal slug
 - package manager and commands
 - direct preview URL
-- optional mapped-host path (`servbayPath` in manifests)
+- optional mapped-host path (`mappedHostPath` in manifests)
 - optional healthcheck URL
 - lightweight notes and tags
 
@@ -140,7 +140,7 @@ Use for:
 - Local-managed WordPress sites
 - repos opened through another tool or service
 
-### `servbay` (mapped host / proxy)
+### `mapped-host` (mapped host / proxy)
 Use when:
 - a clean mapped path or local-domain route is stable
 - proxying adds real convenience

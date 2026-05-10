@@ -51,7 +51,7 @@ The Workspace Hub application should:
 - open preview URLs
 - open repos in Finder, terminal, editor, or Codex where useful
 - store known ports and preferred launch methods
-- optionally provide **mapped-host-aware** preview links when `servbayPath` / `servbaySubdomain` (stable manifest keys) are set
+- optionally provide **mapped-host-aware** preview links when `mappedHostPath` / `mappedHostSubdomain` (stable manifest keys) are set
 
 ## Recommended Hub app approach
 
@@ -169,7 +169,7 @@ Suggested fields:
 
 - `name`
 - `type`
-- `preferredMode` → `direct` | `servbay` | `external` (the value `servbay` means mapped-host/proxy preview; see Hub manifest docs for stable JSON keys)
+- `preferredMode` → `direct` | `mapped-host` | `external` (the value `mapped-host` means mapped-host/proxy preview; see Hub manifest docs for stable JSON keys)
 - `packageManager`
 - `devCommand`
 - `buildCommand`
@@ -180,8 +180,8 @@ Suggested fields:
 - `notes`
 - `tags`
 - `isWordPress`
-- `servbayPath`
-- `servbaySubdomain`
+- `mappedHostPath`
+- `mappedHostSubdomain`
 - `healthcheckUrl`
 
 Not every field is required.
@@ -218,8 +218,8 @@ Use this when:
 - proxying adds unnecessary complexity
 - the project expects to run at root
 
-### `servbay` (mapped host / proxy)
-The manifest uses the stable enum value `servbay` for previews served through a configured path or subdomain on your local domain (see `servbayPath` and `servbaySubdomain`).
+### `mapped-host` (mapped host / proxy)
+The manifest uses the stable enum value `mapped-host` for previews served through a configured path or subdomain on your local domain (see `mappedHostPath` and `mappedHostSubdomain`).
 
 Use this when:
 - clean URLs are useful
@@ -242,7 +242,7 @@ Use this when:
 Default to:
 - `external` for WordPress projects already managed in Local
 - `direct` for Vite, Three.js, WebGL, and most static repos
-- `servbay` only where a mapped path or subdomain is clearly useful and stable
+- `mapped-host` only where a mapped path or subdomain is clearly useful and stable
 
 This avoids fragile path/proxy assumptions.
 

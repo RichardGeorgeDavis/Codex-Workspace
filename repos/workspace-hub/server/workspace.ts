@@ -56,8 +56,8 @@ type RepoManifest = {
   preferredMode?: unknown
   previewCommand?: unknown
   previewUrl?: unknown
-  servbayPath?: unknown
-  servbaySubdomain?: unknown
+  mappedHostPath?: unknown
+  mappedHostSubdomain?: unknown
   slug?: unknown
   tags?: unknown
   type?: unknown
@@ -121,7 +121,7 @@ const archiveFileExtensions = [
 
 const ignoredArchiveDisplayRoots = ['repos/Check-[Sort+add]/']
 
-const previewModes: PreviewMode[] = ['direct', 'external', 'servbay']
+const previewModes: PreviewMode[] = ['direct', 'external', 'mapped-host']
 const publicManifestFileName = 'project.json'
 const localManifestFileName = 'project.local.json'
 const openAgentConfigCandidates = [
@@ -1794,8 +1794,8 @@ function buildSuggestedManifest(options: {
   preferredMode: PreviewMode
   previewCommand: string | null
   previewUrl: string | null
-  servbayPath: string | null
-  servbaySubdomain: string | null
+  mappedHostPath: string | null
+  mappedHostSubdomain: string | null
   slug: string
   tags: string[]
   type: RepoType
@@ -1813,8 +1813,8 @@ function buildSuggestedManifest(options: {
     preferredMode: options.preferredMode,
     previewCommand: options.previewCommand ?? undefined,
     previewUrl: options.previewUrl ?? undefined,
-    servbayPath: options.servbayPath ?? undefined,
-    servbaySubdomain: options.servbaySubdomain ?? undefined,
+    mappedHostPath: options.mappedHostPath ?? undefined,
+    mappedHostSubdomain: options.mappedHostSubdomain ?? undefined,
     slug: options.slug,
     tags: options.tags.length ? options.tags : undefined,
     type: options.type,
@@ -1997,9 +1997,9 @@ async function buildRepoRecord(
   const manifestEntryDocs = deriveEntryDocs(relativePath, names, manifest)
   const manifestTags = normalizeTags(manifest?.tags)
   const recommendedPreset = buildRecommendedPreset(type, packageManager)
-  const servbayPath = isNonEmptyString(manifest?.servbayPath) ? manifest.servbayPath : null
-  const servbaySubdomain = isNonEmptyString(manifest?.servbaySubdomain)
-    ? manifest.servbaySubdomain
+  const mappedHostPath = isNonEmptyString(manifest?.mappedHostPath) ? manifest.mappedHostPath : null
+  const mappedHostSubdomain = isNonEmptyString(manifest?.mappedHostSubdomain)
+    ? manifest.mappedHostSubdomain
     : null
   const suggestedManifest = buildSuggestedManifest({
     buildCommand: manifestBuildCommand,
@@ -2014,8 +2014,8 @@ async function buildRepoRecord(
     preferredMode: manifestPreferredMode,
     previewCommand,
     previewUrl: manifestPreviewUrl ?? fallbackPreviewUrl,
-    servbayPath,
-    servbaySubdomain,
+    mappedHostPath,
+    mappedHostSubdomain,
     slug,
     tags: manifestTags,
     type,
@@ -2111,8 +2111,8 @@ async function buildRepoRecord(
     recommendedPreset,
     relativePath,
     savedMetadata: savedOverrides,
-    servbayPath,
-    servbaySubdomain,
+    mappedHostPath,
+    mappedHostSubdomain,
     slug,
     suggestedManifest,
     tags: savedOverrides?.tags ?? manifestTags,
@@ -2456,7 +2456,7 @@ export async function buildWorkspaceSummary(
       externalWordPressMode: 'external',
       manifestPath: '.workspace/project.json',
       previewMode: 'direct',
-      servbayOptional: true,
+      mappedHostOptional: true,
     },
     sharedRoot,
     stats: {

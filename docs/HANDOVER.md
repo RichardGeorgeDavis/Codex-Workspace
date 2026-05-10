@@ -24,7 +24,7 @@ or use Hub memory command actions until the pause is explicitly lifted.
 
 - workspace release tag: `v1.2.2`
 - `repos/workspace-hub` version: `1.2.2`
-- stable release gate passed on `2026-04-10`
+- latest local release-readiness gate passed on `2026-05-10`
 - current release URL: `https://github.com/RichardGeorgeDavis/Codex-Workspace/releases/tag/v1.2.2`
 
 The workspace foundation is in place:
@@ -37,6 +37,33 @@ The workspace foundation is in place:
 - optional abilities live under `repos/abilities/`
 - `tools/ref/` is reference-only and can remain empty unless a reviewed snapshot is explicitly refreshed
 - launcher commands coordinate ports through `cache/runtime/ports/`
+
+## Latest Local Work
+
+On `2026-05-10`, Workspace Hub was hardened after a comprehensive audit:
+
+- unsafe API methods now require the local Hub intent header and reject foreign
+  browser origins before body parsing or any write, install, open, or runtime
+  action runs; mapped-host Hub origins must be explicitly allowlisted
+- Hub client POST helpers now send the intent header consistently
+- repo activity, metadata, and event writes use canonical discovered
+  `repo.relativePath` values instead of raw request payload paths
+- core service payloads now include `maintenancePaused` and
+  `maintenancePausedReason` so UI disablement and server rejection share the
+  same service-level contract
+- MemPalace install/start/restart/sync controls are disabled or relabeled while
+  workspace memory remains paused, and the API rejects paused MemPalace
+  maintenance and command calls directly
+- Workspace Hub README smoke commands now use the intent header and avoid paused
+  MemPalace command POSTs
+- stale-information handling now keeps tracked docs and manifests canonical,
+  treats generated cache as optional evidence, and requires live verification
+  before recording external service status as current
+- `tools/scripts/cleanup-sync-noise.sh` now defaults to dry-run and requires
+  `--run` before removing macOS or sync-client noise files
+- verification covered `pnpm typecheck`, `pnpm test`, `pnpm lint`,
+  `pnpm build`, live API smoke, in-app browser smoke, and
+  `tools/scripts/release-readiness.sh`
 
 ## Token Budget Rules
 
@@ -66,6 +93,10 @@ Implemented:
 - capability and core-service surfacing from the tracked manifest
 - base-summary refresh with selected-repo detail hydration
 - side-load freshness visibility for generated context packets
+- guarded local-only mutating API actions for writes, opens, installs, and
+  runtime controls
+- canonical repo-relative path persistence for repo activity, metadata, and
+  workspace events
 
 Workspace memory UI exists, but command actions are paused because
 `tools/bin/workspace-memory` is disabled.
@@ -75,10 +106,10 @@ Workspace memory UI exists, but command actions are paused because
 Practical next work:
 
 - TomeVault distribution mirror is implemented and pushed in commit `5186120`.
-  Public TomeVault still reports `1 config, 0 skill, 6 formats`; claim the
-  profile and ask Oli to rescan root `AGENTS.md` plus
-  `.agents/skills/*/SKILL.md`. Do not install Relay unless explicitly
-  requested.
+  Verify the public TomeVault profile state live before documenting scan counts
+  or skill totals as current. Claim the profile and ask Oli to rescan root
+  `AGENTS.md` plus `.agents/skills/*/SKILL.md`. Do not install Relay unless
+  explicitly requested.
 - keep future changes end-to-end and update this file plus `docs/CHANGELOG.md`
 - keep public surfaces aligned when workspace-wide behavior changes:
   `README.md`, `docs/README.md`, `docs/CHANGELOG.md`, and relevant repo-local docs

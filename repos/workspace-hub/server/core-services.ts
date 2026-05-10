@@ -12,6 +12,10 @@ import type {
   WorkspaceCoreServiceManifestIssue,
 } from '../src/types/workspace.ts'
 import {
+  isWorkspaceMemoryService,
+  workspaceMemoryMaintenancePausedReason,
+} from '../src/lib/workspaceMemoryPause.ts'
+import {
   resolveWorkspaceCommand,
   resolveWorkspacePath,
 } from './workspace-manifest-utils.ts'
@@ -368,6 +372,7 @@ export async function readCoreServices(
     const upstreamUrl = repoPresent ? await readGitValue(repoPath, ['remote', 'get-url', 'upstream']) : null
     const version = repoPresent ? await readVersion(repoPath) : null
     const state = await readState(statePath)
+    const maintenancePaused = isWorkspaceMemoryService(id)
 
     services.push({
       branch,
@@ -398,6 +403,8 @@ export async function readCoreServices(
       lastSearchQuery: state?.lastSearchQuery ?? null,
       lastSyncAt: state?.lastSyncAt ?? null,
       lastWakeUpAt: state?.lastWakeUpAt ?? null,
+      maintenancePaused,
+      maintenancePausedReason: maintenancePaused ? workspaceMemoryMaintenancePausedReason : null,
       name,
       notes: serviceConfig.notes?.trim() ?? '',
       originUrl,

@@ -13,11 +13,12 @@ The target is a practical release gate:
 - a clear support matrix
 - a migration note for the `.codex/` contract
 
-Current status:
+Current status, checked on 2026-05-10:
 
-- stable baseline verified on 2026-04-03
-- automated checks passed via `bootstrap-workspace.sh`, both doctor scripts, and `release-readiness.sh`
-- live Workspace Hub smoke checks passed for a direct-preview repo, an external WordPress repo, and a mixed-stack SwiftPM repo
+- workspace release tag remains `v1.2.2`
+- latest local `tools/scripts/release-readiness.sh` run passed with both doctor scripts, Workspace Hub tests, lint, build, skill-sync dry run, and placeholder checks
+- Workspace Hub tests covered 51 passing cases in the latest local gate
+- live Workspace Hub smoke checks are still required before publishing a new release or changing runtime behavior
 
 ## Stable contract
 
@@ -49,6 +50,10 @@ Run these before calling a release stable or after changes that could affect the
 6. Open Workspace Hub and verify a direct-preview repo, an external-preview repo, and one mixed-stack repo still behave correctly
 
 Do not skip the manual repo check just because automated verification passed.
+
+When documenting release state, prefer dated local verification results over
+open-ended claims such as "latest" or "current". External service status must
+be checked live before recording it as fact.
 
 ## Support matrix
 
