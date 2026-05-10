@@ -81,11 +81,10 @@ Useful maintenance scripts:
 
 - `tools/scripts/bootstrap-workspace.sh` prepares safe cache/context folders and can install `workspace-hub` dependencies without touching sibling repos.
 - `tools/bin/workspace-memory` is temporarily disabled while the MemPalace write-lock and corpus-size behavior is reviewed.
-- `tools/bin/mempalace-start` runs the MemPalace MCP server with the workspace-scoped home.
-- `tools/bin/mempalace-sync` fast-forwards the MemPalace repo when its working tree is clean.
+- `tools/bin/mempalace-start` and `tools/bin/mempalace-sync` are tracked MemPalace service wrappers, but do not run them during the current workspace-memory pause unless tracked docs explicitly lift the pause.
 - `tools/scripts/bootstrap-repo.sh` previews or runs repo-native install/setup using manifest `installCommand` first, then package-manager precedence such as env override, manifest `packageManager`, `package.json`, and lockfiles.
 - `tools/scripts/doctor-workspace.sh` runs a non-destructive environment and readiness check for the workspace, Workspace Hub, mixed-stack tooling, and Codex-related setup.
-- `tools/scripts/cleanup-sync-noise.sh` removes macOS and sync-client noise files such as `Icon\r` and `._*`, including the broken-ref cases when they leak into `.git/`.
+- `tools/scripts/cleanup-sync-noise.sh` previews macOS and sync-client noise cleanup by default; pass `--run` to remove `.DS_Store`, `Icon\r`, and `._*`, including broken-ref cases when they leak into `.git/`.
 - `tools/scripts/install-shared-playwright-browser.sh` installs Playwright browsers such as Chromium into the shared workspace cache so multiple repos can reuse them.
 - `tools/scripts/print-workspace-env.sh` prints the shared workspace environment exports, including the shared Playwright browser cache path.
 - `tools/scripts/install-mcp-profile.sh` generates and optionally applies the managed Codex Workspace MCP block for a named profile.
@@ -104,7 +103,7 @@ Useful maintenance scripts:
 - `tools/scripts/sync-reference-snapshots.sh` previews or refreshes ignored upstream reference snapshots under `tools/ref/`, with dry-run mode by default.
 - `tools/scripts/sync-codex-skills.sh` previews or syncs tracked workspace skill sources into repo `.codex/skills/` folders plus optional `.agents/skills/` compatibility mirrors, with dry-run mode by default.
 - `tools/scripts/sync-tomevault-skills.sh` previews or syncs the manifest-managed public `.agents/skills/` mirror used for TomeVault distribution, with dry-run mode by default.
-- `tools/scripts/trim-git-repos.sh` performs safe Git maintenance across `repos/` by cleaning `.git` sync noise, expiring older reflog entries, and running `git gc` with a conservative prune window.
+- `tools/scripts/trim-git-repos.sh` performs intentional Git maintenance across `repos/` by explicitly running `.git` sync-noise cleanup, expiring older reflog entries, and running `git gc` with a conservative prune window.
 - `tools/scripts/update-all.sh` can now fast-forward all repos or only a named repo group from a JSON manifest via `--group`.
 
 Local launch examples:

@@ -74,7 +74,11 @@ export function MempalaceWorkspacePage({
   const [searchQuery, setSearchQuery] = useState(service.lastSearchQuery ?? '')
   const searchCommand = context?.commands.find((command) => command.id === 'search') ?? null
   const buildGraphCommand = context?.commands.find((command) => command.id === 'build-graph') ?? null
-  const memoryPausedReason = searchCommand?.reasonDisabled ?? 'Workspace memory is temporarily paused.'
+  const memoryPausedReason =
+    service.maintenancePausedReason ??
+    searchCommand?.reasonDisabled ??
+    'Workspace memory is temporarily paused.'
+  const serviceMaintenancePaused = service.maintenancePaused
 
   return (
     <main className="memory-workspace-page">
@@ -95,13 +99,19 @@ export function MempalaceWorkspacePage({
           </button>
           <button
             className="primary-button"
-            disabled={actionPendingKey === `${pendingPrefix}install`}
+            disabled={serviceMaintenancePaused || actionPendingKey === `${pendingPrefix}install`}
             onClick={() => {
               void onInstallAction(service.id)
             }}
+            title={
+              serviceMaintenancePaused
+                ? (service.maintenancePausedReason ??
+                  'Workspace memory maintenance is paused while the wrapper is disabled.')
+                : undefined
+            }
             type="button"
           >
-            Install or repair
+            {serviceMaintenancePaused ? 'Maintenance paused' : 'Install or repair'}
           </button>
         </div>
       </section>
@@ -495,25 +505,29 @@ export function MempalaceWorkspacePage({
         </SectionCard>
 
         <SectionCard
-          body="Workspace Hub reads the installed MemPalace version directly from the local repo. With 3.1.0, wake-up filtering now suppresses low-signal sources by default and repo mining can opt into explicit exclude globs for generated output."
+          body={`Workspace Hub reads the installed MemPalace version directly from the local repo. ${
+            service.version
+              ? `The installed package reports ${service.version}.`
+              : 'No installed package version is available yet.'
+          } Maintenance commands stay disabled while workspace memory is paused.`}
           className="reveal delayed-more"
           eyebrow="Release Status"
-          title="MemPalace 3.1.0 in workspace"
+          title={service.version ? `MemPalace ${service.version} in workspace` : 'MemPalace release status'}
         >
           <ul className="memory-checklist">
             <li>Workspace Hub surfaces the installed MemPalace version from the local package metadata.</li>
-            <li>Wake-up now prefers project guidance over dependency metadata by skipping low-signal drawers.</li>
-            <li>Repo mining supports explicit `--exclude` patterns for lockfiles and generated output.</li>
+            <li>Wake-up and repo-mining improvements remain available only after the wrapper pause is lifted.</li>
+            <li>Repo mining should keep explicit excludes for lockfiles and generated output.</li>
             <li>Tracked docs remain canonical; MemPalace is supporting retrieval and long-term operator memory.</li>
             <li>Future phases can add automation for recurring saves and more conversation exporters.</li>
           </ul>
         </SectionCard>
 
         <SectionCard
-          body="These are the workspace-owned wrappers that the page can run safely. The shell command shown on each card is the exact command represented by the UI action."
+          body="These are the workspace-owned command shapes represented by the page. Disabled commands show the pause or target-selection reason instead of running during the workspace-memory pause."
           className="reveal delayed-more"
           eyebrow="Command Surface"
-          title="Safe MemPalace actions"
+          title="MemPalace command surface"
         >
           {context ? (
             <div className="memory-command-grid">

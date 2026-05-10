@@ -5,6 +5,22 @@
 - Added a claim-only TomeVault distribution path with root `AGENTS.md` as the canonical public source, standalone Copilot guidance, and no Relay install or generated multi-format files by default.
 - Added `tools/manifests/tomevault-skills.json` plus `tools/scripts/sync-tomevault-skills.sh` to maintain a deterministic root `.agents/skills/` mirror for all tracked publishable skills.
 - Removed machine-specific absolute links from public skill sources so mirrored TomeVault skill content stays portable.
+- Hardened Workspace Hub mutating API routes with a local intent header and
+  pre-body origin guard, and updated the Hub client POST helpers so UI actions
+  send that intent consistently.
+- Normalized Workspace Hub repo activity, metadata, and event writes to the
+  canonical discovered `repo.relativePath` value instead of raw request payloads.
+- Added core-service `maintenancePaused` metadata so Workspace Hub UI controls
+  and service API routes use the same pause contract.
+- Updated Workspace Hub memory surfaces and smoke docs so MemPalace maintenance,
+  search, and graph command actions stay visibly paused and API-rejected while
+  `tools/bin/workspace-memory` is disabled.
+- Updated release-readiness and handover docs so stale external status is not
+  recorded as current without live verification, and tracked docs/manifests stay
+  canonical over generated cache.
+- Changed `tools/scripts/cleanup-sync-noise.sh` to dry-run by default with an
+  explicit `--run` mode, and updated Git trimming to opt into that cleanup
+  intentionally.
 
 ## 2026-04-27
 
@@ -46,9 +62,9 @@
 ## 2026-04-11
 
 - Bumped the workspace baseline release to `v1.2.2` and updated `repos/workspace-hub` to `1.2.2` to capture the side-load `entry.md` packet flow, manifest `entryDocs` support, and thin-versus-deep indexed search as the new published baseline.
-- Refreshed the root [README](../README.md) with tool-agnostic positioning (Codex, Cursor, Claude), a **Workspace Hub** subsection with the cover image, and a **What's included (and why)** table; shifted public docs to neutral language for optional reverse-proxy and mapped-host previews while keeping compatibility manifest keys documented where needed.
+- Refreshed the root [README](../README.md) with tool-agnostic positioning (Codex, Cursor, Claude), a **Workspace Hub** subsection with the cover image, and a **What's included (and why)** table; shifted public docs to neutral language for optional reverse-proxy and mapped-host previews.
 - Updated [HANDOVER](HANDOVER.md) completion review, the project review addendum pointer to [CHANGELOG](CHANGELOG.md) for resolved Hub items, and aligned [docs/README](README.md), wiki stubs, contributor templates, and [AGENTS.md](../AGENTS.md) with the same stance.
-- Rewrote [00-overview](00-overview.md) and [02-local-runtime-handover](02-local-runtime-handover.md) so runtime guidance uses generic mapped-host terminology while keeping stable manifest enum and field names (`servbay`, `servbayPath`, `servbaySubdomain`) documented in [repos/workspace-hub/docs/manifest.md](../repos/workspace-hub/docs/manifest.md).
+- Rewrote [00-overview](00-overview.md) and [02-local-runtime-handover](02-local-runtime-handover.md) so runtime guidance uses generic mapped-host terminology while keeping stable manifest enum and field names (`mapped-host`, `mappedHostPath`, `mappedHostSubdomain`) documented in [repos/workspace-hub/docs/manifest.md](../repos/workspace-hub/docs/manifest.md).
 - Added a tracked [docs/plans/readme-docs-closeout.md](plans/readme-docs-closeout.md) plan for future reference, and aligned small Workspace Hub/operator copy surfaces with the same mapped-host wording in `repos/workspace-hub`, `tools/scripts/doctor-workspace.sh`, and `tools/scripts/setup-workspace-profile.sh`.
 - Extended `repos/workspace-hub` backlog follow-through with better repo-list prioritization for pinned and recent work, clearer Python-aware dependency readiness, intake-result surfacing in repo details, capability search and inspection, explicit mapped-host routing status, and richer runtime troubleshooting guidance.
 - Advanced Workspace memory graph support from file-open-only toward Phase 2 by surfacing derived-edge counts, node-type breakdown, and an in-app graph report preview for the selected target, while clarifying intentional MCP profile usage in the Workspace Hub settings panel.
@@ -107,7 +123,7 @@
 - Promoted repo-group updates to a tracked default manifest at `tools/manifests/repo-groups.json`, while keeping `repo-groups.example.json` as a sample shape.
 - Reclassified `VoltAgent/awesome-design-md` as an optional ability under `repos/abilities/voltagent-awesome-design-md` and updated the local `DESIGN.md` tooling/docs accordingly.
 - Updated Workspace Hub to read capability registry data, expose capability lifecycle actions in the UI, and persist a repo layout preference with `split` and `discovery-first` modes.
-- Synced the public-facing docs set so the root README, docs index, and older handover notes now all describe Workspace memory, the reviewed-source taxonomy, optional abilities, and the optional `gh auth login` and ServBay stance consistently.
+- Synced the public-facing docs set so the root README, docs index, and older handover notes now all describe Workspace memory, the reviewed-source taxonomy, optional abilities, and the optional `gh auth login` stance consistently.
 - Added a reusable live Hub acceptance block to `docs/HANDOVER.md` and `repos/workspace-hub/README.md` covering base summary, capability-aware search, repo-details hydration, Workspace memory, Workspace Capabilities, Repo Discovery, and `discovery-first` rendering checks.
 - Corrected the legacy compatibility manifest note for `VoltAgent/awesome-design-md` so it no longer points at the old `repos/core/` placement.
 - Added `GET /api/capabilities` to `workspace-hub` as a read-only capability snapshot endpoint and surfaced its installed or enabled or reference-only counts directly in the Workspace Capabilities panel.

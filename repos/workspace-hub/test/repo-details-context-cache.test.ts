@@ -105,8 +105,8 @@ function buildRepo(sideLoad: WorkspaceRepo['sideLoad']): WorkspaceRepo {
       updatedAt: null,
     },
     savedMetadata: null,
-    servbayPath: null,
-    servbaySubdomain: null,
+    mappedHostPath: null,
+    mappedHostSubdomain: null,
     sideLoad,
     slug: 'workspace-hub',
     suggestedManifest: {
@@ -188,7 +188,7 @@ test('RepoDetails omits the context cache block when side-load metadata has not 
 
 test('RepoDetails renders the latest repo intake notes and mapped-host warning when relevant', () => {
   const repo = buildRepo(undefined)
-  repo.preferredMode = 'servbay'
+  repo.preferredMode = 'mapped-host'
 
   const markup = renderRepoDetails(repo, {
     coverCreated: true,

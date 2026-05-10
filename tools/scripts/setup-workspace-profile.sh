@@ -238,7 +238,6 @@ case "$profile" in
   wordpress)
     printf 'Purpose: support WordPress repos without making WordPress tooling mandatory for the whole workspace.\n\n'
     printf 'Checks\n'
-    check_app_path "Optional proxy (ServBay.app)" recommended "/Applications/ServBay.app" "$HOME/Applications/ServBay.app"
     check_app_path "Local" recommended "/Applications/Local.app" "$HOME/Applications/Local.app"
     check_cmd "composer" composer recommended
     check_cmd "wp" wp recommended

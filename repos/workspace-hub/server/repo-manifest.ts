@@ -20,14 +20,14 @@ export type RepoManifestInput = {
   preferredMode?: unknown
   previewCommand?: unknown
   previewUrl?: unknown
-  servbayPath?: unknown
-  servbaySubdomain?: unknown
+  mappedHostPath?: unknown
+  mappedHostSubdomain?: unknown
   slug?: unknown
   tags?: unknown
   type?: unknown
 }
 
-const previewModes: PreviewMode[] = ['direct', 'external', 'servbay']
+const previewModes: PreviewMode[] = ['direct', 'external', 'mapped-host']
 const repoTypes: RepoType[] = [
   'node-app',
   'other',
@@ -50,8 +50,8 @@ const orderedManifestKeys = [
   'previewUrl',
   'externalUrl',
   'healthcheckUrl',
-  'servbayPath',
-  'servbaySubdomain',
+  'mappedHostPath',
+  'mappedHostSubdomain',
   'entryDocs',
   'tags',
   'notes',
@@ -158,8 +158,8 @@ export function normalizeManifestInput(input: RepoManifestInput) {
     preferredMode: input.preferredMode,
     previewCommand: normalizeOptionalString(input.previewCommand),
     previewUrl: normalizeOptionalString(input.previewUrl),
-    servbayPath: normalizeOptionalString(input.servbayPath),
-    servbaySubdomain: normalizeOptionalString(input.servbaySubdomain),
+    mappedHostPath: normalizeOptionalString(input.mappedHostPath),
+    mappedHostSubdomain: normalizeOptionalString(input.mappedHostSubdomain),
     slug,
     tags: normalizedTags.length ? normalizedTags : undefined,
     type: input.type,

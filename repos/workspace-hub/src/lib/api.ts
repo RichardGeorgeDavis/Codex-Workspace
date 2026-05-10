@@ -11,6 +11,7 @@ import type {
   WorkspaceEvent,
   WorkspaceSummary,
 } from '../types/workspace.ts'
+import { workspaceHubIntentHeaders } from './workspaceHubIntent.ts'
 
 async function readErrorMessage(response: Response) {
   try {
@@ -19,6 +20,26 @@ async function readErrorMessage(response: Response) {
   } catch {
     return `Request failed with ${response.status}.`
   }
+}
+
+const workspaceHubJsonHeaders = {
+  'Content-Type': 'application/json',
+  ...workspaceHubIntentHeaders,
+} as const
+
+function postJson(pathname: string, payload: unknown) {
+  return fetch(pathname, {
+    body: JSON.stringify(payload),
+    headers: workspaceHubJsonHeaders,
+    method: 'POST',
+  })
+}
+
+function postAction(pathname: string) {
+  return fetch(pathname, {
+    headers: workspaceHubIntentHeaders,
+    method: 'POST',
+  })
 }
 
 function withSummaryReason(
@@ -98,13 +119,7 @@ export async function openRepoTarget(
     | 'terminal'
     | 'troubleshooting',
 ) {
-  const response = await fetch('/api/repos/open', {
-    body: JSON.stringify({ relativePath, target }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/repos/open', { relativePath, target })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -112,13 +127,7 @@ export async function openRepoTarget(
 }
 
 export async function openWorkspacePath(targetPath: string) {
-  const response = await fetch('/api/open/path', {
-    body: JSON.stringify({ path: targetPath }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/open/path', { path: targetPath })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -139,12 +148,10 @@ export async function openCoreServiceTarget(
     | 'terminal',
   targetPath?: string | null,
 ) {
-  const response = await fetch('/api/services/open', {
-    body: JSON.stringify({ serviceId, target, targetPath: targetPath ?? null }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
+  const response = await postJson('/api/services/open', {
+    serviceId,
+    target,
+    targetPath: targetPath ?? null,
   })
 
   if (!response.ok) {
@@ -156,13 +163,7 @@ export async function openWorkspaceCapabilityTarget(
   capabilityId: string,
   target: 'docs' | 'readme' | 'repo',
 ) {
-  const response = await fetch('/api/capabilities/open', {
-    body: JSON.stringify({ capabilityId, target }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/capabilities/open', { capabilityId, target })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -173,12 +174,9 @@ export async function runWorkspaceCapabilityAction(
   capabilityId: string,
   action: WorkspaceCapabilityActionId,
 ) {
-  const response = await fetch('/api/capabilities/action', {
-    body: JSON.stringify({ action, capabilityId }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
+  const response = await postJson('/api/capabilities/action', {
+    action,
+    capabilityId,
   })
 
   if (!response.ok) {
@@ -204,13 +202,7 @@ export async function fetchCoreServiceTargetContext(
     targetKind: 'current-repo' | 'repo' | 'workspace-docs'
   },
 ) {
-  const response = await fetch('/api/services/context', {
-    body: JSON.stringify({ serviceId, ...payload }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/services/context', { serviceId, ...payload })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -237,13 +229,7 @@ export async function runCoreServiceCommand(
     searchQuery?: string | null
   },
 ) {
-  const response = await fetch('/api/services/command', {
-    body: JSON.stringify({ serviceId, ...payload }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/services/command', { serviceId, ...payload })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -301,13 +287,7 @@ export function subscribeWorkspaceEvents(
 }
 
 export async function runRepoInstall(relativePath: string) {
-  const response = await fetch('/api/repos/install', {
-    body: JSON.stringify({ relativePath }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/repos/install', { relativePath })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -315,13 +295,7 @@ export async function runRepoInstall(relativePath: string) {
 }
 
 export async function runCoreServiceInstall(serviceId: string) {
-  const response = await fetch('/api/services/install', {
-    body: JSON.stringify({ serviceId }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/services/install', { serviceId })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -329,13 +303,7 @@ export async function runCoreServiceInstall(serviceId: string) {
 }
 
 export async function runRepoIntake(relativePath: string) {
-  const response = await fetch('/api/repos/intake', {
-    body: JSON.stringify({ relativePath }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/repos/intake', { relativePath })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -353,13 +321,7 @@ export async function runRepoIntake(relativePath: string) {
 }
 
 export async function generateRepoCover(relativePath: string) {
-  const response = await fetch('/api/repos/cover', {
-    body: JSON.stringify({ relativePath }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/repos/cover', { relativePath })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -370,13 +332,7 @@ export async function recordRepoActivity(
   relativePath: string,
   kind: 'select',
 ) {
-  const response = await fetch('/api/repos/activity', {
-    body: JSON.stringify({ kind, relativePath }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/repos/activity', { kind, relativePath })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -395,23 +351,17 @@ export async function writeRepoManifest(
     name: string
     notes?: string
     packageManager?: string
-    preferredMode: 'direct' | 'external' | 'servbay'
+    preferredMode: 'direct' | 'external' | 'mapped-host'
     previewCommand?: string
     previewUrl?: string
-    servbayPath?: string
-    servbaySubdomain?: string
+    mappedHostPath?: string
+    mappedHostSubdomain?: string
     slug: string
     tags?: string[]
     type: 'node-app' | 'other' | 'php' | 'static' | 'threejs' | 'vite' | 'wordpress'
   },
 ) {
-  const response = await fetch('/api/repos/manifest', {
-    body: JSON.stringify({ manifest, relativePath }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/repos/manifest', { manifest, relativePath })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -422,12 +372,9 @@ export async function applyRepoAgentPreset(
   relativePath: string,
   preset: RepoAgentPresetId,
 ) {
-  const response = await fetch('/api/repos/agent-preset', {
-    body: JSON.stringify({ preset, relativePath }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
+  const response = await postJson('/api/repos/agent-preset', {
+    preset,
+    relativePath,
   })
 
   if (!response.ok) {
@@ -449,13 +396,7 @@ export async function runRepoRuntimeAction(
   relativePath: string,
   action: 'restart' | 'start' | 'stop',
 ) {
-  const response = await fetch('/api/repos/runtime', {
-    body: JSON.stringify({ action, relativePath }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/repos/runtime', { action, relativePath })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -466,13 +407,7 @@ export async function runCoreServiceRuntimeAction(
   serviceId: string,
   action: 'restart' | 'start' | 'stop',
 ) {
-  const response = await fetch('/api/services/runtime', {
-    body: JSON.stringify({ action, serviceId }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/services/runtime', { action, serviceId })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -480,13 +415,7 @@ export async function runCoreServiceRuntimeAction(
 }
 
 export async function syncCoreService(serviceId: string) {
-  const response = await fetch('/api/services/sync', {
-    body: JSON.stringify({ serviceId }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/services/sync', { serviceId })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -494,9 +423,7 @@ export async function syncCoreService(serviceId: string) {
 }
 
 export async function stopAllRuntimes() {
-  const response = await fetch('/api/runtime/stop-all', {
-    method: 'POST',
-  })
+  const response = await postAction('/api/runtime/stop-all')
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -512,18 +439,12 @@ export async function saveRepoMetadata(
     healthcheckUrl?: string
     notes: string
     pinned: boolean
-    preferredMode: 'direct' | 'external' | 'servbay'
+    preferredMode: 'direct' | 'external' | 'mapped-host'
     previewUrl?: string
     tags: string[]
   },
 ) {
-  const response = await fetch('/api/repos/metadata', {
-    body: JSON.stringify({ metadata, relativePath }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/repos/metadata', { metadata, relativePath })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))
@@ -531,13 +452,7 @@ export async function saveRepoMetadata(
 }
 
 export async function resetRepoMetadata(relativePath: string) {
-  const response = await fetch('/api/repos/metadata/reset', {
-    body: JSON.stringify({ relativePath }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  })
+  const response = await postJson('/api/repos/metadata/reset', { relativePath })
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response))

@@ -226,8 +226,8 @@ function buildManifestForIntake(repo: WorkspaceRepo) {
       repo.previewUrl && repo.previewUrlSource !== 'runtime'
         ? repo.previewUrl
         : repo.suggestedManifest.previewUrl,
-    servbayPath: repo.servbayPath ?? repo.suggestedManifest.servbayPath,
-    servbaySubdomain: repo.servbaySubdomain ?? repo.suggestedManifest.servbaySubdomain,
+    mappedHostPath: repo.mappedHostPath ?? repo.suggestedManifest.mappedHostPath,
+    mappedHostSubdomain: repo.mappedHostSubdomain ?? repo.suggestedManifest.mappedHostSubdomain,
   }
 }
 

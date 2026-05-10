@@ -255,6 +255,8 @@ explicitly needs them. See [docs/21-agent-token-budget.md](docs/21-agent-token-b
 
 Tracked repo knowledge belongs in public docs, manifests, and portable skills. Local operator memory belongs in ignored local files until it becomes stable enough to promote into tracked project guidance.
 
+To keep stale information out of the workspace, dated local verification results should replace vague "latest" claims. Generated context under `cache/` is useful evidence, but tracked docs and manifests stay canonical. External service status, including TomeVault profile or scan counts, should be checked live before it is recorded as current.
+
 Workspace memory is temporarily disabled. `tools/bin/workspace-memory` now exits
 without running MemPalace closeout, ingest, search, wake-up, export, or graph
 commands while the write-lock and corpus-size behavior is reviewed.
@@ -264,6 +266,10 @@ Current closeout guidance:
 - record repo closeout in tracked repo docs such as `README.md`, `HANDOVER.md`, or `DESIGN.md`
 - record workspace closeout in `docs/HANDOVER.md` and `docs/CHANGELOG.md`
 - use generated context-cache summaries under `cache/context/` only as optional local side-load material, not as canonical memory
+
+For local cleanup, use `tools/scripts/cleanup-sync-noise.sh` first in its
+default dry-run mode. Pass `--run` only for targeted macOS/sync-noise removal;
+do not use broad `git clean` flows for workspace cleanup.
 
 When a capability becomes part of how the whole workspace operates, prefer a core-service shape:
 

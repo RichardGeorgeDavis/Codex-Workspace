@@ -103,7 +103,8 @@ Do not mix the two flows.
 write-lock and corpus-size behavior is reviewed. Do not run memory closeout,
 ingest, search, wake-up, export, or graph commands during this pause.
 
-Historical checks, currently paused:
+Historical direct-service checks, currently paused and not part of the active
+closeout path:
 
 ```bash
 tools/bin/workspace-memory status
@@ -111,7 +112,8 @@ tools/bin/mempalace-start
 tools/bin/mempalace-sync
 ```
 
-Workspace Hub should surface MemPalace as a core service, but these commands remain the direct shell fallback.
+Workspace Hub should surface MemPalace as a core service, but these commands
+must stay disabled until the workspace-memory pause is lifted in tracked docs.
 
 ## Codex MCP profile management
 

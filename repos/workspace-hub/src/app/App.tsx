@@ -813,7 +813,7 @@ export function App({ initialThemePreference }: AppProps) {
       healthcheckUrl?: string
       notes: string
       pinned: boolean
-      preferredMode: 'direct' | 'external' | 'servbay'
+      preferredMode: 'direct' | 'external' | 'mapped-host'
       previewUrl?: string
       tags: string[]
     },
@@ -868,11 +868,11 @@ export function App({ initialThemePreference }: AppProps) {
       name: string
       notes?: string
       packageManager?: string
-      preferredMode: 'direct' | 'external' | 'servbay'
+      preferredMode: 'direct' | 'external' | 'mapped-host'
       previewCommand?: string
       previewUrl?: string
-      servbayPath?: string
-      servbaySubdomain?: string
+      mappedHostPath?: string
+      mappedHostSubdomain?: string
       slug: string
       tags?: string[]
       type: RepoType

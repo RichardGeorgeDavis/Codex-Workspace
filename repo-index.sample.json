@@ -44,7 +44,7 @@
       "packageManager": "pnpm",
       "devCommand": "pnpm dev",
       "previewUrl": "http://localhost:5173",
-      "servbayPath": "/repo/threejs-scene",
+      "mappedHostPath": "/repo/threejs-scene",
       "tags": [
         "threejs",
         "webgl",
@@ -61,7 +61,7 @@
       "packageManager": "npm",
       "devCommand": "npx serve .",
       "previewUrl": "http://localhost:3000",
-      "servbayPath": "/repo/static-portfolio",
+      "mappedHostPath": "/repo/static-portfolio",
       "tags": [
         "static",
         "portfolio"

@@ -35,14 +35,14 @@ while IFS= read -r git_dir; do
   before_kb=$(du -sk "$git_dir" | awk '{print $1}')
 
   if [ -x "$cleanup_script" ]; then
-    "$cleanup_script" "$repo_dir" --git-only >/dev/null
+    "$cleanup_script" "$repo_dir" --git-only --run >/dev/null
   fi
 
   git -C "$repo_dir" reflog expire --expire=90.days.ago --expire-unreachable=30.days.ago --all >/dev/null 2>&1 || true
   git -C "$repo_dir" gc --prune=30.days.ago >/dev/null 2>&1 || true
 
   if [ -x "$cleanup_script" ]; then
-    "$cleanup_script" "$repo_dir" --git-only >/dev/null
+    "$cleanup_script" "$repo_dir" --git-only --run >/dev/null
   fi
 
   after_kb=$(du -sk "$git_dir" | awk '{print $1}')

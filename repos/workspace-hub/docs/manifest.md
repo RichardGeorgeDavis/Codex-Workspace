@@ -41,7 +41,7 @@ Accepted `preferredMode` values:
 
 - `direct`
 - `external`
-- `servbay` (mapped host / reverse-proxy preview; the JSON value is stable for compatibility even though the label is generic in docs)
+- `mapped-host` (mapped host / reverse-proxy preview)
 
 ## Optional fields
 
@@ -55,8 +55,8 @@ Workspace Hub currently supports these optional fields:
 - `previewUrl`
 - `externalUrl`
 - `healthcheckUrl`
-- `servbayPath`
-- `servbaySubdomain`
+- `mappedHostPath`
+- `mappedHostSubdomain`
 - `entryDocs`
 - `tags`
 - `notes`
@@ -87,8 +87,8 @@ When Workspace Hub writes a manifest, it uses this order for known fields:
 10. `previewUrl`
 11. `externalUrl`
 12. `healthcheckUrl`
-13. `servbayPath`
-14. `servbaySubdomain`
+13. `mappedHostPath`
+14. `mappedHostSubdomain`
 15. `entryDocs`
 16. `tags`
 17. `notes`
@@ -132,7 +132,7 @@ Unknown preserved keys are appended after the known keys.
 
 - Prefer `direct` for Vite, Three.js, and similar frontend repos unless a repo explicitly needs something else.
 - Prefer `external` for WordPress repos already managed by Local or another app.
-- Use `servbayPath` or `servbaySubdomain` only when mapped-host routing is stable and tested (field names are stable JSON keys).
+- Use `mappedHostPath` or `mappedHostSubdomain` only when mapped-host routing is stable and tested (field names are stable JSON keys).
 - Use `entryDocs` for the small set of canonical files the operator should open before scanning the repo broadly.
 - Keep manifests explicit and readable; do not turn them into a dump of every inferred value unless the repo benefits from that clarity.
 - Keep local-only values in `project.local.json` when they should not ship with the repo.

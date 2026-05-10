@@ -317,8 +317,8 @@ test('thin search uses side-load summaries while deep search can include debug-o
       updatedAt: null,
     },
     savedMetadata: null,
-    servbayPath: null,
-    servbaySubdomain: null,
+    mappedHostPath: null,
+    mappedHostSubdomain: null,
     slug: 'repo-search-modes',
     suggestedManifest: {
       entryDocs: ['repos/repo-search-modes/README.md'],
@@ -455,8 +455,8 @@ test('deep search only indexes the configured file prefix for large files', asyn
       updatedAt: null,
     },
     savedMetadata: null,
-    servbayPath: null,
-    servbaySubdomain: null,
+    mappedHostPath: null,
+    mappedHostSubdomain: null,
     slug: 'repo-large-readme',
     suggestedManifest: {
       entryDocs: ['repos/repo-large-readme/README.md'],
@@ -942,8 +942,8 @@ test('search observability tracks requests and document cache reuse', async () =
       updatedAt: null,
     },
     savedMetadata: null,
-    servbayPath: null,
-    servbaySubdomain: null,
+    mappedHostPath: null,
+    mappedHostSubdomain: null,
     slug: 'repo-search-observability',
     suggestedManifest: {
       entryDocs: [],
