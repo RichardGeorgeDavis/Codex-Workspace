@@ -24,7 +24,7 @@ or use Hub memory command actions until the pause is explicitly lifted.
 
 - workspace release tag: `v1.2.2`
 - `repos/workspace-hub` version: `1.2.2`
-- latest local release-readiness gate passed on `2026-05-10`
+- latest local release-readiness gate passed on `main` on `2026-05-10`
 - current release URL: `https://github.com/RichardGeorgeDavis/Codex-Workspace/releases/tag/v1.2.2`
 
 The workspace foundation is in place:
@@ -42,6 +42,7 @@ The workspace foundation is in place:
 
 On `2026-05-10`, Workspace Hub was hardened after a comprehensive audit:
 
+- PR #12 was merged into `main` as commit `2a0169345dbd1e2af0b7fb1a258f51f3a5b15bab`
 - unsafe API methods now require the local Hub intent header and reject foreign
   browser origins before body parsing or any write, install, open, or runtime
   action runs; mapped-host Hub origins must be explicitly allowlisted
@@ -61,9 +62,15 @@ On `2026-05-10`, Workspace Hub was hardened after a comprehensive audit:
   before recording external service status as current
 - `tools/scripts/cleanup-sync-noise.sh` now defaults to dry-run and requires
   `--run` before removing macOS or sync-client noise files
+- tracked vendor-specific mapped-host docs, setup checks, and Hub API/UI naming
+  were removed; the old vendor token has no tracked hits, and mapped-host
+  remains the generic preview mode
 - verification covered `pnpm typecheck`, `pnpm test`, `pnpm lint`,
   `pnpm build`, live API smoke, in-app browser smoke, and
   `tools/scripts/release-readiness.sh`
+- after merge, `tools/scripts/release-readiness.sh` passed on `main` with 51
+  Hub tests passing; the only remaining warning is the optional missing `omx`
+  command
 
 ## Token Budget Rules
 
@@ -113,6 +120,10 @@ Practical next work:
 - keep future changes end-to-end and update this file plus `docs/CHANGELOG.md`
 - keep public surfaces aligned when workspace-wide behavior changes:
   `README.md`, `docs/README.md`, `docs/CHANGELOG.md`, and relevant repo-local docs
+- decide whether optional `omx` support should stay as an informational warning
+  or be removed in a separate focused cleanup
+- sweep ignored or local repo manifests if any still use old vendor-specific
+  mapped-host fields; tracked templates now use generic mapped-host fields
 - apply managed MCP profiles only on machines that need them
 - keep `safe-readonly` versus `default-full` MCP usage intentional
 - extend cross-stack dependency detection only if operators need broader readiness checks

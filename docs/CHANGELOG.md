@@ -21,6 +21,10 @@
 - Changed `tools/scripts/cleanup-sync-noise.sh` to dry-run by default with an
   explicit `--run` mode, and updated Git trimming to opt into that cleanup
   intentionally.
+- Merged the audit cleanup through PR #12, removed tracked vendor-specific
+  mapped-host references and checks, and confirmed the post-merge
+  release-readiness gate on `main` passes with only the optional missing `omx`
+  command warning.
 
 ## 2026-04-27
 
