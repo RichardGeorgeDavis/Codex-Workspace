@@ -74,6 +74,11 @@ Workspace memory UI exists, but command actions are paused because
 
 Practical next work:
 
+- TomeVault distribution mirror is implemented and pushed in commit `5186120`.
+  Public TomeVault still reports `1 config, 0 skill, 6 formats`; claim the
+  profile and ask Oli to rescan root `AGENTS.md` plus
+  `.agents/skills/*/SKILL.md`. Do not install Relay unless explicitly
+  requested.
 - keep future changes end-to-end and update this file plus `docs/CHANGELOG.md`
 - keep public surfaces aligned when workspace-wide behavior changes:
   `README.md`, `docs/README.md`, `docs/CHANGELOG.md`, and relevant repo-local docs
