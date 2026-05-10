@@ -33,6 +33,7 @@ The workspace foundation is in place:
 - helper scripts live under `tools/scripts/`
 - templates live under `tools/templates/`
 - installable abilities and core services are tracked in `tools/manifests/workspace-capabilities.json`
+- TomeVault-publishable skills are mirrored into root `.agents/skills/` from `tools/manifests/tomevault-skills.json`; keep this claim-only and do not install Relay unless explicitly requested
 - optional abilities live under `repos/abilities/`
 - `tools/ref/` is reference-only and can remain empty unless a reviewed snapshot is explicitly refreshed
 - launcher commands coordinate ports through `cache/runtime/ports/`
@@ -124,6 +125,7 @@ tools/scripts/bootstrap-workspace.sh --run
 tools/scripts/doctor-workspace.sh
 tools/scripts/doctor-agent-tooling.sh
 tools/scripts/release-readiness.sh
+tools/scripts/sync-tomevault-skills.sh
 tools/scripts/manage-workspace-capabilities.sh list
 tools/scripts/update-all.sh --list-groups
 ```

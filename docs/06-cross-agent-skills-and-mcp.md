@@ -31,6 +31,7 @@ For this workspace:
 
 - use `.codex/skills/` when a tracked repo skill should be directly discoverable by official Codex
 - use `.agents/skills/` only when the repo also wants a workspace-native compatibility mirror
+- use root `.agents/skills/` only as the TomeVault public distribution mirror generated from `tools/manifests/tomevault-skills.json`
 - use `shared/skills/` for reusable workspace-wide skill source material
 - use `.workspace/skills/` only when a repo intentionally maintains a tool-neutral source layer that is later exported or synced into `.codex/skills/` and optional `.agents/skills/`
 - keep non-Codex adapter folders as compatibility layers rather than primary sources
@@ -112,6 +113,10 @@ Codex Workspace/
 │           ├── codex/
 │           ├── copilot/
 │           └── cursor/
+├── .agents/
+│   └── skills/
+│       └── workspace-maintenance/
+│           └── SKILL.md
 └── repos/
     └── some-repo/
         ├── .codex/
@@ -156,6 +161,16 @@ Examples:
 - repo onboarding
 - manifest generation
 - mixed-stack troubleshooting
+
+### `.agents/skills/` at the workspace root
+
+Use this only as the tracked public distribution mirror for TomeVault.
+Author skills in their normal source locations, list the publishable set in
+`tools/manifests/tomevault-skills.json`, and refresh the mirror with
+`tools/scripts/sync-tomevault-skills.sh`.
+
+TomeVault is claim-only for now: do not install Relay, add TomeVault badges, or
+commit generated multi-format config files unless that is explicitly requested.
 
 ### `repos/<repo>/.codex/skills/`
 

@@ -1,6 +1,8 @@
 # GitHub Copilot Instructions
 
-Use [AGENTS.md](../AGENTS.md) as the primary workspace contract.
+Root `AGENTS.md` is the canonical public agent contract for this workspace.
+Follow these same defaults when working through Copilot, even when this file is
+read on its own by a converter or third-party tool.
 
 For this repository:
 
@@ -13,3 +15,4 @@ For this repository:
 - when editing `repos/workspace-hub`, classify repos conservatively and do not assume one package manager or one runtime model
 - avoid introducing mandatory orchestration layers, shared dependency trees, or hidden automation
 - prefer small, readable changes with clear failure states
+- treat `.agents/skills/` as the tracked TomeVault skill distribution mirror, not as the primary authoring source

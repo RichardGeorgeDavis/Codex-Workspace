@@ -234,6 +234,7 @@ The practical model is:
 
 - tracked resources such as repo docs, READMEs, and manifests
 - official Codex repo-local skills stored in `.codex/skills/`, with `.agents/skills/` supported as a workspace compatibility mirror and shared skill sources/templates kept in normal tracked folders
+- root `.agents/skills/` used only as a manifest-managed TomeVault distribution mirror
 - generated context summaries under `cache/context/`
 - optional local workflow-state folders such as `.cognetivy/` kept separate from canonical tracked docs
 - local-only memory and MCP config kept separate from tracked repo content
@@ -291,6 +292,7 @@ External skill catalogs such as [`openai/skills`](https://github.com/openai/skil
 - prefer local skill installation via Codex tooling such as `$skill-installer`
 - for repo-level Codex discoverability, prefer tracked `.codex/skills/` and keep `.agents/skills/` only when repo-local compatibility mirroring helps
 - keep workspace-wide reusable skill sources in `shared/skills/` and starter templates in `tools/templates/skills/`
+- use `tools/scripts/sync-tomevault-skills.sh` to refresh the root `.agents/skills/` public distribution mirror from `tools/manifests/tomevault-skills.json`; do not install TomeVault Relay or commit generated TomeVault format files by default
 - treat `google-labs-code/design.md` as the canonical repo-level `DESIGN.md` standard and use `tools/scripts/design-md.sh` to initialize, lint, and diff repo-owned `DESIGN.md` files
 - keep repo-root `DESIGN.md` optional and per-repo, recommended mainly for UI-heavy repos rather than the whole workspace
 - keep the managed VoltAgent `DESIGN.md` catalog as an optional example ability under `repos/abilities/voltagent-awesome-design-md` and copy only the specific example files a repo actually needs

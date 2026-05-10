@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-05-10
+
+- Added a claim-only TomeVault distribution path with root `AGENTS.md` as the canonical public source, standalone Copilot guidance, and no Relay install or generated multi-format files by default.
+- Added `tools/manifests/tomevault-skills.json` plus `tools/scripts/sync-tomevault-skills.sh` to maintain a deterministic root `.agents/skills/` mirror for all tracked publishable skills.
+- Removed machine-specific absolute links from public skill sources so mirrored TomeVault skill content stays portable.
+
 ## 2026-04-27
 
 - Temporarily disabled `tools/bin/workspace-memory` so MemPalace closeout, ingest, search, wake-up, export, and graph commands fail fast while the write-lock and corpus-size behavior is reviewed.

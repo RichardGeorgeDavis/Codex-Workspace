@@ -99,6 +99,18 @@ For handover updates:
 - run `git status --short` before closing so the handover does not imply a cleaner worktree than exists
 - if public docs changed, keep `README.md`, `docs/README.md`, `docs/CHANGELOG.md`, and relevant repo-local docs aligned
 
+## Public Agent Distribution
+
+Root `AGENTS.md` is the canonical public agent contract, including for
+TomeVault distribution. `.github/copilot-instructions.md` is a standalone
+Copilot summary, not the source of truth for cross-platform conversion.
+
+Tracked skills published for TomeVault live under `.agents/skills/` and are
+mirrored from `tools/manifests/tomevault-skills.json` by
+`tools/scripts/sync-tomevault-skills.sh`. Do not install TomeVault Relay, add
+TomeVault badges, or commit generated multi-format TomeVault files unless that
+is explicitly requested.
+
 ## Upstream Updates
 
 When asked to update reviewed GitHub refs or managed upstream mirrors, use:

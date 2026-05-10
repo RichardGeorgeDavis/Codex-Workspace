@@ -25,7 +25,9 @@ tools/mempalace/
 tools/ref/
 tools/local/
 .cognetivy/
-.agents/
+.agents/*
+!.agents/skills/
+!.agents/skills/**
 cache/*
 !cache/.gitignore
 cache/context/

@@ -88,6 +88,13 @@ printf '\nTracked workspace assets\n'
 shared_skill_count=$(count_matches "$workspace_root/shared/skills" -type f -name SKILL.md)
 print_status "[ok]" "shared skills" "$shared_skill_count skill files"
 
+if [ -d "$workspace_root/.agents/skills" ]; then
+  tomevault_skill_count=$(count_matches "$workspace_root/.agents/skills" -type f -name SKILL.md)
+  print_status "[ok]" "TomeVault skills" "$workspace_root/.agents/skills ($tomevault_skill_count skill files)"
+else
+  print_status "[warn]" "TomeVault skills" "missing root .agents/skills mirror"
+fi
+
 for template_dir in \
   "$workspace_root/tools/templates/agents-md" \
   "$workspace_root/tools/templates/codex" \
@@ -105,7 +112,8 @@ for script_path in \
   "$workspace_root/tools/scripts/init-agents-tree.sh" \
   "$workspace_root/tools/scripts/doctor-agent-tooling.sh" \
   "$workspace_root/tools/scripts/update-github-refs.sh" \
-  "$workspace_root/tools/scripts/sync-reference-snapshots.sh"
+  "$workspace_root/tools/scripts/sync-reference-snapshots.sh" \
+  "$workspace_root/tools/scripts/sync-tomevault-skills.sh"
 do
   if [ -f "$script_path" ]; then
     print_status "[ok]" "$(basename "$script_path")" "$script_path"
