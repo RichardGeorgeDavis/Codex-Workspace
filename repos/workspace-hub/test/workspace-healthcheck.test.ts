@@ -11,6 +11,12 @@ import {
 } from '../src/lib/workspaceHubIntent.ts'
 
 const repoRoot = path.resolve(import.meta.dirname, '..')
+const tsxExecutable = path.join(
+  repoRoot,
+  'node_modules',
+  '.bin',
+  process.platform === 'win32' ? 'tsx.cmd' : 'tsx',
+)
 const tempRoots: string[] = []
 
 async function createTempWorkspaceRoot(prefix: string) {
@@ -105,7 +111,7 @@ test('workspace healthcheck reports manifest validation warnings and observabili
 
   const port = 46000 + Math.floor(Math.random() * 1000)
   const baseUrl = `http://127.0.0.1:${port}`
-  const child = spawn('pnpm', ['exec', 'tsx', 'server/index.ts'], {
+  const child = spawn(tsxExecutable, ['server/index.ts'], {
     cwd: repoRoot,
     env: {
       ...process.env,

@@ -3,12 +3,29 @@ set -eu
 
 workspace_root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 workspace_hub_dir="$workspace_root/repos/workspace-hub"
+workspace_hub_package="$workspace_hub_dir/package.json"
+hub_pnpm_expected=""
 
 print_status() {
   level=$1
   label=$2
   detail=$3
   printf '%-7s %-24s %s\n' "$level" "$label" "$detail"
+}
+
+run_hub_pnpm() {
+  if command -v corepack >/dev/null 2>&1 &&
+    (cd "$workspace_hub_dir" && corepack pnpm --version >/dev/null 2>&1); then
+    (cd "$workspace_hub_dir" && corepack pnpm "$@")
+    return
+  fi
+
+  if [ -n "$hub_pnpm_expected" ] && command -v npx >/dev/null 2>&1; then
+    (cd "$workspace_hub_dir" && npx --yes "pnpm@$hub_pnpm_expected" "$@")
+    return
+  fi
+
+  (cd "$workspace_hub_dir" && pnpm "$@")
 }
 
 printf 'Codex Workspace release readiness\n'
@@ -25,11 +42,31 @@ if [ ! -d "$workspace_hub_dir/node_modules" ]; then
   exit 1
 fi
 
-(cd "$workspace_hub_dir" && pnpm test)
+hub_package_manager=$(node -e 'const pkg = require(process.argv[1]); process.stdout.write(pkg.packageManager || "pnpm");' "$workspace_hub_package")
+case "$hub_package_manager" in
+  pnpm@*)
+    hub_pnpm_expected=${hub_package_manager#pnpm@}
+    ;;
+  pnpm)
+    ;;
+  *)
+    print_status "[fail]" "packageManager" "unsupported Workspace Hub package manager: $hub_package_manager"
+    exit 1
+    ;;
+esac
+
+hub_pnpm_version=$(run_hub_pnpm --version)
+if [ -n "$hub_pnpm_expected" ] && [ "$hub_pnpm_version" != "$hub_pnpm_expected" ]; then
+  print_status "[fail]" "pnpm" "expected $hub_pnpm_expected from packageManager, got $hub_pnpm_version"
+  exit 1
+fi
+print_status "[ok]" "pnpm" "using $hub_pnpm_version for repos/workspace-hub"
+
+run_hub_pnpm test
 print_status "[ok]" "pnpm test" "passed"
-(cd "$workspace_hub_dir" && pnpm lint)
+run_hub_pnpm lint
 print_status "[ok]" "pnpm lint" "passed"
-(cd "$workspace_hub_dir" && pnpm build)
+run_hub_pnpm build
 print_status "[ok]" "pnpm build" "passed"
 
 printf '\nNon-destructive smoke\n'
