@@ -2,7 +2,6 @@ import type {
   RepoIntakeResult,
   WorkspaceCapabilitiesSnapshot,
   WorkspaceCapabilityActionId,
-  WorkspaceCoreServiceTargetContext,
   WorkspaceRepo,
   WorkspaceSearchResponse,
   RepoAgentPresetId,
@@ -139,9 +138,6 @@ export async function openCoreServiceTarget(
   target:
     | 'cache'
     | 'docs'
-    | 'exports'
-    | 'graph'
-    | 'graph-folder'
     | 'readme'
     | 'repo'
     | 'storage'
@@ -189,54 +185,6 @@ export async function runWorkspaceCapabilityAction(
   }
 
   return data as {
-    ok: boolean
-    output: string
-  }
-}
-
-export async function fetchCoreServiceTargetContext(
-  serviceId: string,
-  payload: {
-    currentRepoRelativePath?: string | null
-    repoRelativePath?: string | null
-    targetKind: 'current-repo' | 'repo' | 'workspace-docs'
-  },
-) {
-  const response = await postJson('/api/services/context', { serviceId, ...payload })
-
-  if (!response.ok) {
-    throw new Error(await readErrorMessage(response))
-  }
-
-  return (await response.json()) as WorkspaceCoreServiceTargetContext
-}
-
-export async function runCoreServiceCommand(
-  serviceId: string,
-  payload: {
-    commandId:
-      | 'build-graph'
-      | 'export-codex-current'
-      | 'mine-codex-current'
-      | 'runtime-start'
-      | 'search'
-      | 'save-repo'
-      | 'save-workspace'
-      | 'status'
-      | 'sync'
-      | 'wake-up'
-    repoRelativePath?: string | null
-    searchQuery?: string | null
-  },
-) {
-  const response = await postJson('/api/services/command', { serviceId, ...payload })
-
-  if (!response.ok) {
-    throw new Error(await readErrorMessage(response))
-  }
-
-  return (await response.json()) as {
-    command: string
     ok: boolean
     output: string
   }

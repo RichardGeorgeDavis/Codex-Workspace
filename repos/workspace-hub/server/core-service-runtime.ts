@@ -1,16 +1,12 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { promisify } from 'node:util'
 import { execFile } from 'node:child_process'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 
 import type {
   RepoInstall,
   RepoRuntime,
   WorkspaceCoreService,
-  WorkspaceCoreServiceCommandId,
 } from '../src/types/workspace.ts'
-import { workspaceMemoryMaintenancePausedReason } from '../src/lib/workspaceMemoryPause.ts'
 import { publishWorkspaceEvent } from './live-events.ts'
 import { invalidateWorkspaceSearchIndex } from './workspace-search.ts'
 
@@ -30,20 +26,9 @@ const managedRuntimes = new Map<string, ManagedServiceRuntime>()
 const managedInstalls = new Map<string, ManagedServiceInstall>()
 const maxLogLines = 40
 const execFileAsync = promisify(execFile)
-const serverFile = fileURLToPath(import.meta.url)
-const serverDir = path.dirname(serverFile)
-const appRoot = path.resolve(serverDir, '..')
-const configuredWorkspaceRoot = process.env.WORKSPACE_HUB_WORKSPACE_ROOT?.trim()
-const workspaceRoot = configuredWorkspaceRoot
-  ? path.resolve(configuredWorkspaceRoot)
-  : path.resolve(appRoot, '..', '..')
 
 function timestamp() {
   return new Date().toISOString()
-}
-
-function quoteShellArg(value: string) {
-  return `'${value.replace(/'/g, `'\\''`)}'`
 }
 
 function trimLogTail(lines: string[]) {
@@ -116,9 +101,7 @@ function buildIdleInstall(command: string): RepoInstall {
 }
 
 function serviceMaintenancePausedReason(service: WorkspaceCoreService) {
-  return service.maintenancePaused
-    ? service.maintenancePausedReason ?? workspaceMemoryMaintenancePausedReason
-    : null
+  return service.maintenancePaused ? service.maintenancePausedReason : null
 }
 
 function assertServiceMaintenanceAvailable(service: WorkspaceCoreService) {
@@ -336,127 +319,4 @@ export async function runCoreServiceSync(service: WorkspaceCoreService) {
     type: 'service',
   })
   invalidateWorkspaceSearchIndex('core-service-sync')
-}
-
-type CoreServiceCommandOptions = {
-  repoRelativePath?: string | null
-  searchQuery?: string | null
-}
-
-function buildCoreServiceCommandInvocation(
-  service: WorkspaceCoreService,
-  commandId: WorkspaceCoreServiceCommandId,
-  options: CoreServiceCommandOptions,
-) {
-  if (service.id !== 'mempalace') {
-    throw new Error(`Workspace commands are not configured for ${service.name}.`)
-  }
-
-  const wrapperPath = path.join(workspaceRoot, 'tools', 'bin', 'workspace-memory')
-
-  switch (commandId) {
-    case 'status':
-      return { commandPath: wrapperPath, shellCommand: 'tools/bin/workspace-memory status', args: ['status'] }
-    case 'build-graph':
-      if (options.repoRelativePath) {
-        return {
-          commandPath: wrapperPath,
-          shellCommand: `tools/bin/workspace-memory build-graph repo ${options.repoRelativePath}`,
-          args: ['build-graph', 'repo', options.repoRelativePath],
-        }
-      }
-      return {
-        commandPath: wrapperPath,
-        shellCommand: 'tools/bin/workspace-memory build-graph workspace-docs',
-        args: ['build-graph', 'workspace-docs'],
-      }
-    case 'save-workspace':
-      return {
-        commandPath: wrapperPath,
-        shellCommand: 'tools/bin/workspace-memory save-workspace',
-        args: ['save-workspace'],
-      }
-    case 'save-repo':
-      if (!options.repoRelativePath) {
-        throw new Error('A repo target is required for save-repo.')
-      }
-      return {
-        commandPath: wrapperPath,
-        shellCommand: `tools/bin/workspace-memory save-repo ${options.repoRelativePath}`,
-        args: ['save-repo', options.repoRelativePath],
-      }
-    case 'search':
-      if (!options.searchQuery?.trim()) {
-        throw new Error('A search query is required.')
-      }
-      return {
-        commandPath: wrapperPath,
-        shellCommand: `tools/bin/workspace-memory search ${quoteShellArg(options.searchQuery)}`,
-        args: ['search', options.searchQuery],
-      }
-    case 'export-codex-current':
-      return {
-        commandPath: wrapperPath,
-        shellCommand: 'tools/bin/workspace-memory export-codex current',
-        args: ['export-codex', 'current'],
-      }
-    case 'mine-codex-current':
-      return {
-        commandPath: wrapperPath,
-        shellCommand: 'tools/bin/workspace-memory mine-codex-current',
-        args: ['mine-codex-current'],
-      }
-    case 'wake-up':
-      return {
-        commandPath: wrapperPath,
-        shellCommand: 'tools/bin/workspace-memory wake-up',
-        args: ['wake-up'],
-      }
-    default:
-      throw new Error(`Command ${commandId} should be handled by the dedicated runtime or sync flow.`)
-  }
-}
-
-export async function runCoreServiceCommand(
-  service: WorkspaceCoreService,
-  commandId: WorkspaceCoreServiceCommandId,
-  options: CoreServiceCommandOptions = {},
-) {
-  assertServiceMaintenanceAvailable(service)
-
-  if (commandId === 'runtime-start') {
-    await startCoreService(service)
-    return {
-      command: path.relative(workspaceRoot, service.runtimeCommand),
-      output: '',
-    }
-  }
-
-  if (commandId === 'sync') {
-    await runCoreServiceSync(service)
-    return {
-      command: path.relative(workspaceRoot, service.syncCommand),
-      output: '',
-    }
-  }
-
-  const invocation = buildCoreServiceCommandInvocation(service, commandId, options)
-  const { stdout, stderr } = await execFileAsync(invocation.commandPath, invocation.args, {
-    cwd: workspaceRoot,
-    env: process.env,
-    maxBuffer: 1024 * 1024,
-    timeout: 240000,
-  })
-
-  publishWorkspaceEvent({
-    message: `${service.name} ${commandId} completed`,
-    relativePath: service.repoRelativePath,
-    status: 'ready',
-    type: 'service',
-  })
-
-  return {
-    command: invocation.shellCommand,
-    output: [stdout.trim(), stderr.trim()].filter(Boolean).join('\n'),
-  }
 }

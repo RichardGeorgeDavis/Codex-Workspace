@@ -44,8 +44,6 @@ Workspace Hub is a local control plane for people who manage many standalone rep
 - indexes repo metadata, manifests, and side-load `entry.md` packets for default server-side search, with an opt-in `deep` mode for heavier repo content such as broader side-load files, logs, failure reports, and local agent-job artifacts
 - reads generated repo side-load summaries on repo-detail hydration so operators can inspect context-cache freshness and open the generated `entry.md`, `abstract.md`, `overview.md`, and provenance files without paying for that metadata on every base summary refresh
 - keeps archive-file discovery out of default summary payloads until the UI or API explicitly requests archived items
-- exposes a dedicated Workspace memory surface for MemPalace service state, target selection, and memory actions; those actions are currently paused because `tools/bin/workspace-memory` is disabled during the write-lock and corpus-size review
-- retains the target-scoped MemPalace graph design, but graph builds are paused while the wrapper is disabled
 - stores lightweight per-repo metadata and recent activity locally
 - writes structured local failure reports for install and runtime errors
 - includes persisted appearance controls with five built-in presets and light or dark mode
@@ -221,10 +219,8 @@ curl -s "http://127.0.0.1:4101/api/workspace/summary/base?includeArchives=true" 
 curl -s http://127.0.0.1:4101/api/capabilities | jq '{generatedAt, stats}'
 curl -s "http://127.0.0.1:4101/api/search?q=memory&mode=thin" | jq '{mode, total: (.results | length), categories: (.results | map(.category))}'
 curl -s "http://127.0.0.1:4101/api/search?q=memory&mode=deep" | jq '{mode, total: (.results | length), categories: (.results | map(.category))}'
-curl -s -X POST http://127.0.0.1:4101/api/services/context -H 'Content-Type: application/json' -H "$HUB_INTENT_HEADER" -d '{"serviceId":"mempalace","targetKind":"workspace-docs"}' | jq '{targetLabel, searchEnabled: (.commands[] | select(.id == "search") | .enabled), buildGraphEnabled: (.commands[] | select(.id == "build-graph") | .enabled), graph: .graph | {lastBuiltAt, nodeCount, edgeCount}}'
 curl -s --get http://127.0.0.1:4101/api/repos/details --data-urlencode "relativePath=repos/workspace-hub" | jq '{relativePath, detailLevel, diagnosticsFreshness}'
 curl -s http://127.0.0.1:4101/api/health | jq '.workspaceHub.repoDetails'
-npx playwright screenshot --wait-for-selector 'text=Workspace memory' http://127.0.0.1:4174 /tmp/workspace-hub-workspace-memory.png
 npx playwright screenshot --wait-for-selector 'text=Workspace Capabilities' --full-page http://127.0.0.1:4174 /tmp/workspace-hub-capabilities.png
 npx playwright screenshot --wait-for-selector 'text=Repo Discovery' --full-page http://127.0.0.1:4174 /tmp/workspace-hub-repo-discovery.png
 cat > /tmp/workspace-hub-discovery-storage.json <<'EOF'
@@ -246,7 +242,7 @@ EOF
 npx playwright screenshot --load-storage /tmp/workspace-hub-discovery-storage.json --wait-for-selector 'text=Select a repo to open details.' --full-page http://127.0.0.1:4174 /tmp/workspace-hub-discovery-mode.png
 ```
 
-That smoke pass validates the current base-summary list projection, indexed capability-aware search, selected repo-detail hydration, `Workspace memory`, the paused MemPalace command surface, target-scoped graph metadata, the capability panel, the discovery-first inline empty-state prompt, and the inline selected-repo details rendering path.
+That smoke pass validates the current base-summary list projection, indexed capability-aware search, selected repo-detail hydration, the capability panel, the discovery-first inline empty-state prompt, and the inline selected-repo details rendering path.
 
 Default local endpoints:
 
@@ -320,27 +316,12 @@ Workspace Hub can surface workspace abilities and core services, but it should n
 
 Current expectation:
 
-- core services such as MemPalace can be surfaced from the tracked workspace capability registry
+- core services can be surfaced from the tracked workspace capability registry when configured
 - optional abilities should be treated as installable helpers, not baseline repo requirements
 - if this repo ever requires an optional ability for a real workflow, that dependency must be documented here and in the relevant repo-local docs
 - install or update those optional helpers through `tools/scripts/manage-workspace-capabilities.sh`, not through `update-all.sh`
 
 At the moment, Workspace Hub has no required optional ability dependency.
-
-## Workspace Memory Graph
-
-Workspace Hub includes a Phase 1 graph flow for Workspace memory, currently paused while `tools/bin/workspace-memory` is disabled.
-
-Current model:
-
-- keep MemPalace as the memory source of truth
-- normalize target-scoped MemPalace sidecars plus nearby markdown into a graph export
-- write rebuildable graph artifacts under `cache/mempalace/<user>/graphs/`
-- expose graph actions from the Workspace memory page once the wrapper pause is lifted
-
-This is intentionally a derived view, not a second memory engine beside MemPalace.
-
-The design note and implementation reference live in [docs/memory-graph.md](./docs/memory-graph.md).
 
 ## Safety And Trust
 

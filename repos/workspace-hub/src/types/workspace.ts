@@ -338,32 +338,19 @@ export type WorkspaceEvent = {
 export type WorkspaceCoreService = {
   branch: string | null
   cacheRoot: string
-  category: 'memory'
-  configPath: string
+  category: string
   description: string
   docsPath: string | null
-  exportsRoot: string
-  homePath: string
   id: string
-  identityPath: string
   install: RepoInstall
   installCommand: string
   installCommandArgs: string[]
   lastCommandAt: string | null
   lastCommandKind: string | null
   lastCommandTarget: string | null
-  lastCodexExportAt: string | null
-  lastCodexExportTarget: string | null
-  lastIngestAt: string | null
-  lastIngestTarget: string | null
   lastInstallAt: string | null
   lastRuntimeStartAt: string | null
-  lastSaveAt: string | null
-  lastSaveTarget: string | null
-  lastSearchAt: string | null
-  lastSearchQuery: string | null
   lastSyncAt: string | null
-  lastWakeUpAt: string | null
   maintenancePaused: boolean
   maintenancePausedReason: string | null
   name: string
@@ -383,65 +370,7 @@ export type WorkspaceCoreService = {
   upstreamUrl: string | null
   updatedAt: string | null
   user: string
-  venvPath: string
-  venvReady: boolean
   version: string | null
-}
-
-export type WorkspaceCoreServiceTargetKind = 'current-repo' | 'repo' | 'workspace-docs'
-
-export type WorkspaceCoreServiceCommandId =
-  | 'build-graph'
-  | 'export-codex-current'
-  | 'mine-codex-current'
-  | 'runtime-start'
-  | 'search'
-  | 'save-repo'
-  | 'save-workspace'
-  | 'status'
-  | 'sync'
-  | 'wake-up'
-
-export type WorkspaceCoreServiceCommand = {
-  description: string
-  enabled: boolean
-  id: WorkspaceCoreServiceCommandId
-  label: string
-  reasonDisabled: string | null
-  shellCommand: string
-}
-
-export type WorkspaceCoreServiceGraph = {
-  artifacts: {
-    htmlPath: string | null
-    jsonPath: string | null
-    reportPath: string | null
-  }
-  available: boolean
-  derivedEdgeCount: number | null
-  edgeCount: number | null
-  lastBuiltAt: string | null
-  nodeCount: number | null
-  nodeTypeCounts: Partial<Record<string, number>>
-  outputDirectory: string | null
-  outputDirectoryExists: boolean
-  reportExcerpt: string[]
-}
-
-export type WorkspaceCoreServiceTargetContext = {
-  commands: WorkspaceCoreServiceCommand[]
-  graph: WorkspaceCoreServiceGraph
-  lastRelevantIngestTarget: string | null
-  metadataExists: boolean
-  metadataPath: string | null
-  recommendedActionId: 'save-repo' | 'save-workspace' | null
-  recommendedActionLabel: string | null
-  repoRelativePath: string | null
-  serviceId: string
-  targetAvailable: boolean
-  targetKind: WorkspaceCoreServiceTargetKind
-  targetLabel: string
-  targetPath: string | null
 }
 
 export type WorkspaceRepo = {

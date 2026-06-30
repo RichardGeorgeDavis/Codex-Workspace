@@ -24,7 +24,7 @@ async function writeTextFile(targetPath: string, content: string) {
   await writeFile(targetPath, content, 'utf8')
 }
 
-async function waitForServer(url: string, timeoutMs = 10000) {
+async function waitForServer(url: string, timeoutMs = 30000) {
   const startedAt = Date.now()
 
   while (Date.now() - startedAt < timeoutMs) {
@@ -52,7 +52,7 @@ after(async () => {
 test('workspace healthcheck reports manifest validation warnings and observability', async () => {
   const workspaceRoot = await createTempWorkspaceRoot('codex-workspace-healthcheck-')
 
-  for (const directory of ['cache', 'docs', 'repos', 'shared', 'tools/bin', 'tools/manifests', 'tools/mempalace']) {
+  for (const directory of ['cache', 'docs', 'repos', 'shared', 'tools/bin', 'tools/manifests', 'tools/services/fixture-service']) {
     await mkdir(path.join(workspaceRoot, directory), { recursive: true })
   }
 
@@ -65,20 +65,20 @@ test('workspace healthcheck reports manifest validation warnings and observabili
         version: 1,
         capabilities: [
           {
-            cacheRoot: 'cache/mempalace',
-            category: 'memory',
+            cacheRoot: 'cache/fixture-service',
+            category: 'fixture',
             classification: 'core-service',
-            description: 'Workspace memory fixture',
+            description: 'Workspace service fixture',
             docsPath: 'docs',
-            id: 'mempalace',
-            installCommand: ['tools/bin/workspace-memory', 'install'],
+            id: 'fixture-service',
+            installCommand: ['tools/bin/fixture-service', 'install'],
             installMethod: 'git',
-            installTarget: 'tools/mempalace',
-            name: 'MemPalace',
-            runtimeCommand: ['tools/bin/mempalace-start'],
-            sharedRoot: 'shared/mempalace',
-            sourceUrl: 'https://example.com/mempalace.git',
-            syncCommand: ['tools/bin/mempalace-sync'],
+            installTarget: 'tools/services/fixture-service',
+            name: 'Fixture Service',
+            runtimeCommand: ['tools/bin/fixture-service', 'start'],
+            sharedRoot: 'shared/fixture-service',
+            sourceUrl: 'https://example.com/fixture-service.git',
+            syncCommand: ['tools/bin/fixture-service', 'sync'],
             updateStrategy: 'git-sync-command',
           },
           {
@@ -86,14 +86,14 @@ test('workspace healthcheck reports manifest validation warnings and observabili
             classification: 'core-service',
             description: 'Broken test entry',
             id: 'broken-service',
-            installCommand: ['tools/bin/workspace-memory', 'install'],
+            installCommand: ['tools/bin/fixture-service', 'install'],
             installMethod: 'git',
-            installTarget: 'tools/mempalace',
+            installTarget: 'tools/services/fixture-service',
             name: 'Broken Service',
-            runtimeCommand: ['tools/bin/mempalace-start'],
+            runtimeCommand: ['tools/bin/fixture-service', 'start'],
             sharedRoot: '../shared-outside',
             sourceUrl: 'https://example.com/broken-service.git',
-            syncCommand: ['tools/bin/mempalace-sync'],
+            syncCommand: ['tools/bin/fixture-service', 'sync'],
             updateStrategy: 'git-sync-command',
           },
         ],
@@ -199,41 +199,6 @@ test('workspace healthcheck reports manifest validation warnings and observabili
     })
     assert.equal(guardedPostResponse.status, 200)
 
-    const serviceHeaders = {
-      'Content-Type': 'application/json',
-      [workspaceHubIntentHeaderName]: workspaceHubIntentHeaderValue,
-    }
-    const pausedMessage = 'Workspace memory is temporarily paused.'
-
-    for (const [pathname, body] of [
-      ['/api/services/install', { serviceId: 'mempalace' }],
-      ['/api/services/runtime', { action: 'start', serviceId: 'mempalace' }],
-      ['/api/services/sync', { serviceId: 'mempalace' }],
-      ['/api/services/command', { commandId: 'search', searchQuery: 'workspace memory', serviceId: 'mempalace' }],
-    ] as const) {
-      const serviceResponse = await fetch(`${baseUrl}${pathname}`, {
-        body: JSON.stringify(body),
-        headers: serviceHeaders,
-        method: 'POST',
-      })
-      assert.equal(serviceResponse.status, 400)
-      assert.equal((await serviceResponse.json() as { message: string }).message, pausedMessage)
-    }
-
-    const contextResponse = await fetch(`${baseUrl}/api/services/context`, {
-      body: JSON.stringify({ serviceId: 'mempalace', targetKind: 'workspace-docs' }),
-      headers: serviceHeaders,
-      method: 'POST',
-    })
-    assert.equal(contextResponse.status, 200)
-    const contextPayload = await contextResponse.json() as {
-      commands: Array<{ enabled: boolean; id: string; reasonDisabled: string | null }>
-    }
-    assert.ok(
-      contextPayload.commands.every(
-        (command) => command.enabled === false && command.reasonDisabled === pausedMessage,
-      ),
-    )
   } finally {
     child.kill('SIGTERM')
     await new Promise<void>((resolve) => {

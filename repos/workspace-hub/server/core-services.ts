@@ -12,10 +12,6 @@ import type {
   WorkspaceCoreServiceManifestIssue,
 } from '../src/types/workspace.ts'
 import {
-  isWorkspaceMemoryService,
-  workspaceMemoryMaintenancePausedReason,
-} from '../src/lib/workspaceMemoryPause.ts'
-import {
   resolveWorkspaceCommand,
   resolveWorkspacePath,
 } from './workspace-manifest-utils.ts'
@@ -25,6 +21,7 @@ type CoreServiceManifest = {
     cacheRoot?: string
     category?: string
     classification?: string
+    description?: string
     docsPath?: string
     enabledByDefault?: boolean
     exposeInHub?: boolean
@@ -68,22 +65,12 @@ async function fileExists(targetPath: string) {
 }
 
 type CoreServiceState = {
-	exportsRoot?: string | null
 	lastCommandAt?: string | null
 	lastCommandKind?: string | null
 	lastCommandTarget?: string | null
-	lastCodexExportAt?: string | null
-	lastCodexExportTarget?: string | null
-	lastIngestAt?: string | null
-	lastIngestTarget?: string | null
 	lastInstallAt?: string | null
 	lastRuntimeStartAt?: string | null
-	lastSaveAt?: string | null
-	lastSaveTarget?: string | null
-	lastSearchAt?: string | null
-	lastSearchQuery?: string | null
 	lastSyncAt?: string | null
-	lastWakeUpAt?: string | null
 	updatedAt?: string | null
 }
 
@@ -305,7 +292,7 @@ export async function readCoreServices(
         buildCoreServiceManifestIssue(
           serviceConfig,
           'Install command must be a non-empty workspace-local argv array.',
-          'Convert `installCommand` to a JSON string array such as `["tools/bin/workspace-memory", "install"]`.',
+          'Convert `installCommand` to a JSON string array rooted in the workspace.',
         ),
       )
       continue
@@ -358,53 +345,33 @@ export async function readCoreServices(
     const normalizedRepoRelativePath = path.relative(workspaceRoot, repoPath).split(path.sep).join('/')
     const sharedRoot = path.join(sharedRootBase, user)
     const cacheRoot = path.join(cacheRootBase, user)
-    const exportsRoot = path.join(sharedRoot, 'exports')
-    const homePath = path.join(sharedRoot, 'home')
-    const configPath = path.join(homePath, '.mempalace', 'config.json')
-    const identityPath = path.join(homePath, '.mempalace', 'identity.txt')
     const statePath = path.join(sharedRoot, 'service-state.json')
     const readmePath = path.join(repoPath, 'README.md')
     const repoPresent = await fileExists(repoPath)
-    const venvPath = path.join(repoPath, '.venv', 'bin', 'python')
-    const venvReady = await fileExists(venvPath)
     const branch = repoPresent ? await readGitValue(repoPath, ['branch', '--show-current']) : null
     const originUrl = repoPresent ? await readGitValue(repoPath, ['remote', 'get-url', 'origin']) : null
     const upstreamUrl = repoPresent ? await readGitValue(repoPath, ['remote', 'get-url', 'upstream']) : null
     const version = repoPresent ? await readVersion(repoPath) : null
     const state = await readState(statePath)
-    const maintenancePaused = isWorkspaceMemoryService(id)
 
     services.push({
       branch,
       cacheRoot,
-      category: 'memory',
-      configPath,
-      description: 'Local long-term memory and retrieval service for Codex Workspace.',
+      category: serviceConfig.category?.trim() ?? 'service',
+      description: serviceConfig.description?.trim() ?? 'Workspace-level support service.',
       docsPath: docsPath && (await fileExists(docsPath)) ? docsPath : null,
-      exportsRoot,
-      homePath,
       id,
-      identityPath,
       install: installSnapshots.get(id) ?? buildIdleInstall(installCommand.display),
       installCommand: installCommand.display,
       installCommandArgs: installCommand.args,
       lastCommandAt: state?.lastCommandAt ?? null,
       lastCommandKind: state?.lastCommandKind ?? null,
       lastCommandTarget: state?.lastCommandTarget ?? null,
-      lastCodexExportAt: state?.lastCodexExportAt ?? null,
-      lastCodexExportTarget: state?.lastCodexExportTarget ?? null,
-      lastIngestAt: state?.lastIngestAt ?? null,
-      lastIngestTarget: state?.lastIngestTarget ?? null,
       lastInstallAt: state?.lastInstallAt ?? null,
       lastRuntimeStartAt: state?.lastRuntimeStartAt ?? null,
-      lastSaveAt: state?.lastSaveAt ?? null,
-      lastSaveTarget: state?.lastSaveTarget ?? null,
-      lastSearchAt: state?.lastSearchAt ?? null,
-      lastSearchQuery: state?.lastSearchQuery ?? null,
       lastSyncAt: state?.lastSyncAt ?? null,
-      lastWakeUpAt: state?.lastWakeUpAt ?? null,
-      maintenancePaused,
-      maintenancePausedReason: maintenancePaused ? workspaceMemoryMaintenancePausedReason : null,
+      maintenancePaused: false,
+      maintenancePausedReason: null,
       name,
       notes: serviceConfig.notes?.trim() ?? '',
       originUrl,
@@ -422,8 +389,6 @@ export async function readCoreServices(
       upstreamUrl,
       updatedAt: state?.updatedAt ?? null,
       user,
-      venvPath,
-      venvReady,
       version,
     } satisfies WorkspaceCoreService)
   }

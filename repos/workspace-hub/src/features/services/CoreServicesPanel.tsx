@@ -11,7 +11,7 @@ type CoreServicesPanelProps = {
   onInstallAction: (serviceId: string) => Promise<void>
   onOpenAction: (
     serviceId: string,
-    target: 'cache' | 'docs' | 'exports' | 'readme' | 'repo' | 'storage' | 'terminal',
+    target: 'cache' | 'docs' | 'readme' | 'repo' | 'storage' | 'terminal',
   ) => Promise<void>
   onOpenServiceWorkspace: (serviceId: string) => void
   onRuntimeAction: (
@@ -39,7 +39,7 @@ function ServiceStatusCard({
   onInstallAction: (serviceId: string) => Promise<void>
   onOpenAction: (
     serviceId: string,
-    target: 'cache' | 'docs' | 'exports' | 'readme' | 'repo' | 'storage' | 'terminal',
+    target: 'cache' | 'docs' | 'readme' | 'repo' | 'storage' | 'terminal',
   ) => Promise<void>
   onOpenServiceWorkspace: (serviceId: string) => void
   onRuntimeAction: (
@@ -83,8 +83,8 @@ function ServiceStatusCard({
           <code>{service.user}</code>
         </div>
         <div>
-          <span className="service-label">Venv</span>
-          <code>{service.venvReady ? 'ready' : 'missing'}</code>
+          <span className="service-label">Repo</span>
+          <code>{service.repoPresent ? 'present' : 'missing'}</code>
         </div>
       </div>
 
@@ -98,8 +98,8 @@ function ServiceStatusCard({
           <code>{service.sharedRoot}</code>
         </li>
         <li className="settings-item">
-          <span>Config</span>
-          <code>{service.configPath}</code>
+          <span>State</span>
+          <code>{service.statePath}</code>
         </li>
         <li className="settings-item">
           <span>Cache</span>
@@ -116,7 +116,7 @@ function ServiceStatusCard({
           }}
           type="button"
         >
-          {service.id === 'mempalace' ? 'Open memory workspace' : 'View details'}
+          View details
         </button>
         <button
           className="action-button"

@@ -7,7 +7,7 @@ type CoreServiceDetailsProps = {
   onInstallAction: (serviceId: string) => Promise<void>
   onOpenAction: (
     serviceId: string,
-    target: 'cache' | 'docs' | 'exports' | 'readme' | 'repo' | 'storage' | 'terminal',
+    target: 'cache' | 'docs' | 'readme' | 'repo' | 'storage' | 'terminal',
   ) => Promise<void>
   onRuntimeAction: (
     serviceId: string,
@@ -163,28 +163,8 @@ export function CoreServiceDetails({
           </dd>
         </div>
         <div className="details-row">
-          <dt>Last export</dt>
-          <dd>{formatTimestamp(service.lastCodexExportAt)}</dd>
-        </div>
-        <div className="details-row">
-          <dt>Last ingest</dt>
-          <dd>{formatTimestamp(service.lastIngestAt)}</dd>
-        </div>
-        <div className="details-row">
-          <dt>Last save</dt>
-          <dd>{formatTimestamp(service.lastSaveAt)}</dd>
-        </div>
-        <div className="details-row">
-          <dt>Last search</dt>
-          <dd>{formatTimestamp(service.lastSearchAt)}</dd>
-        </div>
-        <div className="details-row">
           <dt>Last sync</dt>
           <dd>{formatTimestamp(service.lastSyncAt)}</dd>
-        </div>
-        <div className="details-row">
-          <dt>Last wake-up</dt>
-          <dd>{formatTimestamp(service.lastWakeUpAt)}</dd>
         </div>
         <div className="details-row">
           <dt>Last runtime start</dt>
@@ -195,22 +175,6 @@ export function CoreServiceDetails({
           <dd>{service.lastCommandTarget ?? 'No recorded target'}</dd>
         </div>
         <div className="details-row stacked">
-          <dt>Last export target</dt>
-          <dd>{service.lastCodexExportTarget ?? 'No recorded export target'}</dd>
-        </div>
-        <div className="details-row stacked">
-          <dt>Last ingest target</dt>
-          <dd>{service.lastIngestTarget ?? 'No recorded target'}</dd>
-        </div>
-        <div className="details-row stacked">
-          <dt>Last save target</dt>
-          <dd>{service.lastSaveTarget ?? 'No recorded target'}</dd>
-        </div>
-        <div className="details-row stacked">
-          <dt>Last search query</dt>
-          <dd>{service.lastSearchQuery ?? 'No recorded query'}</dd>
-        </div>
-        <div className="details-row stacked">
           <dt>Repo path</dt>
           <dd>{service.repoPath}</dd>
         </div>
@@ -219,16 +183,8 @@ export function CoreServiceDetails({
           <dd>{service.sharedRoot}</dd>
         </div>
         <div className="details-row stacked">
-          <dt>Config path</dt>
-          <dd>{service.configPath}</dd>
-        </div>
-        <div className="details-row stacked">
           <dt>Cache root</dt>
           <dd>{service.cacheRoot}</dd>
-        </div>
-        <div className="details-row stacked">
-          <dt>Exports root</dt>
-          <dd>{service.exportsRoot}</dd>
         </div>
         <div className="details-row stacked">
           <dt>State path</dt>
@@ -284,15 +240,6 @@ export function CoreServiceDetails({
           type="button"
         >
           Open storage
-        </button>
-        <button
-          className="action-button"
-          onClick={() => {
-            void onOpenAction(service.id, 'exports')
-          }}
-          type="button"
-        >
-          Open exports
         </button>
         <button
           className="action-button"

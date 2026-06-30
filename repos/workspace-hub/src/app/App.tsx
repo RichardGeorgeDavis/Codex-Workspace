@@ -11,7 +11,6 @@ import {
 import { RepoSnapshot } from '../features/repos/RepoSnapshot.tsx'
 import { CoreServicesPanel } from '../features/services/CoreServicesPanel.tsx'
 import { CoreServiceDetails } from '../features/services/CoreServiceDetails.tsx'
-import { MempalaceWorkspacePage } from '../features/services/MempalaceWorkspacePage.tsx'
 import { SettingsPanel } from '../features/settings/SettingsPanel.tsx'
 import { StatusStrip } from '../features/status/StatusStrip.tsx'
 import { ThemeControls } from '../features/theme/ThemeControls.tsx'
@@ -25,7 +24,6 @@ import {
 import {
   applyRepoAgentPreset,
   fetchWorkspaceCapabilitiesSnapshot,
-  fetchCoreServiceTargetContext,
   fetchWorkspaceRepoDetails,
   fetchWorkspaceSummary,
   fetchWorkspaceSummaryBase,
@@ -37,7 +35,6 @@ import {
   recordRepoActivity,
   resetRepoMetadata,
   runCoreServiceInstall,
-  runCoreServiceCommand,
   runCoreServiceRuntimeAction,
   runRepoInstall,
   runRepoIntake,
@@ -62,9 +59,6 @@ import type {
   WorkspaceEvent,
   WorkspaceArchive,
   WorkspaceCapabilitiesSnapshot,
-  WorkspaceCoreServiceCommandId,
-  WorkspaceCoreServiceTargetContext,
-  WorkspaceCoreServiceTargetKind,
   WorkspaceRepo,
   WorkspaceSearchResult,
   WorkspaceSummary,
@@ -82,8 +76,6 @@ type RepoFilterValue =
 type AppProps = {
   initialThemePreference: ThemePreference
 }
-
-type WorkspaceView = 'dashboard' | 'mempalace'
 
 function formatGeneratedAt(value: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -249,13 +241,6 @@ export function App({ initialThemePreference }: AppProps) {
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
   const [selectedFilter, setSelectedFilter] = useState<RepoFilterValue>('all')
   const [showArchived, setShowArchived] = useState(false)
-  const [workspaceView, setWorkspaceView] = useState<WorkspaceView>('dashboard')
-  const [mempalaceTargetKind, setMempalaceTargetKind] =
-    useState<WorkspaceCoreServiceTargetKind>('workspace-docs')
-  const [mempalaceTargetRepoRelativePath, setMempalaceTargetRepoRelativePath] = useState<string | null>(null)
-  const [mempalaceTargetContext, setMempalaceTargetContext] =
-    useState<WorkspaceCoreServiceTargetContext | null>(null)
-  const [mempalaceCommandOutput, setMempalaceCommandOutput] = useState<string | null>(null)
   const [themePreference, setThemePreference] = useState(initialThemePreference)
   const [indexedSearchRevision, setIndexedSearchRevision] = useState(0)
   const deferredSearchTerm = useDeferredValue(searchTerm)
@@ -527,21 +512,17 @@ export function App({ initialThemePreference }: AppProps) {
     target:
       | 'cache'
       | 'docs'
-      | 'exports'
-      | 'graph'
-      | 'graph-folder'
       | 'readme'
       | 'repo'
       | 'storage'
       | 'terminal',
-    targetPath?: string | null,
   ) {
     const pendingKey = `service:${serviceId}:${target}`
     setActionPendingKey(pendingKey)
     setActionError(null)
 
     try {
-      await openCoreServiceTarget(serviceId, target, targetPath ?? null)
+      await openCoreServiceTarget(serviceId, target)
     } catch (caughtError) {
       setActionError(
         caughtError instanceof Error
@@ -697,43 +678,6 @@ export function App({ initialThemePreference }: AppProps) {
         caughtError instanceof Error
           ? caughtError.message
           : 'Unable to open the requested capability target.',
-      )
-    } finally {
-      setActionPendingKey(null)
-    }
-  }
-
-  async function handleCoreServiceCommandAction(
-    commandId: WorkspaceCoreServiceCommandId,
-    options: {
-      searchQuery?: string | null
-    } = {},
-  ) {
-    const service = selectedService
-    if (!service) {
-      return
-    }
-
-    const pendingKey = `service:${service.id}:${commandId}`
-    setActionPendingKey(pendingKey)
-    setActionError(null)
-
-    try {
-      const result = await runCoreServiceCommand(service.id, {
-        commandId,
-        repoRelativePath: mempalaceTargetContext?.repoRelativePath ?? null,
-        searchQuery: options.searchQuery ?? null,
-      })
-      setMempalaceCommandOutput(
-        result.output.trim().length > 0 ? `$ ${result.command}\n${result.output}` : `$ ${result.command}`,
-      )
-      await refreshSummarySoft(undefined, 'action')
-      invalidateIndexedSearch()
-    } catch (caughtError) {
-      setActionError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : 'Unable to run the workspace memory command.',
       )
     } finally {
       setActionPendingKey(null)
@@ -1094,52 +1038,6 @@ export function App({ initialThemePreference }: AppProps) {
     : null
   const selectedService =
     coreServices.find((service) => service.id === selectedServiceId) ?? coreServices[0] ?? null
-  const mempalaceService = coreServices.find((service) => service.id === 'mempalace') ?? null
-
-  useEffect(() => {
-    if (!summary?.repos.length) {
-      setMempalaceTargetRepoRelativePath(null)
-      return
-    }
-
-    if (
-      !mempalaceTargetRepoRelativePath ||
-      !summary.repos.some((repo) => repo.relativePath === mempalaceTargetRepoRelativePath)
-    ) {
-      setMempalaceTargetRepoRelativePath(
-        selectedRepo?.relativePath ?? summary.repos[0]?.relativePath ?? null,
-      )
-    }
-  }, [mempalaceTargetRepoRelativePath, selectedRepo, summary?.repos])
-
-  useEffect(() => {
-    if (workspaceView !== 'mempalace' || selectedService?.id !== 'mempalace') {
-      return
-    }
-
-    void fetchCoreServiceTargetContext(selectedService.id, {
-      currentRepoRelativePath: selectedRepo?.relativePath ?? null,
-      repoRelativePath: mempalaceTargetRepoRelativePath,
-      targetKind: mempalaceTargetKind,
-    })
-      .then((context) => {
-        setMempalaceTargetContext(context)
-      })
-      .catch((caughtError) => {
-        setActionError(
-          caughtError instanceof Error
-            ? caughtError.message
-            : 'Unable to load MemPalace target context.',
-        )
-      })
-  }, [
-    mempalaceTargetKind,
-    mempalaceTargetRepoRelativePath,
-    selectedRepo?.relativePath,
-    selectedService?.id,
-    summary?.generatedAt,
-    workspaceView,
-  ])
 
   useEffect(() => {
     if (!selectedRepo) {
@@ -1166,7 +1064,7 @@ export function App({ initialThemePreference }: AppProps) {
   }, [selectedRepo])
 
   useEffect(() => {
-    if (workspaceView !== 'dashboard' || !selectedRepo) {
+    if (!selectedRepo) {
       return
     }
 
@@ -1217,7 +1115,7 @@ export function App({ initialThemePreference }: AppProps) {
     return () => {
       controller.abort()
     }
-  }, [selectedRepo, workspaceView])
+  }, [selectedRepo])
 
   const generatedAt = summary ? formatGeneratedAt(summary.generatedAt) : 'Waiting for API'
   const refreshDebugLabel = `Refresh stats: coalesced ${softRefreshCoalescedCountRef.current}, selected detail hydrations ${repoDetailsHydrationCountRef.current}`
@@ -1245,14 +1143,10 @@ export function App({ initialThemePreference }: AppProps) {
 
     setSelectedFilter('all')
     setSelectedPath(nextRepo.path)
-    setWorkspaceView('dashboard')
   }
 
   function handleSelectIndexedService(serviceId: string) {
     setSelectedServiceId(serviceId)
-    if (serviceId === 'mempalace') {
-      setWorkspaceView('mempalace')
-    }
   }
 
   function handleSelectIndexedCapability(capabilityId: string) {
@@ -1264,25 +1158,11 @@ export function App({ initialThemePreference }: AppProps) {
       return
     }
 
-    setWorkspaceView('dashboard')
     setSelectedCapabilityId(capabilityId)
 
     if (capability.installed) {
       return
     }
-  }
-
-  function handleOpenDashboardView() {
-    setWorkspaceView('dashboard')
-  }
-
-  function handleOpenMempalaceWorkspace() {
-    if (!mempalaceService) {
-      return
-    }
-
-    setSelectedServiceId(mempalaceService.id)
-    setWorkspaceView('mempalace')
   }
 
   return (
@@ -1297,24 +1177,6 @@ export function App({ initialThemePreference }: AppProps) {
                 A local dashboard for discovering repositories, tracking runtime
                 state, and keeping direct previews as the default path.
               </p>
-            </div>
-
-            <div className="workspace-nav" aria-label="Workspace sections">
-              <button
-                className={`workspace-nav-button ${workspaceView === 'dashboard' ? 'active' : ''}`}
-                onClick={handleOpenDashboardView}
-                type="button"
-              >
-                Dashboard
-              </button>
-              <button
-                className={`workspace-nav-button ${workspaceView === 'mempalace' ? 'active' : ''}`}
-                disabled={!mempalaceService}
-                onClick={handleOpenMempalaceWorkspace}
-                type="button"
-              >
-                Workspace memory
-              </button>
             </div>
 
             <div className="hero-actions">
@@ -1380,31 +1242,7 @@ export function App({ initialThemePreference }: AppProps) {
         </section>
       ) : null}
 
-      {workspaceView === 'mempalace' && selectedService?.id === 'mempalace' ? (
-        <MempalaceWorkspacePage
-          actionError={actionError}
-          actionPendingKey={actionPendingKey}
-          commandOutput={mempalaceCommandOutput}
-          context={mempalaceTargetContext}
-          loading={loading}
-          onInstallAction={handleCoreServiceInstallAction}
-          onOpenAction={handleOpenCoreServiceAction}
-          onReturnToDashboard={() => {
-            handleOpenDashboardView()
-          }}
-          onRunCommand={handleCoreServiceCommandAction}
-          onSearchAction={async (query) => {
-            await handleCoreServiceCommandAction('search', { searchQuery: query })
-          }}
-          onTargetKindChange={setMempalaceTargetKind}
-          onTargetRepoChange={setMempalaceTargetRepoRelativePath}
-          repos={summary?.repos ?? []}
-          selectedRepoRelativePath={mempalaceTargetRepoRelativePath}
-          selectedTargetKind={mempalaceTargetKind}
-          service={selectedService}
-        />
-      ) : (
-        <main className="dashboard-grid">
+      <main className="dashboard-grid">
           <section
             className={`dashboard-main ${
               repoLayoutMode === 'discovery-first'
@@ -1429,7 +1267,6 @@ export function App({ initialThemePreference }: AppProps) {
                 onSelectIndexedService={handleSelectIndexedService}
                 onSelectRepo={(nextPath) => {
                   setSelectedPath(nextPath)
-                  handleOpenDashboardView()
                 }}
                 onFilterChange={setSelectedFilter}
                 onToggleArchived={handleToggleArchived}
@@ -1495,9 +1332,6 @@ export function App({ initialThemePreference }: AppProps) {
                 onOpenAction={handleOpenCoreServiceAction}
                 onOpenServiceWorkspace={(serviceId) => {
                   setSelectedServiceId(serviceId)
-                  if (serviceId === 'mempalace') {
-                    handleOpenMempalaceWorkspace()
-                  }
                 }}
                 onRuntimeAction={handleCoreServiceRuntimeAction}
                 onSelectService={setSelectedServiceId}
@@ -1515,7 +1349,7 @@ export function App({ initialThemePreference }: AppProps) {
                 onSelectCapability={setSelectedCapabilityId}
                 selectedCapabilityId={selectedCapabilityId}
               />
-              {selectedService && selectedService.id !== 'mempalace' ? (
+              {selectedService ? (
                 <CoreServiceDetails
                   actionError={actionError}
                   actionPendingKey={actionPendingKey}
@@ -1579,7 +1413,6 @@ export function App({ initialThemePreference }: AppProps) {
             </div>
           </section>
         </main>
-      )}
     </div>
   )
 }

@@ -1,11 +1,7 @@
 import express, { type NextFunction, type Request, type Response } from 'express'
-import { access } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type {
-  WorkspaceCoreService,
-  WorkspaceCoreServiceCommandId,
-} from '../src/types/workspace.ts'
+import type { WorkspaceCoreService } from '../src/types/workspace.ts'
 import {
   workspaceHubIntentHeaderName,
   workspaceHubIntentHeaderValue,
@@ -18,7 +14,6 @@ import { generateRepoCover } from './repo-cover.ts'
 import { runRepoIntake } from './repo-intake.ts'
 import { writeRepoManifest } from './repo-manifest.ts'
 import { findCoreService } from './core-services.ts'
-import { readMempalaceGraphSnapshot } from './mempalace-graph.ts'
 import {
   buildWorkspaceCapabilitiesSnapshot,
   findWorkspaceCapability,
@@ -30,7 +25,6 @@ import {
   getCoreServiceInstallSnapshots,
   getCoreServiceRuntimeSnapshots,
   restartCoreService,
-  runCoreServiceCommand,
   runCoreServiceInstall,
   runCoreServiceSync,
   startCoreService,
@@ -274,65 +268,6 @@ function invalidateWorkspaceCaches(options: { search?: boolean } = {}) {
   }
 }
 
-async function fileExists(targetPath: string) {
-  try {
-    await access(targetPath)
-    return true
-  } catch {
-    return false
-  }
-}
-
-function parseServiceTargetKind(value: unknown): 'current-repo' | 'repo' | 'workspace-docs' {
-  if (value === 'current-repo' || value === 'repo' || value === 'workspace-docs') {
-    return value
-  }
-
-  return 'workspace-docs'
-}
-
-function readOptionalRelativePath(body: unknown, fieldName: string) {
-  if (typeof body !== 'object' || body === null) {
-    return null
-  }
-
-  const value = (body as Record<string, unknown>)[fieldName]
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null
-}
-
-function readOptionalString(body: unknown, fieldName: string) {
-  if (typeof body !== 'object' || body === null) {
-    return null
-  }
-
-  const value = (body as Record<string, unknown>)[fieldName]
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null
-}
-
-function isPathWithinRoot(rootPath: string, candidatePath: string) {
-  const normalizedRootPath = path.resolve(rootPath)
-  const normalizedCandidatePath = path.resolve(candidatePath)
-
-  return (
-    normalizedCandidatePath === normalizedRootPath ||
-    normalizedCandidatePath.startsWith(`${normalizedRootPath}${path.sep}`)
-  )
-}
-
-function targetMatchesPath(servicePath: string | null, targetPath: string | null) {
-  if (!servicePath || !targetPath) {
-    return false
-  }
-
-  const normalizedServicePath = path.resolve(servicePath)
-  const normalizedTargetPath = path.resolve(targetPath)
-
-  return (
-    normalizedServicePath === normalizedTargetPath ||
-    normalizedServicePath.startsWith(`${normalizedTargetPath}${path.sep}`)
-  )
-}
-
 function serviceMaintenancePausedReason(service: WorkspaceCoreService) {
   return service.maintenancePaused
     ? service.maintenancePausedReason ?? 'This service maintenance is temporarily paused.'
@@ -348,114 +283,6 @@ function rejectPausedServiceMaintenance(service: WorkspaceCoreService, response:
 
   response.status(400).json({ message: pausedReason })
   return true
-}
-
-function buildMempalaceContextCommands(
-  service: WorkspaceCoreService,
-  targetKind: 'current-repo' | 'repo' | 'workspace-docs',
-  repoRelativePath: string | null,
-  targetAvailable: boolean,
-) {
-  const pausedReason = serviceMaintenancePausedReason(service)
-  const serviceCommandsEnabled = !pausedReason
-  const targetCommandsEnabled = serviceCommandsEnabled && targetAvailable
-  const repoCommandEnabled = serviceCommandsEnabled && Boolean(repoRelativePath)
-  const targetUnavailableReason = 'Select an available memory target before running this command.'
-  const repoUnavailableReason = 'Select an available repo target before running this command.'
-  const commandDisabledReason = (enabled: boolean, fallbackReason: string | null = null) =>
-    enabled ? null : pausedReason ?? fallbackReason
-  const buildGraphCommand =
-    targetAvailable && repoRelativePath
-      ? `tools/bin/workspace-memory build-graph repo ${repoRelativePath}`
-      : targetKind === 'workspace-docs'
-        ? 'tools/bin/workspace-memory build-graph workspace-docs'
-        : 'tools/bin/workspace-memory build-graph repo <relative-path>'
-  const saveRepoCommand = repoRelativePath
-    ? `tools/bin/workspace-memory save-repo ${repoRelativePath}`
-    : 'tools/bin/workspace-memory save-repo <repo-name>'
-
-  return [
-    {
-      description: 'Build a target-scoped graph export from MemPalace sidecars and nearby docs.',
-      enabled: targetCommandsEnabled,
-      id: 'build-graph',
-      label: 'Build graph',
-      reasonDisabled: commandDisabledReason(targetCommandsEnabled, targetUnavailableReason),
-      shellCommand: buildGraphCommand,
-    },
-    {
-      description: 'Check local service readiness and key workspace paths.',
-      enabled: serviceCommandsEnabled,
-      id: 'status',
-      label: 'Status',
-      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
-      shellCommand: 'tools/bin/workspace-memory status',
-    },
-    {
-      description: 'Run a retrieval search against the workspace memory corpus.',
-      enabled: serviceCommandsEnabled,
-      id: 'search',
-      label: 'Search memory',
-      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
-      shellCommand: 'tools/bin/workspace-memory search <query>',
-    },
-    {
-      description: 'Save workspace docs and the current Codex thread into MemPalace.',
-      enabled: serviceCommandsEnabled,
-      id: 'save-workspace',
-      label: 'Save workspace',
-      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
-      shellCommand: 'tools/bin/workspace-memory save-workspace',
-    },
-    {
-      description: 'Save the selected repo target plus the current Codex thread.',
-      enabled: repoCommandEnabled,
-      id: 'save-repo',
-      label: 'Save repo',
-      reasonDisabled: commandDisabledReason(repoCommandEnabled, repoUnavailableReason),
-      shellCommand: saveRepoCommand,
-    },
-    {
-      description: 'Export the active Codex thread into a readable transcript bundle.',
-      enabled: serviceCommandsEnabled,
-      id: 'export-codex-current',
-      label: 'Export current Codex thread',
-      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
-      shellCommand: 'tools/bin/workspace-memory export-codex current',
-    },
-    {
-      description: 'Mine the active Codex thread directly from the local session log.',
-      enabled: serviceCommandsEnabled,
-      id: 'mine-codex-current',
-      label: 'Mine current Codex thread',
-      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
-      shellCommand: 'tools/bin/workspace-memory mine-codex-current',
-    },
-    {
-      description: 'Refresh the MemPalace wake-up summary from the current corpus.',
-      enabled: serviceCommandsEnabled,
-      id: 'wake-up',
-      label: 'Wake-up',
-      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
-      shellCommand: 'tools/bin/workspace-memory wake-up',
-    },
-    {
-      description: 'Start the MemPalace MCP server for the workspace user.',
-      enabled: serviceCommandsEnabled,
-      id: 'runtime-start',
-      label: 'Start MCP server',
-      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
-      shellCommand: 'tools/bin/mempalace-start',
-    },
-    {
-      description: 'Fast-forward the MemPalace fork from upstream when the tree is clean.',
-      enabled: serviceCommandsEnabled,
-      id: 'sync',
-      label: 'Sync fork',
-      reasonDisabled: commandDisabledReason(serviceCommandsEnabled),
-      shellCommand: 'tools/bin/mempalace-sync',
-    },
-  ]
 }
 
 app.get('/api/health', (_request: Request, response: Response) => {
@@ -764,147 +591,6 @@ app.post(
 )
 
 app.post(
-  '/api/services/context',
-  async (request: Request, response: Response, next: NextFunction) => {
-    try {
-      const serviceId =
-        typeof request.body?.serviceId === 'string' ? request.body.serviceId.trim() : ''
-      const targetKind = parseServiceTargetKind(request.body?.targetKind)
-      const requestedRepoRelativePath = readOptionalRelativePath(request.body, 'repoRelativePath')
-      const currentRepoRelativePath = readOptionalRelativePath(request.body, 'currentRepoRelativePath')
-
-      if (!serviceId) {
-        response.status(400).json({ message: 'A service id is required.' })
-        return
-      }
-
-      const service = await findCoreService(
-        serviceId,
-        getCoreServiceInstallSnapshots(),
-        getCoreServiceRuntimeSnapshots(),
-      )
-
-      if (!service) {
-        response.status(404).json({ message: 'Service not found.' })
-        return
-      }
-
-      const resolvedRepoRelativePath =
-        targetKind === 'repo'
-          ? requestedRepoRelativePath
-          : targetKind === 'current-repo'
-            ? currentRepoRelativePath
-            : null
-
-      const resolvedRepo = resolvedRepoRelativePath
-        ? await findWorkspaceRepo(
-            resolvedRepoRelativePath,
-            getInstallSnapshots(),
-            getRuntimeSnapshots(),
-          )
-        : null
-
-      const targetPath =
-        targetKind === 'workspace-docs'
-          ? path.join(workspaceRoot, 'docs')
-          : resolvedRepo?.path ?? null
-
-      const targetLabel =
-        targetKind === 'workspace-docs'
-          ? 'Workspace docs'
-          : targetKind === 'current-repo'
-            ? resolvedRepo?.name ?? 'Current repo'
-            : resolvedRepo?.name ?? requestedRepoRelativePath ?? 'Selected repo'
-
-      const metadataPath = targetPath
-        ? path.join(targetPath, '.workspace', 'mempalace', 'mempalace.yaml')
-        : null
-      const metadataExists = metadataPath ? await fileExists(metadataPath) : false
-      const lastRelevantIngestTarget =
-        (targetMatchesPath(service.lastSaveTarget, targetPath) && service.lastSaveTarget) ||
-        (targetMatchesPath(service.lastIngestTarget, targetPath) && service.lastIngestTarget) ||
-        null
-      const recommendedActionId = null
-      const graph = await readMempalaceGraphSnapshot(service, {
-        available: targetKind === 'workspace-docs' || Boolean(resolvedRepo),
-        repoRelativePath: resolvedRepo?.relativePath ?? resolvedRepoRelativePath,
-      })
-
-      response.json({
-        commands: buildMempalaceContextCommands(
-          service,
-          targetKind,
-          resolvedRepo?.relativePath ?? resolvedRepoRelativePath,
-          targetKind === 'workspace-docs' || Boolean(resolvedRepo),
-        ),
-        graph,
-        lastRelevantIngestTarget,
-        metadataExists,
-        metadataPath,
-        recommendedActionId,
-        recommendedActionLabel: null,
-        repoRelativePath: resolvedRepo?.relativePath ?? resolvedRepoRelativePath,
-        serviceId: service.id,
-        targetAvailable: targetKind === 'workspace-docs' || Boolean(resolvedRepo),
-        targetKind,
-        targetLabel,
-        targetPath,
-      })
-    } catch (error) {
-      next(error)
-    }
-  },
-)
-
-app.post(
-  '/api/services/command',
-  async (request: Request, response: Response, next: NextFunction) => {
-    try {
-      const serviceId =
-        typeof request.body?.serviceId === 'string' ? request.body.serviceId.trim() : ''
-      const commandId =
-        typeof request.body?.commandId === 'string' ? request.body.commandId.trim() : ''
-      const repoRelativePath = readOptionalRelativePath(request.body, 'repoRelativePath')
-      const searchQuery = readOptionalString(request.body, 'searchQuery')
-
-      if (!serviceId) {
-        response.status(400).json({ message: 'A service id is required.' })
-        return
-      }
-
-      if (!commandId) {
-        response.status(400).json({ message: 'A command id is required.' })
-        return
-      }
-
-      const service = await findCoreService(
-        serviceId,
-        getCoreServiceInstallSnapshots(),
-        getCoreServiceRuntimeSnapshots(),
-      )
-
-      if (!service) {
-        response.status(404).json({ message: 'Service not found.' })
-        return
-      }
-
-      if (rejectPausedServiceMaintenance(service, response)) {
-        return
-      }
-
-      const result = await runCoreServiceCommand(service, commandId as WorkspaceCoreServiceCommandId, {
-        repoRelativePath,
-        searchQuery,
-      })
-      invalidateWorkspaceCaches({ search: true })
-      response.json({ ok: true, ...result })
-    } catch (error) {
-      next(error)
-    }
-  },
-)
-
-app.post(
   '/api/services/open',
   async (request: Request, response: Response, next: NextFunction) => {
     try {
@@ -912,7 +598,6 @@ app.post(
         typeof request.body?.serviceId === 'string' ? request.body.serviceId.trim() : ''
       const target =
         typeof request.body?.target === 'string' ? request.body.target.trim() : ''
-      const targetPath = readOptionalString(request.body, 'targetPath')
 
       if (!serviceId) {
         response.status(400).json({ message: 'A service id is required.' })
@@ -948,22 +633,6 @@ app.post(
         await openTarget(service.sharedRoot)
       } else if (target === 'cache') {
         await openTarget(service.cacheRoot)
-      } else if (target === 'exports') {
-        await openTarget(service.exportsRoot)
-      } else if (target === 'graph' || target === 'graph-folder') {
-        if (!targetPath) {
-          response.status(400).json({ message: 'A graph target path is required.' })
-          return
-        }
-        if (!isPathWithinRoot(path.join(service.cacheRoot, 'graphs'), targetPath)) {
-          response.status(400).json({ message: 'Graph targets must stay inside the service graph cache.' })
-          return
-        }
-        if (!(await fileExists(targetPath))) {
-          response.status(400).json({ message: 'The requested graph artifact does not exist yet.' })
-          return
-        }
-        await openTarget(targetPath)
       } else if (target === 'terminal') {
         await openInTerminal(service.repoPath)
       } else {

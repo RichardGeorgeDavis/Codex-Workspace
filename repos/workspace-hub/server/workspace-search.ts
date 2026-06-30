@@ -355,7 +355,7 @@ async function buildCoreServiceDocuments(
           { label: 'description', text: service.description },
           { label: 'notes', text: service.notes },
           { label: 'commands', text: [service.installCommand, service.runtimeCommand, service.syncCommand].join(' ') },
-          { label: 'storage', text: [service.sharedRoot, service.cacheRoot, service.configPath].join(' ') },
+          { label: 'storage', text: [service.sharedRoot, service.cacheRoot, service.statePath].join(' ') },
           ...(mode === 'deep'
             ? [
                 { label: 'readme', text: readmeText },

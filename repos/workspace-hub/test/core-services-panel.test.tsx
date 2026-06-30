@@ -12,17 +12,13 @@ import type { WorkspaceCoreService } from '../src/types/workspace.ts'
 function buildService(): WorkspaceCoreService {
   return {
     branch: 'main',
-    cacheRoot: '/tmp/workspace/cache/mempalace/test-user',
-    category: 'memory',
-    configPath: '/tmp/workspace/shared/mempalace/test-user/home/.mempalace/config.json',
-    description: 'Local long-term memory and retrieval service for Codex Workspace.',
+    cacheRoot: '/tmp/workspace/cache/fixture-service/test-user',
+    category: 'fixture',
+    description: 'Local fixture service for Codex Workspace.',
     docsPath: '/tmp/workspace/docs/11-core-memory-and-reference-promotion.md',
-    exportsRoot: '/tmp/workspace/shared/mempalace/test-user/exports',
-    homePath: '/tmp/workspace/shared/mempalace/test-user/home',
-    id: 'mempalace',
-    identityPath: '/tmp/workspace/shared/mempalace/test-user/home/.mempalace/identity.txt',
+    id: 'fixture-service',
     install: {
-      command: 'tools/bin/workspace-memory install',
+      command: 'tools/bin/fixture-service install',
       finishedAt: null,
       lastExitCode: null,
       lastSignal: null,
@@ -32,34 +28,25 @@ function buildService(): WorkspaceCoreService {
       status: 'idle',
       updatedAt: null,
     },
-    installCommand: 'tools/bin/workspace-memory install',
-    installCommandArgs: ['/tmp/workspace/tools/bin/workspace-memory', 'install'],
-    lastCodexExportAt: null,
-    lastCodexExportTarget: null,
+    installCommand: 'tools/bin/fixture-service install',
+    installCommandArgs: ['/tmp/workspace/tools/bin/fixture-service', 'install'],
     lastCommandAt: null,
     lastCommandKind: null,
     lastCommandTarget: null,
-    lastIngestAt: null,
-    lastIngestTarget: null,
     lastInstallAt: null,
     lastRuntimeStartAt: null,
-    lastSaveAt: null,
-    lastSaveTarget: null,
-    lastSearchAt: null,
-    lastSearchQuery: null,
     lastSyncAt: null,
-    lastWakeUpAt: null,
-    maintenancePaused: true,
-    maintenancePausedReason: 'Workspace memory is temporarily paused.',
-    name: 'MemPalace',
+    maintenancePaused: false,
+    maintenancePausedReason: null,
+    name: 'Fixture Service',
     notes: '',
-    originUrl: 'https://github.com/milla-jovovich/mempalace.git',
-    readmePath: '/tmp/workspace/tools/mempalace/README.md',
-    repoPath: '/tmp/workspace/tools/mempalace',
+    originUrl: 'https://example.com/fixture-service.git',
+    readmePath: '/tmp/workspace/tools/services/fixture-service/README.md',
+    repoPath: '/tmp/workspace/tools/services/fixture-service',
     repoPresent: true,
-    repoRelativePath: 'tools/mempalace',
+    repoRelativePath: 'tools/services/fixture-service',
     runtime: {
-      command: 'tools/bin/mempalace-start',
+      command: 'tools/bin/fixture-service start',
       lastExitCode: null,
       lastSignal: null,
       logTail: [],
@@ -70,17 +57,15 @@ function buildService(): WorkspaceCoreService {
       stoppedAt: null,
       updatedAt: null,
     },
-    runtimeCommand: 'tools/bin/mempalace-start',
-    runtimeCommandArgs: ['/tmp/workspace/tools/bin/mempalace-start'],
-    sharedRoot: '/tmp/workspace/shared/mempalace/test-user',
-    statePath: '/tmp/workspace/shared/mempalace/test-user/service-state.json',
-    syncCommand: 'tools/bin/mempalace-sync',
-    syncCommandArgs: ['/tmp/workspace/tools/bin/mempalace-sync'],
+    runtimeCommand: 'tools/bin/fixture-service start',
+    runtimeCommandArgs: ['/tmp/workspace/tools/bin/fixture-service', 'start'],
+    sharedRoot: '/tmp/workspace/shared/fixture-service/test-user',
+    statePath: '/tmp/workspace/shared/fixture-service/test-user/service-state.json',
+    syncCommand: 'tools/bin/fixture-service sync',
+    syncCommandArgs: ['/tmp/workspace/tools/bin/fixture-service', 'sync'],
     updatedAt: null,
     upstreamUrl: null,
     user: 'test-user',
-    venvPath: '/tmp/workspace/tools/mempalace/.venv/bin/python',
-    venvReady: true,
     version: '0.1.0',
   }
 }
@@ -125,8 +110,8 @@ test('CoreServicesPanel renders skipped manifest warnings with remediation', () 
   assert.match(markup, /tools\/manifests\/workspace-capabilities\.json/)
   assert.match(markup, /Docs path resolves outside the workspace root and was rejected\./)
   assert.match(markup, /Use a workspace-relative `docsPath` that stays inside the workspace\./)
-  assert.match(markup, /Maintenance paused/)
-  assert.match(markup, /Stop paused/)
+  assert.match(markup, /Fixture Service/)
+  assert.match(markup, /tools\/services\/fixture-service/)
 })
 
 test('CoreServicesPanel empty state points at workspace capabilities manifest', () => {

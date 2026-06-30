@@ -41,7 +41,7 @@ async function fileExists(targetPath: string) {
 }
 
 async function saveRepoCloseout() {
-  return 'Workspace memory is temporarily paused, so repo closeout was skipped.'
+  return 'Record repo closeout in tracked docs such as README.md, HANDOVER.md, or DESIGN.md.'
 }
 
 function sanitizeAltText(value: string) {
