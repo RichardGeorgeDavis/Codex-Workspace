@@ -283,13 +283,9 @@ else:
 PY
   )"
 
-  notable_constraints=$(
-    cat <<'EOF'
-- Start from this entry packet, then open `abstract.md`, then `overview.md`, then canonical repo docs only if the task stays ambiguous.
+  notable_constraints='- Start from this entry packet, then open `abstract.md`, then `overview.md`, then canonical repo docs only if the task stays ambiguous.
 - Avoid pulling workspace-wide docs into repo work unless shared policy, shared tooling, or a cross-repo dependency actually matters.
-- Treat generated files under `cache/context/` as disposable routing aids, not canonical repo truth.
-EOF
-  )
+- Treat generated files under `cache/context/` as disposable routing aids, not canonical repo truth.'
 
   cat <<EOF
 # Workspace Hub — entry packet

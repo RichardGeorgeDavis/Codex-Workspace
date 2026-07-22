@@ -167,6 +167,11 @@ mkdir -p "$temp_validate_dir/.codex"
 temp_config_file="$temp_validate_dir/.codex/config.toml"
 
 if [ -f "$mcp_codex_config_file" ]; then
+  if ! validate_managed_mcp_block "$mcp_codex_config_file"; then
+    printf '%s\n' "Refusing to replace an invalid managed MCP block in $mcp_codex_config_file." >&2
+    printf '%s\n' "Move unrelated settings outside the marked block, then rerun this installer." >&2
+    exit 1
+  fi
   remove_managed_mcp_block "$mcp_codex_config_file" >"$temp_config_file"
 else
   : >"$temp_config_file"

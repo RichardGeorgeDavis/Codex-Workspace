@@ -70,6 +70,50 @@ remove_managed_mcp_block() {
   ' "$target_file"
 }
 
+validate_managed_mcp_block() {
+  target_file=$1
+
+  [ -f "$target_file" ] || return 0
+
+  awk -v start="$mcp_start_marker" -v end="$mcp_end_marker" '
+    $0 == start {
+      if (inside || starts > 0) {
+        print "invalid managed MCP marker layout" > "/dev/stderr"
+        invalid = 1
+      }
+      inside = 1
+      starts++
+      next
+    }
+    $0 == end {
+      if (!inside) {
+        print "managed MCP end marker has no matching start marker" > "/dev/stderr"
+        invalid = 1
+      }
+      inside = 0
+      ends++
+      next
+    }
+    inside && /^\[/ {
+      if ($0 != "[mcp_servers.openaiDeveloperDocs]" &&
+          $0 != "[mcp_servers.context7]" &&
+          $0 != "[mcp_servers.playwright]" &&
+          $0 != "[mcp_servers.\"chrome-devtools\"]" &&
+          $0 != "[mcp_servers.github]") {
+        print "unmanaged TOML table inside managed MCP block: " $0 > "/dev/stderr"
+        invalid = 1
+      }
+    }
+    END {
+      if (inside || starts != ends) {
+        print "managed MCP markers are unbalanced" > "/dev/stderr"
+        invalid = 1
+      }
+      exit invalid
+    }
+  ' "$target_file"
+}
+
 detect_managed_mcp_profile() {
   if [ -f "$mcp_generated_profile_file" ]; then
     sed -n '1p' "$mcp_generated_profile_file"

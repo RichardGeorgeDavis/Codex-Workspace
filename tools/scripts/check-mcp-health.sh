@@ -260,6 +260,8 @@ if printf '%s\n' "$server_list_json" | jq -e '.[] | select(.name == "context7")'
   fi
 fi
 
+case "$profile" in
+  default-full|github-full)
 if printf '%s\n' "$server_list_json" | jq -e '.[] | select(.name == "github")' >/dev/null 2>&1; then
   github_headers=$(printf '%s\n' "$server_list_json" | jq -r '.[] | select(.name == "github") | .transport.http_headers["X-MCP-Toolsets"] // empty')
   if [ "$github_headers" = "all" ]; then
@@ -281,6 +283,8 @@ if printf '%s\n' "$server_list_json" | jq -e '.[] | select(.name == "github")' >
       ;;
   esac
 fi
+    ;;
+esac
 
 for expected_server in $(profile_expected_servers); do
   server_json=$(server_json_path "$expected_server")
