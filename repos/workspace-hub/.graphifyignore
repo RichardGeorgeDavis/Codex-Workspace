@@ -1,0 +1,19 @@
+# Privacy-first allowlist. This file takes precedence over .gitignore.
+*
+
+!src/
+!src/**
+!server/
+!server/**
+!test/
+!test/**
+
+!package.json
+!tsconfig*.json
+!*eslint*.js
+!*eslint*.mjs
+!vite.config.ts
+
+!.workspace/
+.workspace/*
+!.workspace/project.json

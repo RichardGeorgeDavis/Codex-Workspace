@@ -195,7 +195,10 @@ test('RepoDetails renders the latest repo intake notes and mapped-host warning w
     coverImagePath: '/tmp/workspace/repos/workspace-hub/docs/cover.png',
     manifestCreated: true,
     manifestPath: '/tmp/workspace/repos/workspace-hub/.workspace/project.json',
-    notes: ['Manifest created because this repo benefits from explicit runtime metadata.'],
+    notes: [
+      'Manifest created because this repo benefits from explicit runtime metadata.',
+      'Graphify not enabled: classify the corpus and approve a repo-specific privacy allowlist before generation.',
+    ],
     readmeCreated: false,
     readmePath: '/tmp/workspace/repos/workspace-hub/README.md',
     readmeUpdated: true,
@@ -203,5 +206,6 @@ test('RepoDetails renders the latest repo intake notes and mapped-host warning w
 
   assert.match(markup, /Latest repo intake/)
   assert.match(markup, /Manifest created because this repo benefits from explicit runtime metadata\./)
+  assert.match(markup, /Graphify not enabled: classify the corpus/)
   assert.match(markup, /Mapped-host mode is selected, but no path or subdomain is configured yet\./)
 })

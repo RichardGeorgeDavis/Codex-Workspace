@@ -44,6 +44,43 @@ async function saveRepoCloseout() {
   return 'Record repo closeout in tracked docs such as README.md, HANDOVER.md, or DESIGN.md.'
 }
 
+async function graphifyIntakeNote(repoPath: string) {
+  const graphifyIgnorePath = path.join(repoPath, '.graphifyignore')
+  const gitignorePath = path.join(repoPath, '.gitignore')
+
+  if (!(await fileExists(graphifyIgnorePath))) {
+    return 'Graphify not enabled: classify the corpus and approve a repo-specific privacy allowlist before generation.'
+  }
+
+  if (!(await fileExists(gitignorePath))) {
+    return 'Graphify safeguards incomplete: add a repo-local .gitignore rule for graphify-out/ before generation.'
+  }
+
+  const gitignore = await readFile(gitignorePath, 'utf8')
+  if (!/^\/?graphify-out\/$/m.test(gitignore)) {
+    return 'Graphify safeguards incomplete: add an explicit graphify-out/ ignore rule before generation.'
+  }
+
+  return 'Graphify prerequisite files detected; privacy review is still required. Run the workspace wrapper dry run and privacy gate explicitly. Repo intake did not generate a graph or install hooks.'
+}
+
+async function contextCatalogIntakeNote(repoPath: string, relativePath: string) {
+  const candidates = [
+    'CONTEXT_CATALOG.md',
+    'docs/CONTEXT_CATALOG.md',
+    '00-ai-context/CONTEXT_CATALOG.md',
+    'library/_catalog/index.md',
+  ]
+
+  for (const candidate of candidates) {
+    if (await fileExists(path.join(repoPath, candidate))) {
+      return `Low-token context catalog detected at ${candidate}; use it before broad context loading and keep canonical sources authoritative.`
+    }
+  }
+
+  return `Optional low-token context catalog not configured; preview with tools/scripts/context-catalog.sh "${relativePath}" when repeated context loading warrants it.`
+}
+
 function sanitizeAltText(value: string) {
   return value.replace(/[[\]]/g, '').trim() || 'Repo cover'
 }
@@ -323,6 +360,8 @@ export async function runRepoIntake(
   }
 
   notes.push(await saveRepoCloseout())
+  notes.push(await contextCatalogIntakeNote(repo.path, repo.relativePath))
+  notes.push(await graphifyIntakeNote(repo.path))
 
   return {
     coverCreated,

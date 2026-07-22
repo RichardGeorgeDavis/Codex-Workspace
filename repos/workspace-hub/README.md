@@ -190,6 +190,20 @@ The automated test suite uses temp workspaces and fixture repos so it does not
 rewrite your current `repos/` content while verifying agent detection and
 preset scaffolding.
 
+## Optional Graphify pilot
+
+Workspace Hub is the sole privacy-first Graphify pilot. Its graph is a local,
+ignored navigation aid and never replaces source, tests, manifests, or tracked
+docs. From the workspace root:
+
+```bash
+tools/scripts/graphify-repo.sh repos/workspace-hub
+tools/scripts/graphify-repo.sh --run repos/workspace-hub
+```
+
+The allowlist in `.graphifyignore` limits extraction to source, tests, and
+public code configuration. Query logging is disabled by the workspace wrapper.
+
 Quick verify (optimization pass):
 
 ```bash

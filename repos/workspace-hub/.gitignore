@@ -14,6 +14,7 @@ dist-ssr
 coverage
 *.tsbuildinfo
 *.local
+graphify-out/
 .env
 .env.*
 !.env.example
@@ -22,6 +23,7 @@ coverage
 data/*
 !data/.gitignore
 .workspace/project.local.json
+.workspace/agent-artifacts/
 docs/*.local.md
 
 # macOS and synced-folder noise
