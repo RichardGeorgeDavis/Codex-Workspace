@@ -1,0 +1,52 @@
+{
+  "description": "Managed SKILL.md sources mirrored into .agents/skills for TomeVault distribution.",
+  "targetRoot": ".agents/skills",
+  "managedBy": "tools/scripts/sync-tomevault-skills.sh",
+  "skills": [
+    {
+      "name": "agent-tooling-doctor",
+      "source": "shared/skills/agent-tooling-doctor",
+      "target": ".agents/skills/agent-tooling-doctor"
+    },
+    {
+      "name": "repo-onboarding",
+      "source": "shared/skills/repo-onboarding",
+      "target": ".agents/skills/repo-onboarding"
+    },
+    {
+      "name": "runtime-triage",
+      "source": "shared/skills/runtime-triage",
+      "target": ".agents/skills/runtime-triage"
+    },
+    {
+      "name": "ssh-keychain-access",
+      "source": "shared/skills/ssh-keychain-access",
+      "target": ".agents/skills/ssh-keychain-access"
+    },
+    {
+      "name": "workspace-maintenance",
+      "source": "shared/skills/workspace-maintenance",
+      "target": ".agents/skills/workspace-maintenance"
+    },
+    {
+      "name": "workspace-quality-gate",
+      "source": "plugins/workspace-quality-gate/skills/workspace-quality-gate",
+      "target": ".agents/skills/workspace-quality-gate"
+    },
+    {
+      "name": "quality-gate",
+      "source": "tools/templates/skills/common/quality-gate",
+      "target": ".agents/skills/quality-gate"
+    },
+    {
+      "name": "security-check",
+      "source": "tools/templates/skills/common/security-check",
+      "target": ".agents/skills/security-check"
+    },
+    {
+      "name": "typescript-review",
+      "source": "tools/templates/skills/typescript/review",
+      "target": ".agents/skills/typescript-review"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "defaultProvider": "ollama",
+  "defaultModel": "qwen2.5:3b",
+  "ollamaHost": "http://127.0.0.1:11434",
+  "cloudBlockedPrefixes": [
+    "repos/private/"
+  ],
+  "limits": {
+    "maxFiles": 16,
+    "maxFileBytes": 65536,
+    "maxTotalBytes": 262144,
+    "maxLinesPerFile": 600,
+    "maxPromptChars": 28000,
+    "repoMaxPromptChars": 12000
+  },
+  "operationLimits": {
+    "handover": { "maxOutputTokens": 1200 },
+    "extract": { "maxOutputTokens": 1800 }
+  }
+}

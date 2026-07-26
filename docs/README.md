@@ -1,0 +1,170 @@
+# Docs
+
+This folder is the canonical home for the Codex Workspace documentation set.
+
+Use [../README.md](../README.md) as the public-facing project entrypoint, then use this folder for the detailed workspace and handover material.
+
+## Fast Path
+
+For routine agent sessions, start with `HANDOVER.md`, the relevant repo README, and only the specific doc needed for the task. Use generated `cache/context/**/entry.md` packets before opening broader generated summaries, and keep `docs/archive/`, logs, artifacts, screenshots, and `ref/` evidence as opt-in context.
+
+For setup, start with `08-first-run-and-updates.md`. It is now the concise quick path; the historical long setup note lives under `docs/archive/08-first-run-and-updates-history-2026-04.md`.
+
+For token-sensitive routine repo work, prefer the `safe-readonly` MCP profile. Use heavier profiles such as `default-full` only when browser, GitHub, docs, or debugging tools are needed.
+
+## Core pack
+
+Reference these as needed:
+
+1. `00-overview.md`
+2. `01-codex-workspace-handover.md`
+3. `02-local-runtime-handover.md`
+4. `03-workspace-hub-build-spec.md`
+5. `04-build-order-and-dod.md`
+6. `05-examples-and-templates.md`
+7. `06-cross-agent-skills-and-mcp.md`
+8. `07-context-cache-and-retrieval.md`
+9. `08-first-run-and-updates.md`
+10. `09-new-repo-baseline.md`
+11. `10-release-readiness.md`
+12. `11-core-memory-and-reference-promotion.md`
+13. `12-maintainer-runbook.md`
+14. `13-contributor-roadmap.md`
+15. `14-git-and-github-workflow.md`
+16. `15-mcp-profiles-and-trust-levels.md`
+17. `16-mcp-profiles.md`
+18. `17-mcp-install-and-health-check.md`
+19. `18-mcp-server-catalog.md`
+20. `19-mcp-authoring-rules.md`
+21. `20-ai-context-side-load.md`
+22. `21-agent-token-budget.md`
+23. `22-loop-engineering.md`
+24. `23-codebase-knowledge-graph.md`
+25. `24-local-model-context-handover.md`
+26. `HANDOVER.md`
+27. `CHANGELOG.md`
+
+## What Lives Here
+
+- `00-overview.md` to `05-examples-and-templates.md` define the handover pack.
+- `06-cross-agent-skills-and-mcp.md` defines the cross-agent portability layout for skills and MCP.
+- `07-context-cache-and-retrieval.md` defines the layered context-cache model and retrieval visibility rules.
+- `08-first-run-and-updates.md` defines the concise Hub-first onboarding path, setup profiles, update flow, and token-sensitive tooling defaults.
+- `09-new-repo-baseline.md` defines the default repo-intake and repo-baseline contract.
+- `10-release-readiness.md` defines the stable contract, support matrix, migration note, and stable release gate.
+- `11-core-memory-and-reference-promotion.md` defines the workspace source taxonomy and how reviewed GitHub references can graduate into abilities, repo-level adoption, or core workspace services.
+- `12-maintainer-runbook.md` defines the clean-clone maintainer path, optional GitHub auth, capability lifecycle commands, update flow, and rollback guidance.
+- `13-contributor-roadmap.md` defines the public contribution map, label taxonomy, and the current help-wanted starter issue queue.
+- `14-git-and-github-workflow.md` defines the workspace-default collaboration path for local-only, git-only, GitHub-backed, and fork-plus-upstream repos when a repo does not provide its own clearer workflow.
+- `15-mcp-profiles-and-trust-levels.md` defines the official MCP v1 support boundary, trust classes, and placement rules.
+- `16-mcp-profiles.md` defines the named MCP bundles such as `default-full` and `safe-readonly`.
+- `17-mcp-install-and-health-check.md` defines the workspace-owned Codex MCP install, verify, and downgrade path.
+- `18-mcp-server-catalog.md` defines the small approved MCP server catalog for v1.
+- `19-mcp-authoring-rules.md` defines the quality bar for adding future tracked MCP examples.
+- `20-ai-context-side-load.md` defines the concrete v1 side-load generator, `entry.md` routing packet, provenance contract, and Workspace Hub freshness semantics for generated `cache/context/` summaries plus the thin-versus-deep search split.
+- `21-agent-token-budget.md` defines the default context-loading limits, opt-in evidence paths, and search defaults for reducing agent token usage.
+- `22-loop-engineering.md` defines the bounded scheduled-triage controller, draft-worktree authority, independent verification, and pilot rollout rules.
+- `23-codebase-knowledge-graph.md` defines the optional Graphify code-intelligence pilot, privacy boundary, local-output policy, and adoption gate.
+- `24-local-model-context-handover.md` defines the bounded local-first worker, packet contract, provenance, redaction boundary, public-safe cloud routing and explicit Gemini profile ladder, direct-repo guidance overlay, Keychain setup, manual Gemini.app fallback, and the manual-only Alibaba Cloud cost boundary.
+- `HANDOVER.md` is the short current-state handover; detailed historical logs live under `docs/archive/`.
+- `CHANGELOG.md` records notable workspace-level changes.
+
+## Related Locations
+
+- `tools/bin/` holds small wrappers or launch helpers.
+- `tools/scripts/` holds reusable workspace scripts.
+- `tools/local/commands/` holds Finder-friendly local launch commands for specific workspace tools or repos.
+- `tools/templates/` holds starter metadata templates.
+- `tools/manifests/` holds source lists and supporting manifests for scripts.
+- `tools/github-rulesets/` holds importable repository ruleset JSON for GitHub.
+- `docs/archive/` holds historical handover, setup, and implementation logs that should be opened only for targeted archaeology.
+- `docs/wiki/` holds starter content for the optional GitHub wiki surface.
+- `docs/plans/` holds tracked implementation plans for multi-session work (for example docs closeout).
+- `repos/workspace-hub/docs/` holds repo-local documentation for Workspace Hub itself.
+
+Useful maintenance scripts:
+
+- `tools/scripts/bootstrap-workspace.sh` prepares safe cache/context folders and can install `workspace-hub` dependencies without touching sibling repos.
+- `tools/scripts/bootstrap-repo.sh` previews or runs repo-native install/setup using manifest `installCommand` first, then package-manager precedence such as env override, manifest `packageManager`, `package.json`, and lockfiles.
+- `tools/scripts/doctor-workspace.sh` runs a non-destructive environment and readiness check for the workspace, Workspace Hub, mixed-stack tooling, and Codex-related setup.
+- `tools/scripts/cleanup-sync-noise.sh` previews macOS and sync-client noise cleanup by default; pass `--run` to remove `.DS_Store`, `Icon\r`, and `._*`, including broken-ref cases when they leak into `.git/`.
+- `tools/scripts/install-shared-playwright-browser.sh` installs Playwright browsers such as Chromium into the shared workspace cache so multiple repos can reuse them.
+- `tools/scripts/print-workspace-env.sh` prints the shared workspace environment exports, including the shared Playwright browser cache path.
+- `tools/scripts/install-mcp-profile.sh` generates and optionally applies the managed Codex Workspace MCP block for a named profile.
+- `tools/scripts/check-mcp-health.sh` verifies the managed MCP block, expected active servers, tracked examples, and wrapper-based browser runtime assumptions.
+- `tools/scripts/init-agent-job-bundle.sh` previews or creates a local cache/context bundle for longer-running agent jobs under `cache/context/agents/jobs/`.
+- `tools/scripts/loop-engineering.sh` validates a registered repository loop, creates a disposable evidence bundle only with `--run`, optionally prepares an isolated draft worktree, and records independent verification results.
+- `tools/scripts/generate-context-cache.sh` previews or writes workspace and repo side-load summaries under `cache/context/workspace/` and `cache/context/repos/`, including the generated `entry.md` packet that now acts as the default Hub handoff surface.
+- `tools/scripts/local-model-context.sh` prepares bounded provenance-backed packets with local Ollama, public-only Gemini routing (`fast` automatic; higher profiles explicit), or explicit free-only OpenRouter routing; the provider Keychain helpers, `check-public-secrets.sh`, and fixture scripts provide the credential and public-release gates. Alibaba Model Studio has a Keychain helper but is deliberately manual-only.
+- `tools/scripts/context-catalog.sh` previews or creates an adaptive tracked task router and folder wiki without duplicating established catalog systems.
+- `tools/scripts/release-readiness.sh` runs the stable release gate: workspace doctors, `workspace-hub` test/lint/build, skill-sync dry run, and placeholder-surface checks.
+- `tools/scripts/run-with-workspace-env.sh` runs a command with the shared workspace environment, including the shared Playwright browser cache path.
+- `tools/scripts/setup-workspace-profile.sh` provides a guided, non-destructive profile check for `core`, `hub`, `mixed-stack`, `wordpress`, `agent-enhanced`, `workflow-state`, `spec-driven`, and `ui-previews`.
+- `tools/scripts/manage-workspace-capabilities.sh` lists, installs, updates, enables, disables, or uninstalls tracked workspace abilities and core services, with dry-run mode by default.
+- `tools/scripts/design-md.sh` is the canonical repo-level `DESIGN.md` wrapper for starter-template init, `@google/design.md` lint/diff, and example-catalog delegation.
+- `tools/scripts/update-github-refs.sh` remains the compatibility wrapper for update-only reviewed GitHub-ref flows and delegates to the capability lifecycle command.
+- `tools/scripts/capture-site-reference.sh` previews or runs an `httrack` capture for a public-site reference repo, using conservative same-domain defaults and writing capture notes under repo-local `ref/httrack/`.
+- `tools/scripts/workspace-port-allocator.sh` centralizes workspace launcher port reservations under `cache/runtime/ports/`, so concurrent launchers can keep `127.0.0.1` stable and step to the next open port without colliding.
+- `tools/scripts/use-design-md.sh` mirrors the managed VoltAgent example `DESIGN.md` catalog ability into `cache/design-md/catalog/`, lists available site ids, and can copy a selected example `DESIGN.md` into a repo root.
+- `tools/scripts/sync-reference-snapshots.sh` previews or refreshes ignored upstream reference snapshots under `tools/ref/`, with dry-run mode by default.
+- `tools/scripts/sync-codex-skills.sh` previews or syncs tracked workspace skill sources into repo `.codex/skills/` folders plus optional `.agents/skills/` compatibility mirrors, with dry-run mode by default.
+- `tools/scripts/sync-tomevault-skills.sh` previews or syncs the manifest-managed public `.agents/skills/` mirror used for TomeVault distribution, with dry-run mode by default.
+- `tools/scripts/trim-git-repos.sh` performs intentional Git maintenance across `repos/` by explicitly running `.git` sync-noise cleanup, expiring older reflog entries, and running `git gc` with a conservative prune window.
+- `tools/scripts/update-all.sh` can now fast-forward all repos or only a named repo group from a JSON manifest via `--group`.
+
+Local launch examples:
+
+- `tools/local/commands/Run Workspace Hub.command` starts the Hub and opens the browser once it responds.
+- Repo-specific launchers should be kept in an ignored local folder or a private operator repository.
+
+Useful template locations:
+
+- `tools/templates/skills/` holds starter skill packs, execution-mode conventions, and a selective install-profile example.
+- `tools/templates/repo-docs/` holds a starter repo `README.md` template plus a placeholder cover image for new repo intake.
+- `tools/templates/design-md/` holds the canonical repo-level `DESIGN.md` starter template and notes for UI-heavy repos that want tracked design-system context.
+- `tools/templates/codex/` holds starter material for official repo-local `.codex/` setup.
+- `tools/templates/opencode/` holds starter material for optional `.opencode/` setup plus mixed-tool agent presets.
+- `tools/templates/mcp/` holds the official MCP v1 profile and server examples, env templates, generic `read-only` versus `mutating` starter examples, and stdio/logging hygiene notes.
+- `tools/templates/openspec/` holds lightweight tracked spec and change templates for larger work.
+- `tools/templates/ui-previews/` holds guidance for repo-local component preview tooling.
+- `tools/templates/artifacts/` holds the local artifact-bundle convention for longer-running agent jobs.
+- `tools/templates/workflow-state/` holds guidance for optional local workflow-state layers such as `.cognetivy/`.
+- `tools/templates/agents-md/` holds guidance for optional `AGENTS.md` composition when plain single-file authoring stops scaling.
+
+## Public surfaces to review
+
+When a workspace-wide feature lands, update the user-visible surfaces in the same slice:
+
+- root `README.md`
+- `docs/README.md`
+- `docs/CHANGELOG.md`
+- relevant repo-local docs such as `repos/workspace-hub/README.md`
+- optional navigation pages under `docs/wiki/` when public navigation should expose the feature
+
+Recent examples include the capability lifecycle, the source taxonomy, Hub-visible layout or capability flows, managed Codex MCP profile flow, and tracked skill distribution.
+
+Contributor-facing surfaces now also include the root README funnel, `.github/CONTRIBUTING.md`, the issue-template chooser, `13-contributor-roadmap.md`, and `14-git-and-github-workflow.md`.
+
+## Shared Metadata
+
+The `shared/` folder is reserved for workspace-facing metadata such as `shared/repo-index.json` and `shared/standards.md`.
+
+## Recommended machine-level tools
+
+- Core: `git`, `gh`, `jq`, `rg`, `fd`, `tree`
+- Node: a version manager plus `npm`, `pnpm`, and `yarn` where legacy repos need it
+- Python: `python3`, `pip`, optional `uv`
+- PHP: `composer`, `wp`, optional Local or similar WordPress tooling
+
+`gh` is recommended for maintainers and contributors who manage forks, pull requests, or reviewed upstream mirrors. `gh auth login` is optional setup, not a baseline requirement for a clean clone or release verification.
+
+## Shared cache targets
+
+- npm: `cache/npm`
+- pnpm: `cache/pnpm-store`
+- yarn: `cache/yarn`
+- pip: `cache/pip`
+- Playwright browsers: `cache/playwright-browsers`
+- Homebrew downloads: `cache/homebrew`
+
+Map package-manager caches here where practical, but keep project installs inside each repo.

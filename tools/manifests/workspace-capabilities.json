@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "google-design-md",
+      "name": "google-labs-code/design.md",
+      "classification": "ability",
+      "category": "design-standard",
+      "description": "Optional upstream DESIGN.md spec and CLI reference for repo-level design-system authoring, linting, and diffing.",
+      "sourceUrl": "https://github.com/google-labs-code/design.md.git",
+      "installMethod": "git",
+      "updateStrategy": "git-fast-forward",
+      "installTarget": "repos/abilities/google-design-md",
+      "enabledByDefault": false,
+      "exposeInHub": true,
+      "docsPath": "docs/06-cross-agent-skills-and-mcp.md",
+      "repoUsageNotes": "Use tools/scripts/design-md.sh to initialize, lint, and diff repo-root DESIGN.md files. Keep DESIGN.md optional and repo-local, especially for UI-heavy repos.",
+      "uninstallPolicy": "Remove the managed repo checkout only. Do not modify repo-local DESIGN.md files or starter templates that were already copied into individual repos.",
+      "notes": "Canonical workspace standard for DESIGN.md authoring and validation. The upstream repo is reviewed source material, not a shared runtime dependency."
+    },
+    {
+      "id": "voltagent-awesome-design-md",
+      "name": "VoltAgent/awesome-design-md",
+      "classification": "ability",
+      "category": "design-reference",
+      "description": "Optional local example catalog of DESIGN.md files that repos can copy from without turning the upstream repo into a shared runtime dependency.",
+      "sourceUrl": "https://github.com/VoltAgent/awesome-design-md.git",
+      "installMethod": "git",
+      "updateStrategy": "git-fast-forward",
+      "installTarget": "repos/abilities/voltagent-awesome-design-md",
+      "enabledByDefault": false,
+      "exposeInHub": true,
+      "docsPath": "docs/06-cross-agent-skills-and-mcp.md",
+      "postInstallCommands": [
+        [
+          "tools/scripts/use-design-md.sh",
+          "--refresh"
+        ]
+      ],
+      "disposablePaths": [
+        "cache/design-md/catalog"
+      ],
+      "repoUsageNotes": "Use this as an example catalog only. Copy only the specific DESIGN.md files a repo needs, and prefer tools/scripts/design-md.sh plus a repo-owned DESIGN.md for the canonical workflow.",
+      "uninstallPolicy": "Remove the managed repo checkout and the disposable DESIGN.md catalog cache. Do not rewrite copied DESIGN.md files that already live inside other repos.",
+      "notes": "Treat this as an optional example-source ability rather than the canonical DESIGN.md standard or core workspace infrastructure."
+    },
+    {
+      "id": "openai-skills",
+      "name": "openai/skills",
+      "classification": "reference-only",
+      "category": "skill-catalog",
+      "description": "Reviewed upstream skill catalog for selective installation and pattern study.",
+      "sourceUrl": "https://github.com/openai/skills",
+      "archiveUrl": "https://github.com/openai/skills/archive/refs/heads/main.tar.gz",
+      "installMethod": "snapshot",
+      "updateStrategy": "archive-snapshot",
+      "installTarget": "tools/ref/openai-skills-main",
+      "enabledByDefault": false,
+      "exposeInHub": false,
+      "docsPath": "docs/06-cross-agent-skills-and-mcp.md",
+      "repoUsageNotes": "Install only the specific skills you need; do not vendor the entire upstream catalog into the workspace.",
+      "uninstallPolicy": "Remove the reviewed snapshot only. No tracked docs or copied repo-local skills should be modified.",
+      "notes": "Reference-only unless a later review promotes specific capabilities."
+    },
+    {
+      "id": "openai-codex",
+      "name": "openai/codex",
+      "classification": "reference-only",
+      "category": "cli-reference",
+      "description": "Reviewed upstream Codex CLI and .codex surface reference.",
+      "sourceUrl": "https://github.com/openai/codex",
+      "archiveUrl": "https://github.com/openai/codex/archive/refs/heads/main.tar.gz",
+      "installMethod": "snapshot",
+      "updateStrategy": "archive-snapshot",
+      "installTarget": "tools/ref/openai-codex-main",
+      "enabledByDefault": false,
+      "exposeInHub": false,
+      "docsPath": "docs/06-cross-agent-skills-and-mcp.md",
+      "repoUsageNotes": "Use this as source material for official .codex conventions; do not treat it as a vendored workspace dependency.",
+      "uninstallPolicy": "Remove the reviewed snapshot only. Keep any tracked repo-local .codex surfaces.",
+      "notes": "Reference-only unless a later review promotes specific conventions."
+    },
+    {
+      "id": "oh-my-codex",
+      "name": "oh-my-codex",
+      "classification": "reference-only",
+      "category": "workflow-reference",
+      "description": "Reviewed optional Codex workflow ideas from an external upstream.",
+      "sourceUrl": "https://github.com/Yeachan-Heo/oh-my-codex",
+      "archiveUrl": "https://github.com/Yeachan-Heo/oh-my-codex/archive/refs/heads/main.tar.gz",
+      "installMethod": "snapshot",
+      "updateStrategy": "archive-snapshot",
+      "installTarget": "tools/ref/oh-my-codex-main",
+      "enabledByDefault": false,
+      "exposeInHub": false,
+      "docsPath": "docs/06-cross-agent-skills-and-mcp.md",
+      "repoUsageNotes": "Treat it as optional source material or a dedicated fork outside the workspace dependency tree.",
+      "uninstallPolicy": "Remove the reviewed snapshot only.",
+      "notes": "Reference-only until there is a concrete repo-level or workspace-level adoption case."
+    },
+    {
+      "id": "oh-my-openagent",
+      "name": "oh-my-openagent",
+      "classification": "reference-only",
+      "category": "workflow-reference",
+      "description": "Reviewed OpenCode-specific reference patterns with a license and runtime model that are not suitable as a default workspace dependency.",
+      "sourceUrl": "https://github.com/code-yeongyu/oh-my-openagent",
+      "archiveUrl": "https://github.com/code-yeongyu/oh-my-openagent/archive/refs/heads/dev.tar.gz",
+      "installMethod": "snapshot",
+      "updateStrategy": "archive-snapshot",
+      "installTarget": "tools/ref/oh-my-openagent-dev",
+      "enabledByDefault": false,
+      "exposeInHub": false,
+      "docsPath": "docs/06-cross-agent-skills-and-mcp.md",
+      "repoUsageNotes": "Keep it as reviewed reference material unless the OpenCode-specific runtime and license are an intentional fit.",
+      "uninstallPolicy": "Remove the reviewed snapshot only.",
+      "notes": "Reference-only by default."
+    }
+  ]
+}

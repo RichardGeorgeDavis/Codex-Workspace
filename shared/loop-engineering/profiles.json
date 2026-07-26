@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "authority": "draft-fixes",
+  "statePolicy": {
+    "artifactRoot": ".workspace/agent-artifacts/jobs",
+    "archiveRetentionDays": 14,
+    "canonicalState": "Tracked handover or status files change only after human review.",
+    "retention": "Local automation artifacts are disposable evidence, not canonical project state."
+  },
+  "globalForbiddenActions": [
+    "commit",
+    "push",
+    "merge",
+    "release",
+    "deploy",
+    "external-write",
+    "outbound-message"
+  ],
+  "profiles": [
+    {
+      "id": "workspace-hub",
+      "path": "repos/workspace-hub",
+      "pilot": false,
+      "cadence": "manual",
+      "responsibilities": ["runtime and manifest triage", "targeted draft fixes"],
+      "allowedActions": ["triage", "draft", "verify"],
+      "stateDocument": "docs/HANDOVER.md",
+      "checks": [
+        {"id": "typecheck", "command": "pnpm typecheck"},
+        {"id": "test", "command": "pnpm test"},
+        {"id": "lint", "command": "pnpm lint"},
+        {"id": "build", "command": "pnpm build"}
+      ],
+      "boundaries": [
+        "Do not install dependencies broadly or change sibling repositories.",
+        "Run a narrow local smoke check when an API or UI change is proposed."
+      ]
+    }
+  ]
+}
