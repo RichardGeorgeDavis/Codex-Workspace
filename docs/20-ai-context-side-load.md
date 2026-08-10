@@ -83,10 +83,10 @@ Use this when starting a fresh chat that needs repo-aware handover context.
 
 Recommended sequence:
 
-1. treat tracked docs as canonical and start with the relevant side-load entry packet
+1. read `AGENTS.md`, then the short current `docs/HANDOVER.md`, before using a generated packet
 2. refresh the side-load cache if the session is broad, new, or likely to re-read workspace context repeatedly
-3. let the chat use generated `entry.md` as the fast entry layer; open `abstract.md`, `overview.md`, or `sources.json` only when broader planning or provenance checks are needed
-4. fall back to tracked docs, manifests, and repo files for any real decision or ambiguity
+3. let the chat use a fresh generated `entry.md` as the compact routing layer; open `abstract.md`, `overview.md`, or `sources.json` only when broader planning or provenance checks are needed
+4. fall back to tracked docs, manifests, and repo files for any real decision, missing packet, or ambiguity
 5. regenerate or ignore the cache if Workspace Hub reports the side-load state as `stale` or `missing`
 6. if a repo intake just created or updated setup docs, record that closeout in tracked repo docs
 
@@ -116,6 +116,8 @@ When a new repo folder was just added under `repos/`, use this order:
 
 - `README.md`
 - `AGENTS.md`
+- `docs/HANDOVER.md`
+- `docs/README.md`
 - `docs/07-context-cache-and-retrieval.md`
 - `docs/08-first-run-and-updates.md`
 - `docs/09-new-repo-baseline.md`

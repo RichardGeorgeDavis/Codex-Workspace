@@ -11,8 +11,8 @@ For a fresh task, read in this order:
 
 1. `AGENTS.md`
 2. `docs/HANDOVER.md`
-3. the relevant repo README, handover, manifest, or source files
-4. generated `cache/context/.../entry.md` only when a compact side-load packet is useful
+3. a fresh generated `cache/context/.../entry.md` packet when it covers the workspace or named repo
+4. the relevant repo README, handover, manifest, or source files
 
 Do not load long historical logs just because they exist.
 

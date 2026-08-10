@@ -16,6 +16,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -34,7 +35,7 @@ DEFAULT_OPENROUTER_MODEL = "openrouter/free"
 DEFAULT_OPENROUTER_API_BASE = "https://openrouter.ai/api/v1"
 DEFAULT_GATEWAY_API_BASE = ""
 DEFAULT_GATEWAY_MODEL = ""
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 DEFAULT_LIMITS = {
     "maxFiles": 16,
     "maxFileBytes": 65536,
@@ -630,18 +631,20 @@ def call_ollama(
     operation: str,
     records: list[dict],
     max_prompt_chars: int,
+    max_output_tokens: int,
 ) -> dict:
     check_model(model, host)
     system, user = prompt_for(target_name, operation, records, max_prompt_chars)
     payload = {
         "model": model,
         "stream": False,
+        "think": False,
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
         "format": schema([record["path"] for record in records]),
-        "options": {"temperature": 0},
+        "options": {"temperature": 0, "num_predict": max_output_tokens},
     }
     request = urllib.request.Request(
         f"{host}/api/chat",
@@ -657,10 +660,7 @@ def call_ollama(
     content = result.get("message", {}).get("content")
     if not isinstance(content, str):
         die("Ollama returned no JSON message content.")
-    try:
-        extracted = json.loads(content)
-    except json.JSONDecodeError as exc:
-        die(f"Ollama returned malformed JSON: {exc}")
+    extracted = parse_json_content(content, "ollama")
     warnings = validate_result(extracted, records, "Ollama")
     if warnings:
         print("Warning: model validation adjustments: " + "; ".join(warnings), file=sys.stderr)
@@ -966,8 +966,108 @@ def markdown_list(values: object) -> str:
     return "\n".join(f"- {value}" for value in values)
 
 
+ROUTER_FILENAMES = {
+    "current-state": ("CURRENT_HANDOVER.md", "STATUS.md", "status.md"),
+    "task-handover": ("HANDOVER.md", "handover.md"),
+    "canonical-source": ("README.md", "readme.md", "START-HERE.md"),
+}
+
+
+def route_record(root: Path, path: Path, role: str, selected_source_paths: set[str]) -> dict | None:
+    """Return navigation metadata without copying source content into the packet."""
+    try:
+        resolved = path.resolve(strict=True)
+    except OSError:
+        return None
+    if not path_is_under(resolved, root) or not resolved.is_file():
+        return None
+    data = resolved.read_bytes()
+    stat = resolved.stat()
+    rel = relative_path(root, resolved)
+    return {
+        "role": role,
+        "path": rel,
+        "bytes": len(data),
+        "mtimeMs": stat.st_mtime_ns / 1_000_000,
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "selectedSource": rel in selected_source_paths,
+    }
+
+
+def nearest_route_file(start: Path, stop: Path, names: tuple[str, ...]) -> Path | None:
+    current = start if start.is_dir() else start.parent
+    while True:
+        for name in names:
+            candidate = current / name
+            if candidate.is_file():
+                return candidate
+        if current == stop or current.parent == current:
+            return None
+        current = current.parent
+
+
+def build_read_router(root: Path, target_root: Path, records: list[dict]) -> list[dict]:
+    """Build a deterministic fresh-agent route independent of model quality."""
+    selected = {record["path"] for record in records}
+    routes: list[dict] = []
+    seen: set[str] = set()
+
+    def add(path: Path | None, role: str) -> None:
+        if path is None:
+            return
+        record = route_record(root, path, role, selected)
+        if record is not None and record["path"] not in seen:
+            seen.add(record["path"])
+            routes.append(record)
+
+    # Governance applies before any task-specific material.
+    add(target_root / "AGENTS.md", "operational-rules")
+
+    selected_paths = [root / record["path"] for record in records]
+    for path in selected_paths:
+        add(nearest_route_file(path, target_root, ROUTER_FILENAMES["current-state"]), "current-state")
+    for path in selected_paths:
+        add(nearest_route_file(path, target_root, ROUTER_FILENAMES["task-handover"]), "task-handover")
+
+    # A root README is the canonical orientation route when present; selected
+    # project and site paths then resolve to their nearest local README.
+    add(target_root / "README.md", "canonical-source")
+    for path in selected_paths:
+        add(nearest_route_file(path, target_root, ROUTER_FILENAMES["canonical-source"]), "canonical-source")
+    return routes
+
+
+def render_read_router(router: list[dict]) -> str:
+    if not router:
+        return "No deterministic route was available; inspect the selected sources in `sources.json`."
+    lines = [
+        "Read these canonical files in order. This route is deterministic; summaries below remain advisory.",
+        "",
+    ]
+    for index, item in enumerate(router, start=1):
+        selection = "selected model source" if item["selectedSource"] else "navigation metadata only"
+        lines.append(
+            f"{index}. `{item['path']}` — {item['role']}; {selection}; "
+            f"SHA-256 `{item['sha256']}`; modified `{item['mtimeMs']:.0f}`."
+        )
+    lines.extend(
+        [
+            "",
+            "Scope boundary: do not infer permission to inspect protected, private, input or archive material from this route.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def render_handover(
-    result: dict, target_name: str, provider: str, model: str, profile: str | None, generated_at: str
+    result: dict,
+    target_name: str,
+    provider: str,
+    model: str,
+    profile: str | None,
+    generated_at: str,
+    operation: str,
+    router: list[dict],
 ) -> dict[str, str]:
     items = result["items"]
     item_sections = []
@@ -992,7 +1092,11 @@ def render_handover(
     )
     return {
         "abstract.md": f"# Local-model abstract\n\n{result['summary']}\n\n{metadata}\n",
-        "entry.md": f"# Local-model entry packet\n\n{result['entry']}\n\n{metadata}\n",
+        "entry.md": (
+            "# Local-model entry packet\n\n"
+            + (render_read_router(router) if operation == "handover" else result["entry"])
+            + f"\n\n{metadata}\n"
+        ),
         "overview.md": f"# Local-model overview\n\n{result['overview']}\n\n{metadata}\n",
         "handover.md": f"# Local-model handover\n\n{result['handover']}\n\n{metadata}\n\n" + "\n\n".join(item_sections) + "\n",
     }
@@ -1011,6 +1115,7 @@ def cache_fingerprint(
     provider_profile: str | None,
     records: list[dict],
     include_protected: bool,
+    router: list[dict],
 ) -> str:
     payload = {
         "schemaVersion": SCHEMA_VERSION,
@@ -1024,6 +1129,7 @@ def cache_fingerprint(
             {key: record[key] for key in ("path", "role", "bytes", "mtimeMs", "sha256", "privateValuesPresent")}
             for record in records
         ],
+        "router": router,
     }
     return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
@@ -1073,8 +1179,11 @@ def main() -> None:
     task = safe_task_slug(args.task)
     profiles, profile_path = load_profiles(root, args.profiles)
     limits = profiles.get("limits", DEFAULT_LIMITS)
-    target_name, _target_root, paths = candidate_files(root, args)
+    target_name, target_root, paths = candidate_files(root, args)
     records = read_sources(root, paths, limits, args.include_protected)
+    router_started = time.perf_counter()
+    router = build_read_router(root, target_root, records) if args.operation == "handover" else []
+    router_generation_ms = round((time.perf_counter() - router_started) * 1000, 3)
     requested_provider = args.provider or profiles.get("defaultProvider", DEFAULT_PROVIDER)
     if requested_provider not in {"auto", "ollama", "gemini", "openrouter", "gateway"}:
         die("Local-model profile defaultProvider must be auto, ollama, gemini, openrouter or gateway.")
@@ -1109,7 +1218,9 @@ def main() -> None:
         die(cloud_reason)
     if requested_provider == "openrouter" and args.model:
         die("OpenRouter does not allow --model overrides; it is restricted to the free router model openrouter/free.")
-    selected_provider = "gemini" if requested_provider == "gemini" or (requested_provider == "auto" and cloud_eligible and gemini_auto_enabled) else "ollama"
+    selected_provider = "gemini" if requested_provider == "gemini" or (
+        requested_provider == "auto" and not args.model and cloud_eligible and gemini_auto_enabled
+    ) else "ollama"
     if requested_provider == "openrouter":
         selected_provider = "openrouter"
     if requested_provider == "gateway":
@@ -1121,6 +1232,8 @@ def main() -> None:
         if selected_provider == "openrouter"
         else "local gateway explicitly selected; local gateway model routing is enforced."
         if selected_provider == "gateway"
+        else "Explicit local --model selected; automatic cloud routing bypassed."
+        if requested_provider == "auto" and args.model
         else "Ollama explicitly selected." if requested_provider == "ollama" else cloud_reason
     )
     selected_gemini_profile = None
@@ -1147,7 +1260,14 @@ def main() -> None:
     output_dir = output_dir_for(root, target_name, task)
     output_names = ["abstract.md", "entry.md", "overview.md", "handover.md", "extraction.json", "sources.json"]
     fingerprint = cache_fingerprint(
-        target_name, args.operation, selected_provider, model, selected_gemini_profile, records, args.include_protected
+        target_name,
+        args.operation,
+        selected_provider,
+        model,
+        selected_gemini_profile,
+        records,
+        args.include_protected,
+        router,
     )
     if args.run and not args.refresh and not args.print_output and reuse_packet(output_dir, fingerprint, output_names):
         print(f"Reused {output_dir.relative_to(root)}")
@@ -1171,15 +1291,17 @@ def main() -> None:
             return call_openrouter(profiles, provider_model, target_name, args.operation, records, max_prompt_chars, max_output_tokens)
         if provider == "gateway":
             return call_gateway(profiles, provider_model, target_name, args.operation, records, max_prompt_chars, max_output_tokens)
-        return call_ollama(provider_model, host, target_name, args.operation, records, max_prompt_chars)
+        return call_ollama(
+            provider_model, host, target_name, args.operation, records, max_prompt_chars, max_output_tokens
+        )
 
     if requested_provider == "auto":
         candidate_providers = []
-        if cloud_eligible and gemini_auto_enabled:
+        if cloud_eligible and gemini_auto_enabled and not args.model:
             candidate_providers.append("gemini")
-        if cloud_eligible and openrouter_auto_enabled:
+        if cloud_eligible and openrouter_auto_enabled and not args.model:
             candidate_providers.append("openrouter")
-        if cloud_eligible and gateway_auto_enabled:
+        if cloud_eligible and gateway_auto_enabled and not args.model:
             candidate_providers.append("gateway")
         candidate_providers.append("ollama")
         result = None
@@ -1192,7 +1314,7 @@ def main() -> None:
             elif candidate == "gateway":
                 candidate_model = str(gateway_profile.get("model", DEFAULT_GATEWAY_MODEL))
             else:
-                candidate_model = os.environ.get("OLLAMA_MODEL") or profiles.get("defaultModel", DEFAULT_MODEL)
+                candidate_model = args.model or os.environ.get("OLLAMA_MODEL") or profiles.get("defaultModel", DEFAULT_MODEL)
             try:
                 result = run_provider(candidate, candidate_model)
                 selected_provider = candidate
@@ -1211,7 +1333,14 @@ def main() -> None:
         except ProviderError as exc:
             die(str(exc))
     packets = render_handover(
-        result, target_name, selected_provider, model, selected_gemini_profile, generated_at
+        result,
+        target_name,
+        selected_provider,
+        model,
+        selected_gemini_profile,
+        generated_at,
+        args.operation,
+        router,
     )
     source_payload = {
         "version": SCHEMA_VERSION,
@@ -1256,6 +1385,17 @@ def main() -> None:
             "contentStored": False,
         },
         "cache": {"fingerprint": fingerprint, "reused": False},
+        "measurements": {
+            "inputSourceCount": len(records),
+            "inputBytes": sum(record["bytes"] for record in records),
+            "routerSourceCount": len(router),
+            "routerGenerationMs": router_generation_ms,
+            "firstAuthoritativePath": router[0]["path"] if router else None,
+        },
+        "router": {
+            "deterministic": args.operation == "handover",
+            "readNext": router,
+        },
         "inputs": [
             {key: value for key, value in record.items() if key != "text"}
             for record in records

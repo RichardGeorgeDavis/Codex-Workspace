@@ -36,7 +36,7 @@ die() {
 
 trim_text() {
   local limit="$1"
-  python3 - "$limit" <<'PY'
+  python3 -c '
 import sys
 
 limit = int(sys.argv[1])
@@ -48,7 +48,7 @@ if len(text) <= limit:
 else:
     clipped = text[:limit].rsplit(" ", 1)[0].strip()
     print(f"{clipped} …")
-PY
+' "$limit"
 }
 
 extract_bullets() {
@@ -141,6 +141,26 @@ Primary entrypoints are the root `README.md`, the first-run guide in `docs/08-fi
 Runtime stance: share caches under `cache/`, keep installs repo-local, prefer direct local previews for frontend-style repos, and keep existing WordPress flows pragmatic and external where that already works.
 
 Constraint: side-load files under `cache/context/` are generated convenience summaries only and never override tracked docs, manifests, or repo files.
+EOF
+}
+
+render_workspace_entry() {
+  cat <<'EOF'
+# Codex Workspace — entry packet
+
+Use this compact route for workspace-wide tasks when this packet is present and fresh. It is a convenience layer only: tracked files remain authoritative.
+
+## Read in order
+
+1. `AGENTS.md` — operating, privacy, and repository-routing rules.
+2. `docs/HANDOVER.md` — current workspace state and known boundaries.
+3. `docs/README.md` — choose only the relevant canonical guide.
+4. `repos/workspace-hub/README.md` or the named repo's entry document — task-specific runtime and verification detail.
+5. Targeted canonical source files — only where the task remains ambiguous.
+
+## Cache rule
+
+If this packet is missing or stale, skip it and use the tracked route above. Do not load the full documentation pack, archives, generated artefacts, or private sibling repositories by default.
 EOF
 }
 
@@ -528,9 +548,9 @@ generate_workspace() {
   local abstract_content entry_content overview_content generated_at inputs_spec outputs_spec
   generated_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   abstract_content="$(render_workspace_abstract)"
-  entry_content="$abstract_content"
+  entry_content="$(render_workspace_entry)"
   overview_content="$(render_workspace_overview)"
-  inputs_spec=$'README.md|workspace-readme\nAGENTS.md|workspace-agents\ndocs/07-context-cache-and-retrieval.md|context-model\ndocs/08-first-run-and-updates.md|first-run-guide\ndocs/09-new-repo-baseline.md|repo-baseline\nrepos/workspace-hub/README.md|workspace-hub-readme'
+  inputs_spec=$'README.md|workspace-readme\nAGENTS.md|workspace-agents\ndocs/HANDOVER.md|workspace-handover\ndocs/README.md|docs-router\ndocs/07-context-cache-and-retrieval.md|context-model\ndocs/08-first-run-and-updates.md|first-run-guide\ndocs/09-new-repo-baseline.md|repo-baseline\nrepos/workspace-hub/README.md|workspace-hub-readme'
   outputs_spec=$'cache/context/workspace/abstract.md|abstract\ncache/context/workspace/entry.md|entry\ncache/context/workspace/overview.md|overview\ncache/context/workspace/sources.json|sources'
 
   run_generation "workspace" "workspace" "$output_dir" "$abstract_content" "$entry_content" "$overview_content" "$inputs_spec" "$outputs_spec" "$generated_at"

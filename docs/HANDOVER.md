@@ -1,53 +1,41 @@
-# Codex Workspace Handover
+# Codex Workspace handover
 
 Status: public framework operational
-Last reviewed: 2026-07-27
+Last reviewed: 2026-08-10
 
-## Current Public State
+## Read this first
 
-- Workspace Hub remains the tracked public runtime and launcher example.
-- Everything below `repos/` is ignored except the tracked public
-  `repos/workspace-hub/` implementation.
-- Repo discovery treats `repos/` as independently managed checkouts and does
-  not require private repositories to exist.
-- Loop Engineering ships with a neutral example registry and supports an
-  explicit reviewed registry through `--profiles` or
-  `LOOP_ENGINEERING_PROFILES`.
-- Local-model context defaults to loopback Ollama and supports explicit private
-  configuration through `--profiles` or `OLLAMA_CONTEXT_PROFILES`.
-- Public TomeVault mirrors are generated only from
-  `tools/manifests/tomevault-skills.json`.
-- Repo-specific commands, provider credentials, operator routing policy and
-  private operational history are intentionally outside the public tree.
+- This is the current-state checkpoint. Read root `AGENTS.md` first, then use
+  `docs/README.md` to select one relevant canonical guide.
+- `repos/workspace-hub/` is the only tracked child implementation. Other
+  repositories below `repos/` are independent and private by default.
+- Generated `cache/context/**/entry.md` packets are optional accelerators. Use
+  one only when it is present and fresh; tracked docs and repo files win on any
+  conflict.
 
-## Private Split Closeout
+## Current boundaries
 
-- The public skill distribution now contains only generic framework skills:
-  agent-tooling diagnosis, repo onboarding, runtime triage, workspace
-  maintenance and quality checks, placeholder-only SSH guidance, and generic
-  quality/security/TypeScript templates.
-- The Neo4j memory-hooks experiment, repo-specific integration skills,
-  provider helpers, private launcher implementations and operator history are
-  removed from public sources and manifests.
-- Ignored links under `tools/local/commands/` and `tools/local/agents/` preserve
-  Finder and local-agent convenience without tracking their private targets.
-- Reachable Git history still contains earlier operational identifiers. The
-  current cleanup removes them from the branch tip; it does not rewrite
-  history. A separate coordinated rewrite remains required if complete
-  historical purging is approved.
+- Keep installs repo-local; share caches only. Do not assume every repository
+  uses the same package manager or preview model.
+- Keep provider details, credentials, private operator history and private repo
+  topology out of the public tree.
+- Use `safe-readonly` for ordinary agent work; choose wider MCP access only when
+  the task needs it.
+- The monthly agent-readability audit is report-only. Findings require review
+  before any documentation, script, cache, or automation change.
+
+## Open next when needed
+
+- [Docs router](README.md) for setup, context, runtime, release, and policy
+  guidance.
+- [First-run guide](08-first-run-and-updates.md) for normal workspace setup.
+- [Context and side-load contract](20-ai-context-side-load.md) for generated
+  entry packets and provenance.
+- [Workspace Hub README](../repos/workspace-hub/README.md) for the tracked app.
 
 ## Verification
 
-Before release, run:
-
-```sh
-tools/scripts/doctor-workspace.sh
-tools/scripts/test-loop-engineering.sh
-tools/scripts/test-local-model-context.sh
-tools/scripts/test-public-release-hygiene.sh
-tools/scripts/check-public-secrets.sh
-tools/scripts/release-readiness.sh
-```
-
-Inspect `git status --short` before claiming a clean worktree. Generated cache
-packets and ignored local runtime state are not canonical documentation.
+Run `tools/scripts/doctor-workspace.sh` for environment readiness. Before a
+release, use the complete verification sequence in
+[10-release-readiness.md](10-release-readiness.md). Always inspect
+`git status --short`; generated cache and ignored local state are not canonical.

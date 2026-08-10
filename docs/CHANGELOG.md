@@ -3,6 +3,23 @@
 This changelog records public Codex Workspace framework changes. Private
 operator history is maintained outside the public repository.
 
+## 2026-08-01
+
+- Expanded the optional repo-level `DESIGN.md` starter with broader design
+  tokens, component states, responsive and accessibility guidance, motion,
+  imagery, content, implementation notes and a verification checklist.
+- Clarified illustrative defaults, upstream `omitted` sections and the
+  repo-local authoring boundary.
+
+## 2026-07-30
+
+- Added bounded non-thinking Ollama generation, fenced-JSON parsing with strict
+  schema validation, and made an explicit local `--model` bypass automatic
+  cloud routing.
+- Added Apple Silicon memory guidance and optional Gemma 4 E4B and 12B
+  comparison commands while retaining the conservative public default, plus
+  fixture coverage for the request bounds and model-selection rule.
+
 ## 2026-07-27
 
 - Separated private repo launchers, provider helpers, live profiles and

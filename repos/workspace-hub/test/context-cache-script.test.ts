@@ -25,6 +25,8 @@ async function setupWorkspaceFixture(root: string) {
 
   await writeText(path.join(root, 'README.md'), '# Codex Workspace\n- Workspace Hub\n- cache/context/\n')
   await writeText(path.join(root, 'AGENTS.md'), '# AGENTS\n- Share caches, not installs.\n')
+  await writeText(path.join(root, 'docs', 'HANDOVER.md'), '# Handover\n- Current state.\n')
+  await writeText(path.join(root, 'docs', 'README.md'), '# Docs\n- Use the relevant guide.\n')
   await writeText(
     path.join(root, 'docs', '07-context-cache-and-retrieval.md'),
     '# Context\n- L0 abstract\n- L1 overview\n- cache/context/\n',
@@ -118,7 +120,20 @@ test('generate-context-cache.sh writes workspace and repo side-load files with p
   assert.equal(workspaceSources.scope, 'workspace')
   assert.equal(workspaceSources.target, 'workspace')
   assert.ok(workspaceSources.generatedAt)
-  assert.equal(workspaceSources.inputs.length, 6)
+  assert.equal(workspaceSources.inputs.length, 8)
+  assert.deepEqual(
+    workspaceSources.inputs.map((entry) => entry.role),
+    [
+      'workspace-readme',
+      'workspace-agents',
+      'workspace-handover',
+      'docs-router',
+      'context-model',
+      'first-run-guide',
+      'repo-baseline',
+      'workspace-hub-readme',
+    ],
+  )
   assert.ok(workspaceSources.inputs.every((entry) => entry.bytes >= 0 && entry.mtimeMs > 0 && entry.sha256.length > 0))
   assert.deepEqual(
     workspaceSources.outputs.map((entry) => entry.role),

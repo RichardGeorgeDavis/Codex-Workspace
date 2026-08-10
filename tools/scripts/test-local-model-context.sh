@@ -10,6 +10,8 @@ trap 'rm -rf "$fixture_root" "$outside_root"' EXIT
 mkdir -p \
   "$fixture_root/docs" \
   "$fixture_root/repos/demo" \
+  "$fixture_root/repos/demo/system/docs" \
+  "$fixture_root/repos/demo/sites/example" \
   "$fixture_root/repos/demo/library/private" \
   "$fixture_root/repos/private-notes/public" \
   "$fixture_root/repos/private-notes/library/private" \
@@ -21,6 +23,13 @@ printf '%s\n' '# Fixture rules' >"$fixture_root/AGENTS.md"
 printf '%s\n' '# Handover' >"$fixture_root/docs/HANDOVER.md"
 printf '%s\n' '# Demo repo' >"$fixture_root/repos/demo/README.md"
 printf '%s\n' '# Demo rules' >"$fixture_root/repos/demo/AGENTS.md"
+printf '%s\n' '# Demo status' >"$fixture_root/repos/demo/STATUS.md"
+printf '%s\n' '# Demo handover' >"$fixture_root/repos/demo/HANDOVER.md"
+printf '%s\n' '# System handover' >"$fixture_root/repos/demo/system/docs/HANDOVER.md"
+printf '%s\n' '# Example site' >"$fixture_root/repos/demo/sites/example/README.md"
+printf '%s\n' '# Example site rules' >"$fixture_root/repos/demo/sites/example/AGENTS.md"
+printf '%s\n' '# Example site status' >"$fixture_root/repos/demo/sites/example/STATUS.md"
+printf '%s\n' '# Example site handover' >"$fixture_root/repos/demo/sites/example/HANDOVER.md"
 printf '%s\n' 'api_key: should-not-leave-local-redaction' >"$fixture_root/repos/demo/library/private/secret.md"
 printf '%s\n' '# Explicit public fixture' >"$fixture_root/repos/private-notes/public/README.md"
 printf '%s\n' 'api_key: private-notes-fixture' >"$fixture_root/repos/private-notes/library/private/secret.md"
@@ -76,7 +85,7 @@ PY
 git -C "$fixture_root" init -q
 git -C "$fixture_root" config user.email fixture@example.test
 git -C "$fixture_root" config user.name fixture
-git -C "$fixture_root" add README.md AGENTS.md docs repos/demo/README.md repos/demo/AGENTS.md repos/demo/library/private/secret.md repos/demo/rate-limit.md repos/private-notes/public/README.md repos/private-notes/library/private/secret.md shared tools
+git -C "$fixture_root" add README.md AGENTS.md docs repos/demo/README.md repos/demo/AGENTS.md repos/demo/STATUS.md repos/demo/HANDOVER.md repos/demo/system/docs/HANDOVER.md repos/demo/library repos/demo/sites repos/demo/rate-limit.md repos/private-notes/public/README.md repos/private-notes/library/private/secret.md shared tools
 git -C "$fixture_root" commit -qm fixture
 
 fake_bin="$fixture_root/fake-bin"
@@ -89,7 +98,7 @@ ollama, security = map(Path, sys.argv[1:])
 ollama.write_text(
     "#!/usr/bin/env bash\n"
     "if [[ \"${1:-}\" == list ]]; then\n"
-    "  printf '%s\\n' 'NAME ID SIZE MODIFIED' 'qwen2.5:3b fixture 1 1'\n"
+    "  printf '%s\\n' 'NAME ID SIZE MODIFIED' 'qwen2.5:3b fixture 1 1' 'gemma4:e4b-mlx fixture 1 1' 'gemma4:12b-mlx fixture 1 1'\n"
     "fi\n",
     encoding="utf-8",
 )
@@ -159,18 +168,24 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         size = int(self.headers.get("Content-Length", "0"))
         body = self.rfile.read(size).decode("utf-8")
+        request_payload = json.loads(body)
+        if self.path == "/api/chat":
+            assert request_payload["think"] is False, request_payload
+            assert request_payload["options"]["num_predict"] in {1200, 1800}, request_payload
         if self.path.startswith("/v1beta/models/") and "rate limit fixture" in body:
             self.send_response(429)
             self.end_headers()
             return
-        if self.path.startswith("/v1beta/models/") and "malformed fixture" in body:
+        if self.path == "/api/chat" and "malformed fixture" in body:
+            payload = {"message": {"content": "```json\nnot-json\n```"}}
+        elif self.path.startswith("/v1beta/models/") and "malformed fixture" in body:
             payload = {"candidates": [{"content": {"parts": [{"text": "not-json"}]}}]}
         else:
             match = re.search(r'SOURCE PATH: ([^"\\]+)', body)
             path = match.group(1) if match else "README.md"
             text = json.dumps(extraction(path))
             if self.path == "/api/chat":
-                payload = {"message": {"content": text}}
+                payload = {"message": {"content": f"```json\n{text}\n```"}}
             elif self.path == "/v1/chat/completions":
                 payload = {"choices": [{"message": {"content": text}}]}
             else:
@@ -234,6 +249,56 @@ assert sources["model"]["backend"] == "ollama-loopback", sources["model"]
 assert all(item["sha256"] and item["bytes"] >= 0 for item in sources["inputs"]), sources["inputs"]
 PY
 
+run_context --repo repos/demo --provider ollama --operation handover --task root-router --run
+root_router_dir="$fixture_root/cache/context/local-models/repos__demo/root-router"
+python3 - "$root_router_dir/entry.md" "$root_router_dir/sources.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+entry = Path(sys.argv[1]).read_text(encoding="utf-8")
+sources = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+expected = [
+    "repos/demo/AGENTS.md",
+    "repos/demo/STATUS.md",
+    "repos/demo/HANDOVER.md",
+    "repos/demo/README.md",
+]
+positions = []
+for path in expected:
+    assert path in entry, (path, entry)
+    positions.append(entry.index(path))
+assert positions == sorted(positions), positions
+router = sources["router"]
+assert router["deterministic"] is True, router
+assert [item["path"] for item in router["readNext"]][:3] == expected[:3], router
+assert all(item["sha256"] and item["mtimeMs"] >= 0 for item in router["readNext"]), router
+measurements = sources["measurements"]
+assert measurements["inputSourceCount"] >= 4, measurements
+assert measurements["inputBytes"] > 0, measurements
+assert measurements["firstAuthoritativePath"] == "repos/demo/AGENTS.md", measurements
+assert measurements["routerGenerationMs"] >= 0, measurements
+assert "README.md" in entry and "Current context" not in entry, entry
+PY
+
+run_context --repo repos/demo --file repos/demo/sites/example/README.md --provider ollama --operation handover --task site-router --run
+site_router_dir="$fixture_root/cache/context/local-models/repos__demo/site-router"
+python3 - "$site_router_dir/entry.md" "$site_router_dir/sources.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+entry = Path(sys.argv[1]).read_text(encoding="utf-8")
+sources = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+assert "repos/demo/sites/example/STATUS.md" in entry, entry
+assert "repos/demo/sites/example/HANDOVER.md" in entry, entry
+assert "repos/demo/sites/example/README.md" in entry, entry
+assert "# Example site status" not in entry, entry
+roles = {(item["path"], item["role"]) for item in sources["router"]["readNext"]}
+assert ("repos/demo/sites/example/STATUS.md", "current-state") in roles, roles
+assert ("repos/demo/sites/example/HANDOVER.md", "task-handover") in roles, roles
+PY
+
 run_context --repo repos/demo --operation extract --task fixture --run >/tmp/local-model-context-test.stdout
 rg -q '"reused": true' "$output_dir/sources.json"
 run_context --repo repos/demo --operation extract --task fixture --refresh --run >/tmp/local-model-context-test.stdout
@@ -246,7 +311,17 @@ assert_fails run_context --file repos/demo/untracked.md --provider gemini --oper
 assert_fails run_context --file repos/demo/library/private/secret.md --include-protected --provider gemini --operation extract --task protected-cloud
 assert_fails run_context --file repos/private-notes/library/private/secret.md --include-protected --provider gemini --operation extract --task private-notes-protected-cloud
 assert_fails run_context --file repos/demo/README.md --provider gemini --model gemini-3.6-flash --operation extract --task gemini-model-override
-assert_fails run_context --file repos/demo/README.md --model qwen2.5:3b --operation extract --task auto-model-override
+run_context --file repos/demo/README.md --model gemma4:12b-mlx --operation extract --task auto-model-override --run >/tmp/local-model-context-test.stdout
+python3 - "$fixture_root/cache/context/local-models/files/auto-model-override/sources.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+sources = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert sources["provider"]["requested"] == "auto", sources["provider"]
+assert sources["provider"]["selected"] == "ollama", sources["provider"]
+assert sources["model"]["name"] == "gemma4:12b-mlx", sources["model"]
+PY
 assert_fails run_context --file repos/demo/README.md --gemini-profile quality --operation extract --task quality-auto
 assert_fails run_context --file repos/demo/README.md --provider ollama --gemini-profile fast --operation extract --task invalid-gemini-profile-provider
 
@@ -371,6 +446,7 @@ git -C "$fixture_root" commit -qm malformed
 assert_fails env CONTEXT_TEST_KEY='fixture-gemini-key' PATH="$fake_bin:$PATH" OLLAMA_HOST="http://127.0.0.1:$fake_port" \
   GEMINI_CONTEXT_API_BASE="http://127.0.0.1:$fake_port/v1beta" OLLAMA_CONTEXT_WORKSPACE_ROOT="$fixture_root" \
   "$fixture_root/tools/scripts/local-model-context.sh" --file repos/demo/malformed.md --provider gemini --operation extract --task malformed-json
+assert_fails run_context --file repos/demo/malformed.md --provider ollama --operation extract --task malformed-ollama-json
 
 run_context --file repos/demo/library/private/secret.md --include-protected --provider ollama --operation extract --task redacted --run
 redacted_dir="$fixture_root/cache/context/local-models/files/redacted"

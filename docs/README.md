@@ -4,13 +4,38 @@ This folder is the canonical home for the Codex Workspace documentation set.
 
 Use [../README.md](../README.md) as the public-facing project entrypoint, then use this folder for the detailed workspace and handover material.
 
-## Fast Path
+## Agent quick route
 
-For routine agent sessions, start with `HANDOVER.md`, the relevant repo README, and only the specific doc needed for the task. Use generated `cache/context/**/entry.md` packets before opening broader generated summaries, and keep `docs/archive/`, logs, artifacts, screenshots, and `ref/` evidence as opt-in context.
+Use this order for a fresh workspace task:
 
-For setup, start with `08-first-run-and-updates.md`. It is now the concise quick path; the historical long setup note lives under `docs/archive/08-first-run-and-updates-history-2026-04.md`.
+1. Read root `AGENTS.md` for operating and privacy rules.
+2. Read [HANDOVER.md](HANDOVER.md) for current state and known boundaries.
+3. If a fresh `cache/context/**/entry.md` packet exists, use it as a compact
+   route; otherwise proceed with tracked documents.
+4. Open the named repo's README, handover, manifest, or source file.
+5. Open one targeted canonical guide below only when the task requires it.
 
-For token-sensitive routine repo work, prefer the `safe-readonly` MCP profile. Use heavier profiles such as `default-full` only when browser, GitHub, docs, or debugging tools are needed.
+Do not load the whole pack by default. Archives, logs, copied HTML, screenshots,
+`ref/`, generated reports, caches, lockfiles, vendor, and build output are
+opt-in evidence. For token-sensitive routine work, prefer `safe-readonly`; use
+`default-full` only when browser, GitHub, documentation, or debugging access is
+actually required.
+
+### Choose a guide
+
+| Need | Open |
+| --- | --- |
+| Setup or normal update | [08-first-run-and-updates.md](08-first-run-and-updates.md) |
+| Add or orient a repo | [09-new-repo-baseline.md](09-new-repo-baseline.md) |
+| Reduce context loading or refresh entry packets | [20-ai-context-side-load.md](20-ai-context-side-load.md) and [21-agent-token-budget.md](21-agent-token-budget.md) |
+| Audit agent handover readability | `tools/scripts/audit-agent-readability.sh` |
+| Run Workspace Hub | [../repos/workspace-hub/README.md](../repos/workspace-hub/README.md) |
+| Release or public hygiene | [10-release-readiness.md](10-release-readiness.md) |
+| MCP access and profiles | [15-mcp-profiles-and-trust-levels.md](15-mcp-profiles-and-trust-levels.md) |
+| Scheduled triage or controlled loop work | [22-loop-engineering.md](22-loop-engineering.md) |
+
+The core pack below remains the full reference index. Historical material is in
+`docs/archive/` and should be opened only for targeted archaeology.
 
 ## Core pack
 
