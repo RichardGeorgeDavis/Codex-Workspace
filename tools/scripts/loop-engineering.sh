@@ -241,7 +241,7 @@ jq -n \
   --arg worktree "$worktree_path" \
   --argjson dirty "$dirty" \
   --argjson checks "$checks_json" \
-  '{version:1, profile:$profile, phase:$phase, repository:$repo, status:$status, stopReason:$stopReason, verifierResult:$verifier, primaryWorktreeDirty:$dirty, draftWorktree:($worktree | select(length > 0)), checks:$checks}' \
+  '{version:1, profile:$profile, phase:$phase, repository:$repo, status:$status, stopReason:$stopReason, verifierResult:$verifier, primaryWorktreeDirty:$dirty, draftWorktree:(if ($worktree | length) > 0 then $worktree else null end), checks:$checks}' \
   >"$artifact_dir/run.json"
 
 printf 'Artifact: %s\n' "$artifact_dir"

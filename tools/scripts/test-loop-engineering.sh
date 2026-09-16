@@ -47,6 +47,8 @@ assert_contains() { grep -F "$2" "$1" >/dev/null || { printf 'missing %s in %s\n
 assert_contains "$fixture/clean.out" 'Status: clean'
 "$runner" --profiles "$profiles" --repo-dir "$repo" --profile fixture --phase triage --finding none --run --run-id clean >"$fixture/clean-run.out"
 assert_contains "$repo/.workspace/agent-artifacts/jobs/archive/clean/report.md" 'No actionable finding; archive the run.'
+test -s "$repo/.workspace/agent-artifacts/jobs/archive/clean/run.json"
+jq -e '.status == "clean" and .draftWorktree == null and .primaryWorktreeDirty == false' "$repo/.workspace/agent-artifacts/jobs/archive/clean/run.json" >/dev/null
 mkdir -p "$repo/.workspace/agent-artifacts/jobs/archive/expired"
 touch -t 202001010000 "$repo/.workspace/agent-artifacts/jobs/archive/expired"
 "$runner" --profiles "$profiles" --repo-dir "$repo" --profile fixture --phase triage --finding none --run --run-id clean-retention >"$fixture/retention.out"
